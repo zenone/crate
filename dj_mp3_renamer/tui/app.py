@@ -6,6 +6,7 @@ Modern TUI using Textual framework - API-first architecture maintained
 from pathlib import Path
 from typing import Optional
 import asyncio
+import threading
 import time
 
 from rich.syntax import Syntax
@@ -34,6 +35,11 @@ from textual.widgets import (
 # Import existing API (maintains API-first architecture)
 from ..api import RenamerAPI, RenameRequest, RenameStatus
 from ..core.template import DEFAULT_TEMPLATE
+
+
+class OperationCancelled(Exception):
+    """Raised when user cancels a long-running operation."""
+    pass
 
 
 class StatsPanel(Static):
@@ -186,6 +192,10 @@ class ProgressOverlay(ModalScreen):
         color: $success;
         margin-top: 1;
     }
+
+    #cancel-btn {
+        margin-top: 2;
+    }
     """
 
     def __init__(self, title: str, total_files: int):
@@ -195,6 +205,7 @@ class ProgressOverlay(ModalScreen):
         self.processed = 0
         self.start_time = time.time()
         self.current_file = ""
+        self.cancelled = threading.Event()  # Thread-safe cancellation flag
 
     def compose(self) -> ComposeResult:
         """Create the progress overlay layout."""
@@ -206,6 +217,8 @@ class ProgressOverlay(ModalScreen):
                 yield Label("", id="progress-current")
                 yield Label("Estimated time remaining: calculating...", id="progress-time")
                 yield Label("", id="progress-speed")
+                with Center():
+                    yield Button("Cancel", variant="error", id="cancel-btn")
 
     def update_progress(self, processed: int, current_file: str = ""):
         """Update progress bar and status text."""
@@ -253,6 +266,12 @@ class ProgressOverlay(ModalScreen):
                 # Update speed
                 speed_label = self.query_one("#progress-speed", Label)
                 speed_label.update(f"Speed: {files_per_second:.1f} files/second")
+
+    @on(Button.Pressed, "#cancel-btn")
+    def handle_cancel(self) -> None:
+        """Handle cancel button press."""
+        self.cancelled.set()  # Signal cancellation
+        self.dismiss()  # Close the overlay
 
 
 class DJRenameTUI(App):
@@ -573,11 +592,17 @@ class DJRenameTUI(App):
 
         def progress_callback(processed: int, filename: str):
             """Update progress overlay from API callback."""
+            # Check if user cancelled the operation
+            if progress_screen.cancelled.is_set():
+                raise OperationCancelled("User cancelled the operation")
+
             try:
                 if progress_screen in self.screen_stack:
                     progress_screen.update_progress(processed, filename)
+            except OperationCancelled:
+                raise  # Re-raise cancellation
             except Exception:
-                pass  # Ignore errors updating progress
+                pass  # Ignore other errors updating progress
 
         # Push progress overlay
         await self.push_screen(progress_screen)
@@ -625,6 +650,16 @@ class DJRenameTUI(App):
                     severity="success",
                     timeout=5
                 )
+
+        except OperationCancelled:
+            # User cancelled - dismiss overlay and notify
+            try:
+                self.pop_screen()
+            except Exception:
+                pass
+
+            self.notify("Operation cancelled by user", severity="warning", timeout=3)
+            self.log.info("User cancelled operation")
 
         except Exception as e:
             # Dismiss progress overlay on error
