@@ -5,6 +5,7 @@ Modern TUI using Textual framework - API-first architecture maintained
 
 from pathlib import Path
 from typing import Optional
+import asyncio
 import time
 
 from rich.syntax import Syntax
@@ -315,6 +316,13 @@ class DJRenameTUI(App):
         text-style: italic;
     }
 
+    #template-helper {
+        color: $text-muted;
+        text-style: italic;
+        margin: 0 0 1 0;
+        padding: 0 1;
+    }
+
     #button-row {
         height: auto;
         width: 100%;
@@ -396,6 +404,14 @@ class DJRenameTUI(App):
                     value=DEFAULT_TEMPLATE,
                     placeholder="{artist} - {title}{mix_paren}{kb}",
                     id="template-input",
+                )
+
+                # Template variable helper
+                yield Static(
+                    "[dim italic]Available: "
+                    "{artist} {title} {bpm} {key} {camelot} {mix} {mix_paren} {kb} {year} {album} {label} {track}"
+                    "[/dim italic]",
+                    id="template-helper"
                 )
 
                 yield Checkbox("Recursive (include subfolders)", value=True, id="recursive-check")
@@ -574,8 +590,8 @@ class DJRenameTUI(App):
                 progress_callback=progress_callback,
             )
 
-            # Run API call (blocking but progress overlay remains responsive)
-            status = await self.run_in_executor(None, self.api.rename_files, request)
+            # Run API call in background thread (blocking but progress overlay remains responsive)
+            status = await asyncio.to_thread(self.api.rename_files, request)
             self.last_status = status
 
             # Dismiss progress overlay
