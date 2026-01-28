@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(test:*)",
+      "Bash(cmp:*)",
+      "Bash(git add:*)",
+      "Bash(git rm:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: Add testing infrastructure for TDD refactoring\n\n- Create pytest configuration with markers\n- Set up requirements and dev requirements\n- Create package directory structure \\(core, api, cli\\)\n- Create tests directory with __init__.py\n- Verify pytest can collect tests \\(0 tests initially\\)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git commit:*)",
+      "Bash(pip install:*)",
+      "Bash(dj-mp3-renamer:*)",
+      "Bash(pip uninstall:*)"
+    ]
+  }
+}
