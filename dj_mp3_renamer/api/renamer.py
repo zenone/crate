@@ -169,8 +169,11 @@ class RenamerAPI:
         if ext != ".mp3":
             ext = ".mp3"
 
-        dst = book.reserve_unique(src.parent, stem, ext)
-        if dst.resolve() == src.resolve():
+        # Check if the file already has the desired name BEFORE collision handling
+        desired_path = src.parent / f"{stem}{ext}"
+        if desired_path.resolve() == src.resolve():
             return None, "Already has desired name"
 
+        # File needs renaming - use collision detection
+        dst = book.reserve_unique(src.parent, stem, ext)
         return dst, None

@@ -11,7 +11,13 @@
       "Bash(git commit:*)",
       "Bash(pip install:*)",
       "Bash(dj-mp3-renamer:*)",
-      "Bash(pip uninstall:*)"
+      "Bash(pip uninstall:*)",
+      "Bash(chmod:*)",
+      "Bash(./quick_test.sh:*)",
+      "WebSearch",
+      "Bash(tree:*)",
+      "Bash(pytest:*)",
+      "Bash(python run_web.py:*)"
     ]
   }
 }

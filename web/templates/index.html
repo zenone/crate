@@ -40,7 +40,28 @@
 
         <!-- Main Content -->
         <main class="main">
-            <!-- Step 1: Upload -->
+            <!-- Mode Selector -->
+            <section class="card mode-selector-card">
+                <div class="mode-selector">
+                    <button class="mode-btn active" id="mode-upload" data-mode="upload">
+                        <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span>Upload Files</span>
+                    </button>
+                    <button class="mode-btn" id="mode-local" data-mode="local">
+                        <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                        <span>Local Directory</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 1a: Upload Files -->
             <section id="upload-section" class="card">
                 <h2 class="section-title">
                     <span class="step-number">1</span>
@@ -58,6 +79,60 @@
                     <input type="file" id="file-input" accept=".mp3" multiple hidden>
                 </div>
                 <div id="file-list" class="file-list hidden"></div>
+            </section>
+
+            <!-- Step 1b: Local Directory -->
+            <section id="local-section" class="card hidden">
+                <h2 class="section-title">
+                    <span class="step-number">1</span>
+                    Select Local Directory
+                </h2>
+                <div class="local-directory-config">
+                    <label for="local-path-input" class="label">Directory Path</label>
+                    <div class="path-input-group">
+                        <input
+                            type="text"
+                            id="local-path-input"
+                            class="input"
+                            placeholder="Type or paste path here..."
+                        >
+                    </div>
+                    <p class="help-text">
+                        <strong>Tip:</strong> Type or paste the full path to your MP3 directory<br>
+                        Example: <code>/Users/szenone/Music/DJ_Files</code>
+                    </p>
+
+                    <!-- Quick Access Buttons -->
+                    <div class="quick-paths">
+                        <p class="quick-paths-label">Quick Access:</p>
+                        <div class="quick-paths-buttons">
+                            <button class="btn-quick-path" data-path="~/Music">
+                                🎵 Music
+                            </button>
+                            <button class="btn-quick-path" data-path="~/Documents">
+                                📄 Documents
+                            </button>
+                            <button class="btn-quick-path" data-path="~/Downloads">
+                                ⬇️ Downloads
+                            </button>
+                            <button class="btn-quick-path" data-path="~/Desktop">
+                                🖥️ Desktop
+                            </button>
+                        </div>
+                    </div>
+                    <div class="checkbox-group">
+                        <label>
+                            <input type="checkbox" id="local-recursive" checked>
+                            Include subfolders
+                        </label>
+                    </div>
+                    <button class="btn btn-primary" id="process-local-btn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Process Directory
+                    </button>
+                </div>
             </section>
 
             <!-- Step 2: Configure -->
@@ -121,6 +196,20 @@
                 <div id="results-stats" class="stats-grid"></div>
                 <div id="results-list" class="results-list"></div>
                 <div class="action-buttons">
+                    <button class="btn btn-success hidden" id="rename-files-btn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Rename Files
+                    </button>
+                    <button class="btn btn-primary hidden" id="download-btn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Download Renamed Files
+                    </button>
                     <button class="btn btn-secondary" id="new-batch-btn">
                         <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <polyline points="1 4 1 10 7 10"></polyline>

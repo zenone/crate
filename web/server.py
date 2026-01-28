@@ -6,6 +6,7 @@ a REST API for the web frontend.
 """
 
 import logging
+import os
 import shutil
 from pathlib import Path
 from typing import List, Optional
@@ -79,6 +80,88 @@ class TemplateInfo(BaseModel):
 
     default: str
     tokens: dict
+
+
+class LocalRenameRequest(BaseModel):
+    """Request model for local directory rename operation."""
+
+    path: str
+    template: Optional[str] = DEFAULT_TEMPLATE
+    dry_run: bool = True
+    recursive: bool = False
+
+
+# ======================== Security Functions ========================
+
+
+def validate_path(user_input: str) -> Path:
+    """
+    Secure path validation to prevent traversal attacks.
+
+    Args:
+        user_input: User-provided path string
+
+    Returns:
+        Validated and resolved Path object
+
+    Raises:
+        HTTPException: If path is invalid or forbidden
+    """
+    try:
+        # Expand user shortcuts (~) and resolve to absolute path
+        path = Path(user_input).expanduser().resolve()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid path: {e}")
+
+    # Prevent access to system directories
+    forbidden_paths = [
+        Path("/System"),      # macOS system
+        Path("/Windows"),     # Windows system
+        Path("/etc"),         # Linux config
+        Path("/usr/bin"),     # Linux binaries
+        Path("/usr/sbin"),    # Linux system binaries
+        Path("/bin"),         # System binaries
+        Path("/sbin"),        # System binaries
+    ]
+
+    path_str = str(path)
+    for forbidden in forbidden_paths:
+        forbidden_str = str(forbidden)
+        if path_str.startswith(forbidden_str):
+            raise HTTPException(
+                status_code=403,
+                detail=f"Access to system directories is forbidden: {forbidden}"
+            )
+
+    # Verify path exists
+    if not path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Path does not exist: {path}"
+        )
+
+    # Verify it's a directory
+    if not path.is_dir():
+        raise HTTPException(
+            status_code=400,
+            detail=f"Path must be a directory: {path}"
+        )
+
+    # Verify read/write permissions
+    if not os.access(path, os.R_OK):
+        raise HTTPException(
+            status_code=403,
+            detail=f"No read permission for: {path}"
+        )
+
+    if not os.access(path, os.W_OK):
+        raise HTTPException(
+            status_code=403,
+            detail=f"No write permission for: {path}"
+        )
+
+    logger.info(f"Path validated: {path}")
+    return path
 
 
 # ======================== Routes ========================
@@ -176,6 +259,63 @@ async def rename_files(request: RenameRequestModel):
     )
 
 
+@app.post("/api/rename-local", response_model=RenameResultModel)
+async def rename_local_files(request: LocalRenameRequest):
+    """
+    Rename files in a local directory without upload/download.
+
+    This endpoint allows direct filesystem access for localhost usage.
+    Security: Validates paths to prevent traversal attacks and system directory access.
+
+    Args:
+        request: LocalRenameRequest with path, template, dry_run, recursive
+
+    Returns:
+        RenameResultModel with operation results
+
+    Raises:
+        HTTPException: For invalid paths, permissions, or security violations
+    """
+    # Security: Validate and sanitize path
+    validated_path = validate_path(request.path)
+
+    # Use existing API - no changes needed!
+    rename_request = RenameRequest(
+        path=validated_path,
+        recursive=request.recursive,
+        dry_run=request.dry_run,
+        template=request.template or DEFAULT_TEMPLATE,
+    )
+
+    # Execute rename operation
+    status: RenameStatus = renamer_api.rename_files(rename_request)
+
+    # Convert results to JSON-serializable format
+    results = []
+    for result in status.results:
+        results.append(
+            {
+                "src": result.src.name,
+                "dst": result.dst.name if result.dst else None,
+                "status": result.status,
+                "message": result.message,
+            }
+        )
+
+    logger.info(
+        f"Local rename at {validated_path}: {status.renamed} renamed, "
+        f"{status.skipped} skipped, {status.errors} errors"
+    )
+
+    return RenameResultModel(
+        total=status.total,
+        renamed=status.renamed,
+        skipped=status.skipped,
+        errors=status.errors,
+        results=results,
+    )
+
+
 @app.post("/api/download/{session_id}")
 async def download_files(session_id: str):
     """
@@ -183,6 +323,7 @@ async def download_files(session_id: str):
     """
     import zipfile
     from io import BytesIO
+    from fastapi.responses import StreamingResponse
 
     session_dir = UPLOAD_DIR / session_id
 
@@ -197,10 +338,10 @@ async def download_files(session_id: str):
 
     zip_buffer.seek(0)
 
-    return FileResponse(
+    return StreamingResponse(
         zip_buffer,
         media_type="application/zip",
-        filename=f"renamed_mp3s_{session_id[:8]}.zip",
+        headers={"Content-Disposition": f"attachment; filename=renamed_mp3s_{session_id[:8]}.zip"},
     )
 
 

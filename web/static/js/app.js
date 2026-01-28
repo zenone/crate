@@ -21,11 +21,14 @@ const elements = {
     browseBtn: document.getElementById('browse-btn'),
     fileList: document.getElementById('file-list'),
     uploadSection: document.getElementById('upload-section'),
+    localSection: document.getElementById('local-section'),
     configSection: document.getElementById('config-section'),
     resultsSection: document.getElementById('results-section'),
     templateInput: document.getElementById('template-input'),
     previewBtn: document.getElementById('preview-btn'),
     renameBtn: document.getElementById('rename-btn'),
+    renameFilesBtn: document.getElementById('rename-files-btn'),
+    downloadBtn: document.getElementById('download-btn'),
     resultsStats: document.getElementById('results-stats'),
     resultsList: document.getElementById('results-list'),
     newBatchBtn: document.getElementById('new-batch-btn'),
@@ -33,6 +36,12 @@ const elements = {
     loading: document.getElementById('loading'),
     loadingText: document.getElementById('loading-text'),
     toast: document.getElementById('toast'),
+    modeUploadBtn: document.getElementById('mode-upload'),
+    modeLocalBtn: document.getElementById('mode-local'),
+    localPathInput: document.getElementById('local-path-input'),
+    localRecursive: document.getElementById('local-recursive'),
+    browseFolderBtn: document.getElementById('browse-folder-btn'),
+    processLocalBtn: document.getElementById('process-local-btn'),
 };
 
 // ==================== Theme Management ====================
@@ -87,9 +96,31 @@ function showToast(message, type = 'success') {
 
 function showSection(section) {
     elements.uploadSection.classList.add('hidden');
+    elements.localSection.classList.add('hidden');
     elements.configSection.classList.add('hidden');
     elements.resultsSection.classList.add('hidden');
     section.classList.remove('hidden');
+}
+
+// ==================== Mode Switching ====================
+
+function switchMode(mode) {
+    // Update button states
+    elements.modeUploadBtn.classList.remove('active');
+    elements.modeLocalBtn.classList.remove('active');
+
+    if (mode === 'upload') {
+        elements.modeUploadBtn.classList.add('active');
+        showSection(elements.uploadSection);
+    } else {
+        elements.modeLocalBtn.classList.add('active');
+        showSection(elements.localSection);
+        // Auto-focus the path input when switching to local mode
+        setTimeout(() => elements.localPathInput.focus(), 100);
+    }
+
+    // Reset state
+    resetApp();
 }
 
 function formatFileSize(bytes) {
@@ -309,6 +340,135 @@ function displayResults(data, isPreview) {
             </div>
         `;
     }).join('');
+
+    // Button visibility logic
+    if (isPreview) {
+        // After preview: show "Rename Files" button, hide "Download" button
+        elements.renameFilesBtn.classList.remove('hidden');
+        elements.downloadBtn.classList.add('hidden');
+    } else {
+        // After actual rename: hide "Rename Files" button, show "Download" button if files were renamed
+        elements.renameFilesBtn.classList.add('hidden');
+        if (data.renamed > 0) {
+            elements.downloadBtn.classList.remove('hidden');
+        } else {
+            elements.downloadBtn.classList.add('hidden');
+        }
+    }
+}
+
+async function downloadFiles() {
+    if (!state.sessionId) {
+        showToast('No session found', 'error');
+        return;
+    }
+
+    showLoading('Preparing download...');
+
+    try {
+        const response = await fetch(`/api/download/${state.sessionId}`, {
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            throw new Error('Download failed');
+        }
+
+        // Create blob from response
+        const blob = await response.blob();
+
+        // Create download link
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `renamed-files-${new Date().toISOString().slice(0, 10)}.zip`;
+        document.body.appendChild(a);
+        a.click();
+
+        // Cleanup
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+
+        showToast('Download started');
+    } catch (error) {
+        console.error('Download error:', error);
+        showToast('Download failed. Please try again.', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+// ==================== Local Directory Processing ====================
+
+async function processLocalDirectory(dryRun = true) {
+    const path = elements.localPathInput.value.trim();
+
+    if (!path) {
+        showToast('Please enter a directory path', 'error');
+        return;
+    }
+
+    const template = elements.templateInput.value.trim() || '{artist} - {title}{mix_paren}{kb}';
+    const recursive = elements.localRecursive.checked;
+
+    showLoading(dryRun ? 'Generating preview...' : 'Renaming files...');
+
+    try {
+        const response = await fetch('/api/rename-local', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                path: path,
+                template: template,
+                dry_run: dryRun,
+                recursive: recursive,
+            }),
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Operation failed');
+        }
+
+        const data = await response.json();
+
+        // Show config section with template if not already shown
+        if (elements.configSection.classList.contains('hidden')) {
+            elements.templateInput.value = template;
+            showSection(elements.configSection);
+        }
+
+        // Display results
+        displayResults(data, dryRun);
+        showSection(elements.resultsSection);
+
+        if (dryRun) {
+            showToast(`Preview: ${data.total} file(s) found`);
+        } else {
+            showToast(`Successfully renamed ${data.renamed} file(s)`);
+        }
+    } catch (error) {
+        console.error('Process error:', error);
+        showToast(error.message, 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+async function previewLocalDirectory() {
+    await processLocalDirectory(true);
+}
+
+async function renameLocalDirectory() {
+    const confirmed = confirm(
+        'This will rename files in your local directory. Are you sure?'
+    );
+
+    if (!confirmed) return;
+
+    await processLocalDirectory(false);
 }
 
 function resetApp() {
@@ -319,6 +479,8 @@ function resetApp() {
     elements.fileList.classList.add('hidden');
     elements.templateInput.value = '';
     elements.renameBtn.disabled = true;
+    elements.renameFilesBtn.classList.add('hidden');
+    elements.downloadBtn.classList.add('hidden');
     showSection(elements.uploadSection);
 }
 
@@ -364,6 +526,33 @@ elements.uploadZone.addEventListener('click', (e) => {
 // Preview and rename buttons
 elements.previewBtn.addEventListener('click', previewRename);
 elements.renameBtn.addEventListener('click', executeRename);
+elements.renameFilesBtn.addEventListener('click', () => {
+    // Check if we're in local mode or upload mode
+    if (elements.localPathInput.value.trim()) {
+        renameLocalDirectory();
+    } else {
+        executeRename();
+    }
+});
+
+// Download button
+elements.downloadBtn.addEventListener('click', downloadFiles);
+
+// Mode switching
+elements.modeUploadBtn.addEventListener('click', () => switchMode('upload'));
+elements.modeLocalBtn.addEventListener('click', () => switchMode('local'));
+
+// Local directory processing
+elements.processLocalBtn.addEventListener('click', previewLocalDirectory);
+
+// Quick path buttons
+document.querySelectorAll('.btn-quick-path').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const path = btn.dataset.path;
+        elements.localPathInput.value = path;
+        elements.localPathInput.focus();
+    });
+});
 
 // New batch button
 elements.newBatchBtn.addEventListener('click', () => {

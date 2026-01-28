@@ -33,10 +33,21 @@ setup(
             "mypy>=1.4.0",
             "ruff>=0.0.280",
         ],
+        "tui": [
+            "textual>=0.47.0",
+            "rich>=13.7.0",
+        ],
+        "web": [
+            "fastapi>=0.104.0",
+            "uvicorn>=0.24.0",
+            "python-multipart>=0.0.6",
+            "aiofiles>=23.2.0",
+        ],
     },
     entry_points={
         "console_scripts": [
             "dj-mp3-renamer=dj_mp3_renamer.cli.main:main",
+            "dj-mp3-renamer-tui=dj_mp3_renamer.tui:run_tui",
         ],
     },
     classifiers=[
