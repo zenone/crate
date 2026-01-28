@@ -35,11 +35,135 @@ from textual.widgets import (
 # Import existing API (maintains API-first architecture)
 from ..api import RenamerAPI, RenameRequest, RenameStatus
 from ..core.template import DEFAULT_TEMPLATE
+from ..core.config import load_config, save_config
 
 
 class OperationCancelled(Exception):
     """Raised when user cancels a long-running operation."""
     pass
+
+
+class SettingsScreen(ModalScreen):
+    """Modal screen for managing user settings."""
+
+    CSS = """
+    SettingsScreen {
+        align: center middle;
+    }
+
+    #settings-container {
+        width: 90;
+        height: auto;
+        background: $panel;
+        border: thick $primary;
+        padding: 2;
+    }
+
+    #settings-title {
+        text-align: center;
+        text-style: bold;
+        color: $accent;
+        margin-bottom: 1;
+    }
+
+    .setting-label {
+        margin-top: 1;
+        margin-bottom: 0;
+        color: $text;
+    }
+
+    .setting-help {
+        margin-bottom: 1;
+        color: $text-muted;
+        text-style: italic;
+    }
+
+    #settings-buttons {
+        margin-top: 2;
+        align: center middle;
+    }
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.config = load_config()
+
+    def compose(self) -> ComposeResult:
+        """Create the settings layout."""
+        with Center():
+            with Vertical(id="settings-container"):
+                yield Label("⚙️ Settings", id="settings-title")
+
+                yield Label("AcoustID API Key:", classes="setting-label")
+                yield Static(
+                    "[dim]For MusicBrainz database lookups. Get your own key at: https://acoustid.org/api-key[/dim]",
+                    classes="setting-help"
+                )
+                yield Input(
+                    value=self.config.get("acoustid_api_key", ""),
+                    placeholder="8XaBELgH (default public key)",
+                    id="api-key-input"
+                )
+
+                yield Label("MusicBrainz Database Lookup:", classes="setting-label")
+                yield Static(
+                    "[dim]Try database before audio analysis (faster but limited BPM/Key coverage)[/dim]",
+                    classes="setting-help"
+                )
+                yield Checkbox(
+                    "Enable MusicBrainz lookup",
+                    value=self.config.get("enable_musicbrainz", False),
+                    id="musicbrainz-check"
+                )
+
+                yield Label("Auto-Detection Preferences:", classes="setting-label")
+                yield Static(
+                    "[dim]Choose what to auto-detect when missing from ID3 tags[/dim]",
+                    classes="setting-help"
+                )
+                yield Checkbox(
+                    "Auto-detect BPM",
+                    value=self.config.get("auto_detect_bpm", True),
+                    id="auto-bpm-check"
+                )
+                yield Checkbox(
+                    "Auto-detect Key",
+                    value=self.config.get("auto_detect_key", True),
+                    id="auto-key-check"
+                )
+
+                with Horizontal(id="settings-buttons"):
+                    yield Button("Save Settings", variant="success", id="save-settings-btn")
+                    yield Button("Cancel", variant="default", id="cancel-settings-btn")
+
+    @on(Button.Pressed, "#save-settings-btn")
+    def save_settings(self) -> None:
+        """Save settings to config file."""
+        # Get values from inputs
+        api_key = self.query_one("#api-key-input", Input).value.strip()
+        enable_mb = self.query_one("#musicbrainz-check", Checkbox).value
+        auto_bpm = self.query_one("#auto-bpm-check", Checkbox).value
+        auto_key = self.query_one("#auto-key-check", Checkbox).value
+
+        # Update config
+        self.config["acoustid_api_key"] = api_key or "8XaBELgH"
+        self.config["enable_musicbrainz"] = enable_mb
+        self.config["auto_detect_bpm"] = auto_bpm
+        self.config["auto_detect_key"] = auto_key
+
+        # Save to file
+        if save_config(self.config):
+            self.app.notify("✓ Settings saved successfully!", severity="information", timeout=3)
+            # Reload config in API
+            self.app.api.config = load_config()
+            self.dismiss()
+        else:
+            self.app.notify("Failed to save settings", severity="error", timeout=3)
+
+    @on(Button.Pressed, "#cancel-settings-btn")
+    def cancel_settings(self) -> None:
+        """Close settings without saving."""
+        self.dismiss()
 
 
 class StatsPanel(Static):
@@ -117,6 +241,7 @@ class ResultsPanel(Static):
             source_map = {
                 "Analyzed": "AI Audio",
                 "Database": "MusicBrainz",
+                "MusicBrainz": "MusicBrainz",  # Direct return from audio_analysis
                 "ID3": "Tags",
                 "Failed": "Failed",
                 "Unavailable": "N/A",
@@ -466,6 +591,7 @@ class DJRenameTUI(App):
                 with Horizontal(id="button-row"):
                     yield Button("Preview (P)", variant="primary", id="preview-btn")
                     yield Button("Rename Files (R)", variant="success", id="rename-btn")
+                    yield Button("Settings", variant="default", id="settings-btn")
                     yield Button("Reset (Ctrl+R)", variant="default", id="reset-btn")
                     yield Button("Quit (Q)", variant="error", id="quit-btn")
 
@@ -568,6 +694,11 @@ class DJRenameTUI(App):
 
         self.last_status = None
         self.query_one("#path-input", Input).focus()
+
+    @on(Button.Pressed, "#settings-btn")
+    async def handle_settings_button(self) -> None:
+        """Handle settings button press."""
+        await self.push_screen(SettingsScreen())
 
     @on(Button.Pressed, "#quit-btn")
     def handle_quit_button(self) -> None:

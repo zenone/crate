@@ -24,8 +24,8 @@ except ImportError:
     LIBROSA_AVAILABLE = False
 
 
-# AcoustID API key (free tier)
-ACOUSTID_API_KEY = "8XaBELgH"  # Free public key for open-source projects
+# Default AcoustID API key (free tier, can be overridden in config)
+DEFAULT_ACOUSTID_API_KEY = "8XaBELgH"  # Free public key for open-source projects
 
 
 def detect_bpm_from_audio(file_path: Path, logger: logging.Logger) -> Tuple[Optional[str], str]:
@@ -168,7 +168,7 @@ def detect_key_from_audio(file_path: Path, logger: logging.Logger) -> Tuple[Opti
         return None, "Failed"
 
 
-def lookup_acoustid(file_path: Path, logger: logging.Logger) -> Tuple[Optional[dict], str]:
+def lookup_acoustid(file_path: Path, logger: logging.Logger, api_key: Optional[str] = None) -> Tuple[Optional[dict], str]:
     """
     Lookup track metadata using AcoustID fingerprinting.
 
@@ -177,6 +177,7 @@ def lookup_acoustid(file_path: Path, logger: logging.Logger) -> Tuple[Optional[d
     Args:
         file_path: Path to audio file
         logger: Logger instance
+        api_key: AcoustID API key (uses default if not provided)
 
     Returns:
         Tuple of (metadata_dict, source)
@@ -190,9 +191,12 @@ def lookup_acoustid(file_path: Path, logger: logging.Logger) -> Tuple[Optional[d
         logger.debug("acoustid not installed - skipping database lookup")
         return None, "Unavailable"
 
+    # Use provided key or default
+    key_to_use = api_key or DEFAULT_ACOUSTID_API_KEY
+
     try:
         # Generate audio fingerprint and lookup
-        results = acoustid.match(ACOUSTID_API_KEY, str(file_path))
+        results = acoustid.match(key_to_use, str(file_path))
 
         for score, recording_id, title, artist in results:
             # Score is confidence (0.0 to 1.0)
@@ -225,14 +229,16 @@ def auto_detect_metadata(
     current_bpm: str,
     current_key: str,
     logger: logging.Logger,
-    force_analysis: bool = False
+    force_analysis: bool = False,
+    enable_musicbrainz: bool = False,
+    acoustid_api_key: Optional[str] = None
 ) -> Tuple[str, str, str, str]:
     """
     Auto-detect BPM and Key with smart hybrid approach.
 
     Strategy:
     1. Use existing values if present (skip detection)
-    2. Try database lookup first (fast)
+    2. Try database lookup first (fast, if enabled)
     3. Fall back to audio analysis (slower but accurate)
 
     Args:
@@ -241,6 +247,8 @@ def auto_detect_metadata(
         current_key: Current key value (may be empty)
         logger: Logger instance
         force_analysis: If True, always run analysis even if values exist
+        enable_musicbrainz: If True, try MusicBrainz lookup before audio analysis
+        acoustid_api_key: AcoustID API key (uses default if not provided)
 
     Returns:
         Tuple of (bpm, bpm_source, key, key_source)
@@ -266,11 +274,26 @@ def auto_detect_metadata(
         return bpm, bpm_source, key, key_source
 
     # Try database lookup first (fast but may not have BPM/Key)
-    # Note: AcoustID/MusicBrainz free tier has limited BPM/Key data
-    # Commenting out for now - go straight to audio analysis
-    # db_result, db_source = lookup_acoustid(file_path, logger)
+    if enable_musicbrainz and (needs_bpm or needs_key):
+        logger.info(f"Trying MusicBrainz lookup for: {file_path.name}")
+        db_result, db_source = lookup_acoustid(file_path, logger, acoustid_api_key)
 
-    # Audio analysis fallback (always works)
+        if db_result and db_source == "Database":
+            # MusicBrainz rarely has BPM/Key in free tier
+            # But if it does, use it (saves 5-10 sec of audio analysis)
+            if needs_bpm and db_result.get("bpm"):
+                bpm = db_result["bpm"]
+                bpm_source = "MusicBrainz"
+                needs_bpm = False  # Got it from database
+                logger.info(f"  Found BPM in MusicBrainz: {bpm}")
+
+            if needs_key and db_result.get("key"):
+                key = db_result["key"]
+                key_source = "MusicBrainz"
+                needs_key = False  # Got it from database
+                logger.info(f"  Found Key in MusicBrainz: {key}")
+
+    # Audio analysis fallback (always works, used if DB didn't have data)
     if needs_bpm:
         logger.info(f"Detecting BPM for: {file_path.name}")
         detected_bpm, bpm_source = detect_bpm_from_audio(file_path, logger)

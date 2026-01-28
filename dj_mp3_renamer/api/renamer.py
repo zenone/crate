@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from ..core.audio_analysis import auto_detect_metadata
+from ..core.config import load_config
 from ..core.io import ReservationBook, find_mp3s, read_mp3_metadata, write_bpm_key_to_tags
 from ..core.key_conversion import to_camelot
 from ..core.sanitization import safe_filename
@@ -35,6 +36,7 @@ class RenamerAPI:
         """
         self.workers = max(1, workers)
         self.logger = logger or logging.getLogger("dj_mp3_renamer")
+        self.config = load_config()  # Load user configuration
 
     def rename_files(self, request: RenameRequest) -> RenameStatus:
         """
@@ -202,11 +204,14 @@ class RenamerAPI:
                     self.logger.info(f"Auto-detecting metadata for: {src.name}")
 
                     # Run detection (wrapped in try/except for safety)
+                    # Pass config values for MusicBrainz and API key
                     detected_bpm, bpm_source, detected_key, key_source = auto_detect_metadata(
                         src,
                         meta.get("bpm", ""),
                         meta.get("key", ""),
-                        self.logger
+                        self.logger,
+                        enable_musicbrainz=self.config.get("enable_musicbrainz", False),
+                        acoustid_api_key=self.config.get("acoustid_api_key")
                     )
 
                     # Update metadata dict
