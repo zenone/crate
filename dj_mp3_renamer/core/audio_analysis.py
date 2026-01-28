@@ -57,8 +57,10 @@ def detect_bpm_from_audio(file_path: Path, logger: logging.Logger) -> Tuple[Opti
         # Detect tempo (BPM)
         tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
 
-        # Round to nearest integer
-        bpm = int(round(tempo))
+        # Convert to Python scalar if numpy array, then round to nearest integer
+        if hasattr(tempo, 'item'):
+            tempo = tempo.item()
+        bpm = int(round(float(tempo)))
 
         # Validate range (typical DJ BPM range: 60-200)
         if 60 <= bpm <= 200:
