@@ -67,6 +67,8 @@ class ResultsPanel(Static):
             row_styles=["", "dim"],  # Alternating row styles for better readability
         )
 
+        # Row number column for verification and accessibility
+        table.add_column("#", justify="right", style="dim", width=4)
         table.add_column("Status", style="dim", width=8)
         table.add_column("Original", style="cyan", no_wrap=False)
         table.add_column("→", justify="center", width=3)
@@ -79,7 +81,7 @@ class ResultsPanel(Static):
         # Show more results for better preview (increased from 50 to 200)
         display_limit = min(200, len(status.results))
 
-        for result in status.results[:display_limit]:
+        for idx, result in enumerate(status.results[:display_limit], start=1):
             if result.status == "renamed":
                 status_icon = "✓" if not is_preview else "→"
                 status_style = "green"
@@ -113,6 +115,7 @@ class ResultsPanel(Static):
                 source = "ID3"
 
             table.add_row(
+                str(idx),  # Row number for verification
                 f"[{status_style}]{status_icon}[/{status_style}]",
                 result.src.name,
                 "→" if result.dst else "",
