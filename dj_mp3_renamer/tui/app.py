@@ -69,7 +69,7 @@ class ResultsPanel(Static):
             title=f"Rename Results - {mode}",
             show_header=True,
             header_style="bold magenta",
-            box=box.HORIZONTALS,  # Horizontal lines between every row for clarity
+            box=box.SIMPLE,  # Simple box with horizontal lines between rows
             row_styles=["", "dim"],  # Alternating row styles for better readability
         )
 

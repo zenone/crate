@@ -97,6 +97,10 @@ class RenamerAPI:
                     try:
                         request.progress_callback(processed_count, result.src.name)
                     except Exception as cb_err:
+                        # Check if this is a cancellation request (exception name contains "cancel")
+                        if "cancel" in type(cb_err).__name__.lower():
+                            self.logger.info(f"Operation cancelled via progress callback")
+                            raise  # Re-raise cancellation exceptions to stop processing
                         self.logger.warning(f"Progress callback error: {cb_err}")
 
         # Compute stats
