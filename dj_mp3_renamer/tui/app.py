@@ -5,13 +5,16 @@ Modern TUI using Textual framework - API-first architecture maintained
 
 from pathlib import Path
 from typing import Optional
+import time
 
 from rich.syntax import Syntax
 from rich.table import Table
-from textual import on
+from rich import box
+from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical, VerticalScroll
+from textual.containers import Container, Horizontal, Vertical, VerticalScroll, Center
+from textual.screen import ModalScreen
 from textual.widgets import (
     Button,
     Checkbox,
@@ -21,6 +24,7 @@ from textual.widgets import (
     Header,
     Input,
     Label,
+    ProgressBar,
     Static,
     TabbedContent,
     TabPane,
@@ -58,6 +62,8 @@ class ResultsPanel(Static):
             title=f"Rename Results - {mode}",
             show_header=True,
             header_style="bold magenta",
+            box=box.SIMPLE_HEAVY,  # Horizontal lines between rows for clarity
+            row_styles=["", "dim"],  # Alternating row styles for better readability
         )
 
         table.add_column("Status", style="dim", width=8)
@@ -124,6 +130,125 @@ class ResultsPanel(Static):
             )
 
         self.update(table)
+
+
+class ProgressOverlay(ModalScreen):
+    """Modal overlay showing processing progress with real-time updates."""
+
+    CSS = """
+    ProgressOverlay {
+        align: center middle;
+    }
+
+    #progress-container {
+        width: 80;
+        height: auto;
+        background: $panel;
+        border: thick $primary;
+        padding: 2;
+    }
+
+    #progress-title {
+        text-align: center;
+        text-style: bold;
+        color: $accent;
+        margin-bottom: 1;
+    }
+
+    #progress-bar {
+        margin: 1 0;
+    }
+
+    #progress-status {
+        text-align: center;
+        margin: 1 0;
+    }
+
+    #progress-current {
+        text-align: center;
+        color: $text-muted;
+        text-style: italic;
+        margin: 1 0;
+    }
+
+    #progress-time {
+        text-align: center;
+        color: $warning;
+        margin: 1 0;
+    }
+
+    #progress-speed {
+        text-align: center;
+        color: $success;
+        margin-top: 1;
+    }
+    """
+
+    def __init__(self, title: str, total_files: int):
+        super().__init__()
+        self.title_text = title
+        self.total_files = total_files
+        self.processed = 0
+        self.start_time = time.time()
+        self.current_file = ""
+
+    def compose(self) -> ComposeResult:
+        """Create the progress overlay layout."""
+        with Center():
+            with Vertical(id="progress-container"):
+                yield Label(self.title_text, id="progress-title")
+                yield ProgressBar(total=self.total_files, show_eta=False, id="progress-bar")
+                yield Label(f"Processing: 0 / {self.total_files} files", id="progress-status")
+                yield Label("", id="progress-current")
+                yield Label("Estimated time remaining: calculating...", id="progress-time")
+                yield Label("", id="progress-speed")
+
+    def update_progress(self, processed: int, current_file: str = ""):
+        """Update progress bar and status text."""
+        self.processed = processed
+        self.current_file = current_file
+
+        # Update progress bar
+        progress_bar = self.query_one("#progress-bar", ProgressBar)
+        progress_bar.update(progress=processed)
+
+        # Update status text
+        status_label = self.query_one("#progress-status", Label)
+        percentage = (processed / self.total_files * 100) if self.total_files > 0 else 0
+        status_label.update(f"Processing: {processed} / {self.total_files} files ({percentage:.0f}%)")
+
+        # Update current file
+        current_label = self.query_one("#progress-current", Label)
+        if current_file:
+            # Truncate long filenames
+            display_name = current_file if len(current_file) < 60 else current_file[:57] + "..."
+            current_label.update(f"Current: {display_name}")
+        else:
+            current_label.update("")
+
+        # Calculate time estimates
+        elapsed = time.time() - self.start_time
+        if processed > 0:
+            files_per_second = processed / elapsed
+            remaining_files = self.total_files - processed
+
+            if files_per_second > 0:
+                remaining_seconds = remaining_files / files_per_second
+                remaining_minutes = remaining_seconds / 60
+
+                time_label = self.query_one("#progress-time", Label)
+                if remaining_minutes < 1:
+                    time_label.update(f"Estimated time remaining: {int(remaining_seconds)} seconds")
+                elif remaining_minutes < 60:
+                    time_label.update(f"Estimated time remaining: {int(remaining_minutes)} minutes")
+                else:
+                    hours = int(remaining_minutes / 60)
+                    minutes = int(remaining_minutes % 60)
+                    time_label.update(f"Estimated time remaining: {hours}h {minutes}m")
+
+                # Update speed
+                speed_label = self.query_one("#progress-speed", Label)
+                speed_label.update(f"Speed: {files_per_second:.1f} files/second")
 
 
 class DJRenameTUI(App):
@@ -414,33 +539,31 @@ class DJRenameTUI(App):
 
         self.current_path = path
 
-        # Quick file count estimation for progress notice
+        # Quick file count estimation for progress
         from ..core.io import find_mp3s
         mp3_files = find_mp3s(path, recursive=recursive)
         file_count = len(mp3_files)
 
-        # Smart progress notification based on file count and auto-detect
-        mode = "Previewing" if dry_run else "Renaming"
-        if auto_detect and file_count > 0:
-            # Estimate processing time (rough: 8 seconds per file with auto-detect)
-            estimated_minutes = (file_count * 8) / 60
-            if file_count > 50:
-                self.notify(
-                    f"{mode} {file_count} files with auto-detection... Estimated time: {int(estimated_minutes)}-{int(estimated_minutes * 1.5)} minutes. Files already processed will be instant.",
-                    timeout=8,
-                    severity="warning"
-                )
-            elif file_count > 10:
-                self.notify(
-                    f"{mode} {file_count} files with auto-detection... This may take {int(estimated_minutes)}-{int(estimated_minutes * 1.5)} minutes",
-                    timeout=5
-                )
-            else:
-                self.notify(f"{mode} {file_count} files with auto-detection...", timeout=3)
-        else:
-            self.notify(f"{mode} {file_count} files...", timeout=2)
+        if file_count == 0:
+            self.notify("No MP3 files found in directory", severity="warning")
+            return
 
-        # Call the API (maintains API-first architecture)
+        # Show progress overlay
+        mode = "Previewing Changes" if dry_run else "Renaming Files"
+        progress_screen = ProgressOverlay(mode, file_count)
+
+        def progress_callback(processed: int, filename: str):
+            """Update progress overlay from API callback."""
+            try:
+                if progress_screen in self.screen_stack:
+                    progress_screen.update_progress(processed, filename)
+            except Exception:
+                pass  # Ignore errors updating progress
+
+        # Push progress overlay
+        await self.push_screen(progress_screen)
+
+        # Call the API in background (maintains API-first architecture)
         try:
             request = RenameRequest(
                 path=path,
@@ -448,10 +571,15 @@ class DJRenameTUI(App):
                 dry_run=dry_run,
                 template=template or DEFAULT_TEMPLATE,
                 auto_detect=auto_detect,
+                progress_callback=progress_callback,
             )
 
-            status = self.api.rename_files(request)
+            # Run API call (blocking but progress overlay remains responsive)
+            status = await self.run_in_executor(None, self.api.rename_files, request)
             self.last_status = status
+
+            # Dismiss progress overlay
+            self.pop_screen()
 
             # Update UI
             stats = self.query_one("#stats-panel", StatsPanel)
@@ -468,16 +596,24 @@ class DJRenameTUI(App):
             # Notify
             if dry_run:
                 self.notify(
-                    f"Preview: {status.renamed} files will be renamed",
+                    f"Preview complete: {status.renamed} files will be renamed, {status.skipped} skipped",
                     severity="information",
+                    timeout=5
                 )
             else:
                 self.notify(
                     f"✓ Successfully renamed {status.renamed} files!",
                     severity="success",
+                    timeout=5
                 )
 
         except Exception as e:
+            # Dismiss progress overlay on error
+            try:
+                self.pop_screen()
+            except Exception:
+                pass
+
             self.notify(f"Error: {e}", severity="error")
             self.log.error(f"Processing error: {e}", exc_info=True)
 

@@ -4,7 +4,7 @@ Data models for the API layer.
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Callable, Optional
 
 
 @dataclass(frozen=True)
@@ -16,6 +16,7 @@ class RenameRequest:
     dry_run: bool = False
     template: Optional[str] = None
     auto_detect: bool = True  # Auto-detect BPM/Key if missing
+    progress_callback: Optional[Callable[[int, str], None]] = None  # Called after each file: (count, filename)
 
 
 @dataclass(frozen=True)

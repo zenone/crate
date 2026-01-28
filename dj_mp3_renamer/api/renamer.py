@@ -86,9 +86,18 @@ class RenamerAPI:
                 for src in mp3s
             ]
 
+            processed_count = 0
             for future in as_completed(futures):
                 result = future.result()
                 results.append(result)
+
+                # Call progress callback if provided
+                processed_count += 1
+                if request.progress_callback:
+                    try:
+                        request.progress_callback(processed_count, result.src.name)
+                    except Exception as cb_err:
+                        self.logger.warning(f"Progress callback error: {cb_err}")
 
         # Compute stats
         renamed = sum(1 for r in results if r.status == "renamed")
