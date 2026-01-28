@@ -69,8 +69,11 @@ class ResultsPanel(Static):
             title=f"Rename Results - {mode}",
             show_header=True,
             header_style="bold magenta",
-            box=box.SIMPLE,  # Simple box with horizontal lines between rows
+            box=box.ROUNDED,  # Rounded box style
+            show_lines=True,  # Show horizontal lines between every row
             row_styles=["", "dim"],  # Alternating row styles for better readability
+            caption="[dim italic]Source Legend: Tags=ID3 metadata | AI Audio=Auto-detected via audio analysis | MusicBrainz=Database lookup[/dim italic]",
+            caption_justify="left",
         )
 
         # Row number column for verification and accessibility
@@ -107,18 +110,30 @@ class ResultsPanel(Static):
             year = meta.get("year", "-")
 
             # Determine source (prioritize detection sources)
-            bpm_source = meta.get("bpm_source", "ID3" if meta else "-")
-            key_source = meta.get("key_source", "ID3" if meta else "-")
+            bpm_source = meta.get("bpm_source", "Tags" if meta else "-")
+            key_source = meta.get("key_source", "Tags" if meta else "-")
+
+            # Map internal names to user-friendly display names
+            source_map = {
+                "Analyzed": "AI Audio",
+                "Database": "MusicBrainz",
+                "ID3": "Tags",
+                "Failed": "Failed",
+                "Unavailable": "N/A",
+            }
 
             # Show combined source or most relevant one
             if bpm_source == key_source:
-                source = bpm_source
+                raw_source = bpm_source
             elif bpm_source == "Analyzed" or key_source == "Analyzed":
-                source = "Analyzed"
+                raw_source = "Analyzed"
             elif bpm_source == "Database" or key_source == "Database":
-                source = "Database"
+                raw_source = "Database"
             else:
-                source = "ID3"
+                raw_source = "ID3"
+
+            # Convert to user-friendly name
+            source = source_map.get(raw_source, raw_source)
 
             table.add_row(
                 str(idx),  # Row number for verification
