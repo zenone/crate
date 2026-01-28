@@ -63,20 +63,20 @@ class ResultsPanel(Static):
             title=f"Rename Results - {mode}",
             show_header=True,
             header_style="bold magenta",
-            box=box.SIMPLE_HEAVY,  # Horizontal lines between rows for clarity
+            box=box.HORIZONTALS,  # Horizontal lines between every row for clarity
             row_styles=["", "dim"],  # Alternating row styles for better readability
         )
 
         # Row number column for verification and accessibility
         table.add_column("#", justify="right", style="dim", width=4)
-        table.add_column("Status", style="dim", width=8)
+        table.add_column("Status", style="dim", width=3)
         table.add_column("Original", style="cyan", no_wrap=False)
         table.add_column("→", justify="center", width=3)
         table.add_column("New Name", style="green", no_wrap=False)
         table.add_column("BPM", justify="right", style="yellow", width=4)
         table.add_column("Key", justify="center", style="magenta", width=6)
         table.add_column("Year", justify="center", style="blue", width=4)
-        table.add_column("Source", style="dim", width=6)
+        table.add_column("Source", style="dim", width=10)
 
         # Show more results for better preview (increased from 50 to 200)
         display_limit = min(200, len(status.results))
