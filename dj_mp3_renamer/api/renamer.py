@@ -10,7 +10,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional, Tuple
 
-from ..core.io import ReservationBook, find_mp3s, read_mp3_metadata
+from ..core.audio_analysis import auto_detect_metadata
+from ..core.io import ReservationBook, find_mp3s, read_mp3_metadata, write_bpm_key_to_tags
+from ..core.key_conversion import to_camelot
 from ..core.sanitization import safe_filename
 from ..core.template import DEFAULT_TEMPLATE, build_default_components, build_filename_from_template
 from .models import RenameRequest, RenameResult, RenameStatus
@@ -79,6 +81,7 @@ class RenamerAPI:
                     request.dry_run,
                     template,
                     book,
+                    request.auto_detect,
                 )
                 for src in mp3s
             ]
@@ -106,6 +109,7 @@ class RenamerAPI:
         dry_run: bool,
         template: str,
         book: ReservationBook,
+        auto_detect: bool,
     ) -> RenameResult:
         """
         Rename a single file.
@@ -115,12 +119,13 @@ class RenamerAPI:
             dry_run: If True, don't actually rename
             template: Filename template
             book: ReservationBook for collision handling
+            auto_detect: If True, auto-detect BPM/Key if missing
 
         Returns:
             RenameResult
         """
         try:
-            dst, reason, meta = self._derive_target(src, template, book)
+            dst, reason, meta = self._derive_target(src, template, book, auto_detect)
 
             if dst is None:
                 self.logger.info("SKIP  %s  (%s)", src.name, reason)
@@ -144,6 +149,7 @@ class RenamerAPI:
         src: Path,
         template: str,
         book: ReservationBook,
+        auto_detect: bool,
     ) -> Tuple[Optional[Path], Optional[str], Optional[dict]]:
         """
         Derive target path for a source file.
@@ -152,6 +158,7 @@ class RenamerAPI:
             src: Source file path
             template: Filename template
             book: ReservationBook
+            auto_detect: If True, auto-detect BPM/Key if missing
 
         Returns:
             Tuple of (target_path, error_message, metadata)
@@ -160,6 +167,45 @@ class RenamerAPI:
         if err:
             return None, err, None
         assert meta is not None
+
+        # Auto-detect BPM/Key if missing and auto_detect is enabled
+        if auto_detect:
+            needs_bpm = not meta.get("bpm", "").strip()
+            needs_key = not meta.get("key", "").strip()
+
+            if needs_bpm or needs_key:
+                self.logger.info(f"Auto-detecting metadata for: {src.name}")
+
+                # Run detection
+                detected_bpm, bpm_source, detected_key, key_source = auto_detect_metadata(
+                    src,
+                    meta.get("bpm", ""),
+                    meta.get("key", ""),
+                    self.logger
+                )
+
+                # Update metadata dict
+                if needs_bpm and detected_bpm:
+                    meta["bpm"] = detected_bpm
+                    meta["bpm_source"] = bpm_source
+                    self.logger.info(f"  Detected BPM: {detected_bpm} (source: {bpm_source})")
+
+                if needs_key and detected_key:
+                    meta["key"] = detected_key
+                    meta["camelot"] = to_camelot(detected_key) if detected_key else ""
+                    meta["key_source"] = key_source
+                    self.logger.info(f"  Detected Key: {detected_key} (source: {key_source})")
+
+                # Write detected values to ID3 tags (permanent storage)
+                if (needs_bpm and detected_bpm) or (needs_key and detected_key):
+                    write_success = write_bpm_key_to_tags(
+                        src,
+                        detected_bpm if needs_bpm else None,
+                        detected_key if needs_key else None,
+                        self.logger
+                    )
+                    if write_success:
+                        self.logger.info(f"  Saved detected metadata to ID3 tags")
 
         tokens = build_default_components(meta)
         expanded = build_filename_from_template(tokens, template)

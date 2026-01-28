@@ -91,8 +91,19 @@ class ResultsPanel(Static):
             key_display = f"{key} {camelot}" if camelot else key
             year = meta.get("year", "-")
 
-            # All metadata comes from ID3 tags (for now)
-            source = "ID3" if meta else "-"
+            # Determine source (prioritize detection sources)
+            bpm_source = meta.get("bpm_source", "ID3" if meta else "-")
+            key_source = meta.get("key_source", "ID3" if meta else "-")
+
+            # Show combined source or most relevant one
+            if bpm_source == key_source:
+                source = bpm_source
+            elif bpm_source == "Analyzed" or key_source == "Analyzed":
+                source = "Analyzed"
+            elif bpm_source == "Database" or key_source == "Database":
+                source = "Database"
+            else:
+                source = "ID3"
 
             table.add_row(
                 f"[{status_style}]{status_icon}[/{status_style}]",

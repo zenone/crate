@@ -123,6 +123,72 @@ def read_mp3_metadata(
         return None, f"Metadata read error: {exc.__class__.__name__}"
 
 
+def write_bpm_key_to_tags(
+    path: Path,
+    bpm: Optional[str],
+    key: Optional[str],
+    logger: logging.Logger
+) -> bool:
+    """
+    Write BPM and Key to MP3 ID3 tags.
+
+    Args:
+        path: Path to MP3 file
+        bpm: BPM value to write (or None to skip)
+        key: Key value to write (or None to skip)
+        logger: Logger instance
+
+    Returns:
+        True if successful, False otherwise
+
+    Examples:
+        >>> logger = logging.getLogger("test")
+        >>> success = write_bpm_key_to_tags(Path("song.mp3"), "128", "D min", logger)
+    """
+    if MutagenFile is None:
+        logger.warning("Missing dependency: mutagen - cannot write tags")
+        return False
+
+    try:
+        audio = MutagenFile(path.as_posix(), easy=False)
+        if audio is None or not hasattr(audio, "tags"):
+            logger.warning(f"Cannot write tags to {path.name} - no tag support")
+            return False
+
+        tags = audio.tags
+        if tags is None:
+            logger.warning(f"No tags found in {path.name}")
+            return False
+
+        # Write BPM if provided
+        if bpm:
+            try:
+                # Import ID3 frame types
+                from mutagen.id3 import TBPM
+                tags["TBPM"] = TBPM(encoding=3, text=str(bpm))
+                logger.debug(f"Wrote BPM={bpm} to {path.name}")
+            except Exception as e:
+                logger.warning(f"Failed to write BPM: {e}")
+
+        # Write Key if provided
+        if key:
+            try:
+                from mutagen.id3 import TKEY
+                tags["TKEY"] = TKEY(encoding=3, text=str(key))
+                logger.debug(f"Wrote Key={key} to {path.name}")
+            except Exception as e:
+                logger.warning(f"Failed to write Key: {e}")
+
+        # Save changes to file
+        audio.save()
+        logger.info(f"Saved metadata to {path.name}")
+        return True
+
+    except Exception as exc:
+        logger.error(f"Failed to write tags to {path.name}: {exc}")
+        return False
+
+
 def find_mp3s(root: Path, recursive: bool) -> List[Path]:
     """
     Find MP3 files in a directory.

@@ -15,6 +15,7 @@ class RenameRequest:
     recursive: bool = False
     dry_run: bool = False
     template: Optional[str] = None
+    auto_detect: bool = True  # Auto-detect BPM/Key if missing
 
 
 @dataclass(frozen=True)
