@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DJ MP3 Renamer</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9 18V5l12-2v13"></path>
+                        <circle cx="6" cy="18" r="3"></circle>
+                        <circle cx="18" cy="16" r="3"></circle>
+                    </svg>
+                    <h1>DJ MP3 Renamer</h1>
+                </div>
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Step 1: Upload -->
+            <section id="upload-section" class="card">
+                <h2 class="section-title">
+                    <span class="step-number">1</span>
+                    Upload MP3 Files
+                </h2>
+                <div class="upload-zone" id="upload-zone">
+                    <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <p class="upload-text">Drag & drop MP3 files here</p>
+                    <p class="upload-subtext">or</p>
+                    <button class="btn btn-primary" id="browse-btn">Browse Files</button>
+                    <input type="file" id="file-input" accept=".mp3" multiple hidden>
+                </div>
+                <div id="file-list" class="file-list hidden"></div>
+            </section>
+
+            <!-- Step 2: Configure -->
+            <section id="config-section" class="card hidden">
+                <h2 class="section-title">
+                    <span class="step-number">2</span>
+                    Configure Template
+                </h2>
+                <div class="template-config">
+                    <label for="template-input" class="label">Filename Template</label>
+                    <input
+                        type="text"
+                        id="template-input"
+                        class="input"
+                        placeholder="{artist} - {title}{mix_paren}{kb}"
+                    >
+                    <div class="template-help">
+                        <details>
+                            <summary>Available tokens</summary>
+                            <div class="token-grid">
+                                <div class="token-item"><code>{artist}</code> - Artist name</div>
+                                <div class="token-item"><code>{title}</code> - Title</div>
+                                <div class="token-item"><code>{mix}</code> - Mix/remix</div>
+                                <div class="token-item"><code>{mix_paren}</code> - Mix in ()</div>
+                                <div class="token-item"><code>{bpm}</code> - BPM</div>
+                                <div class="token-item"><code>{key}</code> - Musical key</div>
+                                <div class="token-item"><code>{camelot}</code> - Camelot</div>
+                                <div class="token-item"><code>{kb}</code> - Key + BPM in []</div>
+                                <div class="token-item"><code>{year}</code> - Year</div>
+                                <div class="token-item"><code>{label}</code> - Label</div>
+                                <div class="token-item"><code>{album}</code> - Album</div>
+                                <div class="token-item"><code>{track}</code> - Track #</div>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="preview-btn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        Preview Changes
+                    </button>
+                    <button class="btn btn-success" id="rename-btn" disabled>
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                        Rename Files
+                    </button>
+                </div>
+            </section>
+
+            <!-- Step 3: Results -->
+            <section id="results-section" class="card hidden">
+                <h2 class="section-title">
+                    <span class="step-number">3</span>
+                    Results
+                </h2>
+                <div id="results-stats" class="stats-grid"></div>
+                <div id="results-list" class="results-list"></div>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary" id="new-batch-btn">
+                        <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="1 4 1 10 7 10"></polyline>
+                            <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                        </svg>
+                        Start New Batch
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>Powered by <strong>DJ MP3 Renamer API</strong> v2.0 |
+            <a href="https://github.com/yourusername/dj-mp3-renamer" target="_blank">GitHub</a></p>
+        </footer>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p id="loading-text">Processing...</p>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
