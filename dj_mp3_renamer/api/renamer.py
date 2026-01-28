@@ -87,21 +87,32 @@ class RenamerAPI:
             ]
 
             processed_count = 0
-            for future in as_completed(futures):
-                result = future.result()
-                results.append(result)
+            try:
+                for future in as_completed(futures):
+                    result = future.result()
+                    results.append(result)
 
-                # Call progress callback if provided
-                processed_count += 1
-                if request.progress_callback:
-                    try:
-                        request.progress_callback(processed_count, result.src.name)
-                    except Exception as cb_err:
-                        # Check if this is a cancellation request (exception name contains "cancel")
-                        if "cancel" in type(cb_err).__name__.lower():
-                            self.logger.info(f"Operation cancelled via progress callback")
-                            raise  # Re-raise cancellation exceptions to stop processing
-                        self.logger.warning(f"Progress callback error: {cb_err}")
+                    # Call progress callback if provided
+                    processed_count += 1
+                    if request.progress_callback:
+                        try:
+                            request.progress_callback(processed_count, result.src.name)
+                        except Exception as cb_err:
+                            # Check if this is a cancellation request (exception name contains "cancel")
+                            if "cancel" in type(cb_err).__name__.lower():
+                                self.logger.info(f"Operation cancelled via progress callback")
+                                # Cancel all pending futures before raising
+                                for f in futures:
+                                    if not f.done():
+                                        f.cancel()
+                                raise  # Re-raise cancellation exceptions to stop processing
+                            self.logger.warning(f"Progress callback error: {cb_err}")
+            except Exception:
+                # On any exception (including cancellation), cancel pending futures
+                for f in futures:
+                    if not f.done():
+                        f.cancel()
+                raise  # Re-raise the exception
 
         # Compute stats
         renamed = sum(1 for r in results if r.status == "renamed")

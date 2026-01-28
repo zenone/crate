@@ -160,6 +160,10 @@ class ResultsPanel(Static):
 class ProgressOverlay(ModalScreen):
     """Modal overlay showing processing progress with real-time updates."""
 
+    BINDINGS = [
+        Binding("c", "cancel", "Cancel", show=False),
+    ]
+
     CSS = """
     ProgressOverlay {
         align: center middle;
@@ -233,7 +237,7 @@ class ProgressOverlay(ModalScreen):
                 yield Label("Estimated time remaining: calculating...", id="progress-time")
                 yield Label("", id="progress-speed")
                 with Center():
-                    yield Button("Cancel", variant="error", id="cancel-btn")
+                    yield Button("Cancel (C)", variant="error", id="cancel-btn")
 
     def update_progress(self, processed: int, current_file: str = ""):
         """Update progress bar and status text."""
@@ -286,7 +290,12 @@ class ProgressOverlay(ModalScreen):
     def handle_cancel(self) -> None:
         """Handle cancel button press."""
         self.cancelled.set()  # Signal cancellation
-        self.dismiss()  # Close the overlay
+        # DO NOT dismiss here - let the exception handling in _process_files dismiss it
+        # Dismissing immediately removes from screen_stack and breaks cancellation check
+
+    def action_cancel(self) -> None:
+        """Handle 'c' key press to cancel."""
+        self.handle_cancel()
 
 
 class DJRenameTUI(App):
