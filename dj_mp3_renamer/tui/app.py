@@ -402,14 +402,14 @@ class DJRenameTUI(App):
                 yield Label("Template:", classes="help-text")
                 yield Input(
                     value=DEFAULT_TEMPLATE,
-                    placeholder="{artist} - {title}{mix_paren}{kb}",
+                    placeholder="{artist} - {title} [{camelot} {bpm}]",
                     id="template-input",
                 )
 
                 # Template variable helper
                 yield Static(
-                    "[dim italic]Available: "
-                    "{artist} {title} {bpm} {key} {camelot} {mix} {mix_paren} {kb} {year} {album} {label} {track}"
+                    "[dim italic]Available variables: "
+                    "{artist} {title} {bpm} {key} {camelot} {mix} {year} {album} {label} {track}"
                     "[/dim italic]",
                     id="template-helper"
                 )

@@ -11,7 +11,7 @@ from .metadata_parsing import strip_mix_from_title
 from .sanitization import squash_spaces
 
 
-DEFAULT_TEMPLATE = "{artist} - {title}{mix_paren}{kb}"
+DEFAULT_TEMPLATE = "{artist} - {title} [{camelot} {bpm}]"
 
 _TOKEN_RE = re.compile(r"\{([a-z_]+)\}")
 
@@ -44,20 +44,20 @@ def build_default_components(meta: Dict[str, str]) -> Dict[str, str]:
     """
     Build default filename components from metadata.
 
-    Handles defaults for missing values and constructs composite fields
-    like mix_paren and kb.
+    Provides atomic template variables with sensible defaults.
+    All variables are basic/atomic - users control formatting in template.
 
     Args:
         meta: Raw metadata dictionary
 
     Returns:
-        Enriched metadata with computed fields
+        Enriched metadata dictionary with defaults
 
     Examples:
         >>> meta = {"artist": "DJ", "title": "Song", "bpm": "128"}
         >>> result = build_default_components(meta)
-        >>> result["kb"]
-        ' [128]'
+        >>> result["artist"], result["bpm"]
+        ('DJ', '128')
     """
     artist = meta.get("artist") or "Unknown Artist"
     title = meta.get("title") or "Unknown Title"
@@ -68,17 +68,11 @@ def build_default_components(meta: Dict[str, str]) -> Dict[str, str]:
     camelot = meta.get("camelot", "")
     raw_key = meta.get("key", "")
 
-    mix_paren = f" ({mix})" if mix else ""
-    kb_inner = squash_spaces(" ".join([camelot or raw_key, bpm]).strip())
-    kb = f" [{kb_inner}]" if kb_inner else ""
-
     return {
         **meta,
         "artist": artist,
         "title": clean_title,
         "mix": mix,
-        "mix_paren": mix_paren,
-        "kb": kb,
         "bpm": bpm,
         "key": raw_key,
         "camelot": camelot,
