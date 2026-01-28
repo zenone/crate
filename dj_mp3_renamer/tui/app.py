@@ -414,18 +414,31 @@ class DJRenameTUI(App):
 
         self.current_path = path
 
-        # Show progress (with auto-detection notice if enabled)
+        # Quick file count estimation for progress notice
+        from ..core.io import find_mp3s
+        mp3_files = find_mp3s(path, recursive=recursive)
+        file_count = len(mp3_files)
+
+        # Smart progress notification based on file count and auto-detect
         mode = "Previewing" if dry_run else "Renaming"
-        if recursive:
-            self.notify(
-                f"{mode} files in {path.name}... Auto-detecting BPM/Key for files that need it (this may take a few minutes)",
-                timeout=5
-            )
+        if auto_detect and file_count > 0:
+            # Estimate processing time (rough: 8 seconds per file with auto-detect)
+            estimated_minutes = (file_count * 8) / 60
+            if file_count > 50:
+                self.notify(
+                    f"{mode} {file_count} files with auto-detection... Estimated time: {int(estimated_minutes)}-{int(estimated_minutes * 1.5)} minutes. Files already processed will be instant.",
+                    timeout=8,
+                    severity="warning"
+                )
+            elif file_count > 10:
+                self.notify(
+                    f"{mode} {file_count} files with auto-detection... This may take {int(estimated_minutes)}-{int(estimated_minutes * 1.5)} minutes",
+                    timeout=5
+                )
+            else:
+                self.notify(f"{mode} {file_count} files with auto-detection...", timeout=3)
         else:
-            self.notify(
-                f"{mode} files... Auto-detecting BPM/Key if needed",
-                timeout=3
-            )
+            self.notify(f"{mode} {file_count} files...", timeout=2)
 
         # Call the API (maintains API-first architecture)
         try:
