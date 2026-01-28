@@ -52,7 +52,7 @@ class ResultsPanel(Static):
     """Display rename results."""
 
     def show_results(self, status: RenameStatus, is_preview: bool = True):
-        """Display rename results."""
+        """Display rename results with metadata."""
         mode = "PREVIEW" if is_preview else "COMPLETED"
         table = Table(
             title=f"Rename Results - {mode}",
@@ -61,9 +61,13 @@ class ResultsPanel(Static):
         )
 
         table.add_column("Status", style="dim", width=8)
-        table.add_column("Original", style="cyan")
+        table.add_column("Original", style="cyan", no_wrap=False)
         table.add_column("→", justify="center", width=3)
-        table.add_column("New Name", style="green")
+        table.add_column("New Name", style="green", no_wrap=False)
+        table.add_column("BPM", justify="right", style="yellow", width=4)
+        table.add_column("Key", justify="center", style="magenta", width=6)
+        table.add_column("Year", justify="center", style="blue", width=4)
+        table.add_column("Source", style="dim", width=6)
 
         # Show more results for better preview (increased from 50 to 200)
         display_limit = min(200, len(status.results))
@@ -79,16 +83,33 @@ class ResultsPanel(Static):
                 status_icon = "✗"
                 status_style = "red"
 
+            # Extract metadata for display
+            meta = result.metadata or {}
+            bpm = meta.get("bpm", "-")
+            key = meta.get("key", "-")
+            camelot = meta.get("camelot", "")
+            key_display = f"{key} {camelot}" if camelot else key
+            year = meta.get("year", "-")
+
+            # All metadata comes from ID3 tags (for now)
+            source = "ID3" if meta else "-"
+
             table.add_row(
                 f"[{status_style}]{status_icon}[/{status_style}]",
                 result.src.name,
                 "→" if result.dst else "",
                 result.dst.name if result.dst else f"[dim]{result.message}[/dim]",
+                bpm,
+                key_display,
+                year,
+                source,
             )
 
         if len(status.results) > display_limit:
             table.add_row(
-                "", f"[dim]... and {len(status.results) - display_limit} more files (scroll to see all)[/dim]", "", ""
+                "",
+                f"[dim]... and {len(status.results) - display_limit} more files (scroll to see all)[/dim]",
+                "", "", "", "", "", ""
             )
 
         self.update(table)

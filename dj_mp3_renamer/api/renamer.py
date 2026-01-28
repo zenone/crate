@@ -120,31 +120,31 @@ class RenamerAPI:
             RenameResult
         """
         try:
-            dst, reason = self._derive_target(src, template, book)
+            dst, reason, meta = self._derive_target(src, template, book)
 
             if dst is None:
                 self.logger.info("SKIP  %s  (%s)", src.name, reason)
-                return RenameResult(src=src, dst=None, status="skipped", message=reason)
+                return RenameResult(src=src, dst=None, status="skipped", message=reason, metadata=meta)
 
             if dry_run:
                 self.logger.info("DRY   %s  ->  %s", src.name, dst.name)
-                return RenameResult(src=src, dst=dst, status="renamed", message="dry-run")
+                return RenameResult(src=src, dst=dst, status="renamed", message="dry-run", metadata=meta)
 
             os.replace(src.as_posix(), dst.as_posix())
             self.logger.info("REN   %s  ->  %s", src.name, dst.name)
-            return RenameResult(src=src, dst=dst, status="renamed")
+            return RenameResult(src=src, dst=dst, status="renamed", metadata=meta)
 
         except Exception as exc:
             self.logger.error("ERR   %s  (%s)", src, exc)
             self.logger.debug("Trace", exc_info=True)
-            return RenameResult(src=src, dst=None, status="error", message=str(exc))
+            return RenameResult(src=src, dst=None, status="error", message=str(exc), metadata=None)
 
     def _derive_target(
         self,
         src: Path,
         template: str,
         book: ReservationBook,
-    ) -> Tuple[Optional[Path], Optional[str]]:
+    ) -> Tuple[Optional[Path], Optional[str], Optional[dict]]:
         """
         Derive target path for a source file.
 
@@ -154,11 +154,11 @@ class RenamerAPI:
             book: ReservationBook
 
         Returns:
-            Tuple of (target_path, error_message)
+            Tuple of (target_path, error_message, metadata)
         """
         meta, err = read_mp3_metadata(src, self.logger)
         if err:
-            return None, err
+            return None, err, None
         assert meta is not None
 
         tokens = build_default_components(meta)
@@ -172,8 +172,8 @@ class RenamerAPI:
         # Check if the file already has the desired name BEFORE collision handling
         desired_path = src.parent / f"{stem}{ext}"
         if desired_path.resolve() == src.resolve():
-            return None, "Already has desired name"
+            return None, "Already has desired name", meta
 
         # File needs renaming - use collision detection
         dst = book.reserve_unique(src.parent, stem, ext)
-        return dst, None
+        return dst, None, meta

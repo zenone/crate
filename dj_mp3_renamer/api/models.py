@@ -25,6 +25,7 @@ class RenameResult:
     dst: Optional[Path]
     status: str  # "renamed" | "skipped" | "error"
     message: Optional[str] = None
+    metadata: Optional[dict[str, str]] = None  # MP3 metadata (artist, title, bpm, key, etc.)
 
 
 @dataclass(frozen=True)
