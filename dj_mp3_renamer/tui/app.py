@@ -577,6 +577,11 @@ class DJRenameTUI(App):
             self.notify("Please enter a directory path", severity="error")
             return
 
+        # Remove shell escape characters (backslashes before spaces)
+        # This allows users to paste paths like: /Volumes/Drive/Shared\ Music/Incoming
+        # and have them work without manual editing
+        path_input = path_input.replace("\\ ", " ")
+
         # Expand and validate path
         try:
             path = Path(path_input).expanduser().resolve()

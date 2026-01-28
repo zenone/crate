@@ -52,9 +52,9 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         type=str,
         default=DEFAULT_TEMPLATE,
         help=(
-            "Filename template. Tokens: {artist} {title} {mix} {mix_paren} {bpm} {key} {camelot} "
-            "{year} {label} {album} {track} {kb}. "
-            "Default: '{artist} - {title}{mix_paren}{kb}'"
+            "Filename template. Available variables: {artist} {title} {mix} {bpm} {key} {camelot} "
+            "{year} {label} {album} {track}. "
+            f"Default: '{DEFAULT_TEMPLATE}'"
         ),
     )
     return parser.parse_args(argv)
@@ -81,10 +81,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         logger.error("Missing dependency: tqdm. Install with: pip3 install tqdm")
         return 2
 
+    # Clean path: remove shell escape characters (backslashes before spaces)
+    # Allows users to paste paths like: /Volumes/Drive/Shared\ Music/Incoming
+    path_str = str(args.path).replace("\\ ", " ")
+    cleaned_path = Path(path_str)
+
     # Create API and request
     api = RenamerAPI(workers=args.workers, logger=logger)
     request = RenameRequest(
-        path=args.path,
+        path=cleaned_path,
         recursive=args.recursive,
         dry_run=args.dry_run,
         template=args.template,
