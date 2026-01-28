@@ -274,6 +274,7 @@ class DJRenameTUI(App):
                 )
 
                 yield Checkbox("Recursive (include subfolders)", value=True, id="recursive-check")
+                yield Checkbox("Auto-detect BPM/Key (if missing in ID3 tags)", value=True, id="autodetect-check")
 
                 with Horizontal(id="button-row"):
                     yield Button("Preview (P)", variant="primary", id="preview-btn")
@@ -370,6 +371,7 @@ class DJRenameTUI(App):
         self.query_one("#path-input", Input).value = ""
         self.query_one("#template-input", Input).value = DEFAULT_TEMPLATE
         self.query_one("#recursive-check", Checkbox).value = True
+        self.query_one("#autodetect-check", Checkbox).value = True
 
         stats = self.query_one("#stats-panel", StatsPanel)
         stats.update("[dim]Ready for new directory[/dim]")
@@ -391,6 +393,7 @@ class DJRenameTUI(App):
         path_input = self.query_one("#path-input", Input).value.strip()
         template = self.query_one("#template-input", Input).value.strip()
         recursive = self.query_one("#recursive-check", Checkbox).value
+        auto_detect = self.query_one("#autodetect-check", Checkbox).value
 
         if not path_input:
             self.notify("Please enter a directory path", severity="error")
@@ -411,9 +414,18 @@ class DJRenameTUI(App):
 
         self.current_path = path
 
-        # Show progress
+        # Show progress (with auto-detection notice if enabled)
         mode = "Previewing" if dry_run else "Renaming"
-        self.notify(f"{mode} files in {path.name}...", timeout=2)
+        if recursive:
+            self.notify(
+                f"{mode} files in {path.name}... Auto-detecting BPM/Key for files that need it (this may take a few minutes)",
+                timeout=5
+            )
+        else:
+            self.notify(
+                f"{mode} files... Auto-detecting BPM/Key if needed",
+                timeout=3
+            )
 
         # Call the API (maintains API-first architecture)
         try:
@@ -422,6 +434,7 @@ class DJRenameTUI(App):
                 recursive=recursive,
                 dry_run=dry_run,
                 template=template or DEFAULT_TEMPLATE,
+                auto_detect=auto_detect,
             )
 
             status = self.api.rename_files(request)
