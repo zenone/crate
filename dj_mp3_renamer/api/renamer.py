@@ -174,38 +174,48 @@ class RenamerAPI:
             needs_key = not meta.get("key", "").strip()
 
             if needs_bpm or needs_key:
-                self.logger.info(f"Auto-detecting metadata for: {src.name}")
+                try:
+                    self.logger.info(f"Auto-detecting metadata for: {src.name}")
 
-                # Run detection
-                detected_bpm, bpm_source, detected_key, key_source = auto_detect_metadata(
-                    src,
-                    meta.get("bpm", ""),
-                    meta.get("key", ""),
-                    self.logger
-                )
-
-                # Update metadata dict
-                if needs_bpm and detected_bpm:
-                    meta["bpm"] = detected_bpm
-                    meta["bpm_source"] = bpm_source
-                    self.logger.info(f"  Detected BPM: {detected_bpm} (source: {bpm_source})")
-
-                if needs_key and detected_key:
-                    meta["key"] = detected_key
-                    meta["camelot"] = to_camelot(detected_key) if detected_key else ""
-                    meta["key_source"] = key_source
-                    self.logger.info(f"  Detected Key: {detected_key} (source: {key_source})")
-
-                # Write detected values to ID3 tags (permanent storage)
-                if (needs_bpm and detected_bpm) or (needs_key and detected_key):
-                    write_success = write_bpm_key_to_tags(
+                    # Run detection (wrapped in try/except for safety)
+                    detected_bpm, bpm_source, detected_key, key_source = auto_detect_metadata(
                         src,
-                        detected_bpm if needs_bpm else None,
-                        detected_key if needs_key else None,
+                        meta.get("bpm", ""),
+                        meta.get("key", ""),
                         self.logger
                     )
-                    if write_success:
-                        self.logger.info(f"  Saved detected metadata to ID3 tags")
+
+                    # Update metadata dict
+                    if needs_bpm and detected_bpm:
+                        meta["bpm"] = detected_bpm
+                        meta["bpm_source"] = bpm_source
+                        self.logger.info(f"  Detected BPM: {detected_bpm} (source: {bpm_source})")
+
+                    if needs_key and detected_key:
+                        meta["key"] = detected_key
+                        meta["camelot"] = to_camelot(detected_key) if detected_key else ""
+                        meta["key_source"] = key_source
+                        self.logger.info(f"  Detected Key: {detected_key} (source: {key_source})")
+
+                    # Write detected values to ID3 tags (permanent storage)
+                    if (needs_bpm and detected_bpm) or (needs_key and detected_key):
+                        try:
+                            write_success = write_bpm_key_to_tags(
+                                src,
+                                detected_bpm if needs_bpm else None,
+                                detected_key if needs_key else None,
+                                self.logger
+                            )
+                            if write_success:
+                                self.logger.info(f"  Saved detected metadata to ID3 tags")
+                        except Exception as tag_err:
+                            self.logger.error(f"  Failed to write tags: {tag_err}")
+
+                except Exception as detect_err:
+                    self.logger.error(f"Auto-detection failed for {src.name}: {detect_err}", exc_info=True)
+                    # Continue processing even if auto-detection fails
+                    meta["bpm_source"] = "Failed"
+                    meta["key_source"] = "Failed"
 
         tokens = build_default_components(meta)
         expanded = build_filename_from_template(tokens, template)

@@ -51,27 +51,44 @@ def detect_bpm_from_audio(file_path: Path, logger: logging.Logger) -> Tuple[Opti
         return None, "Unavailable"
 
     try:
-        # Load audio file
-        y, sr = librosa.load(str(file_path), duration=60, sr=22050)
+        # Load audio file (limit duration to first 60 seconds for speed)
+        try:
+            y, sr = librosa.load(str(file_path), duration=60, sr=22050)
+        except Exception as load_err:
+            logger.warning(f"Failed to load audio file {file_path.name}: {load_err}")
+            return None, "Failed"
+
+        # Check if audio data is valid
+        if y is None or len(y) == 0:
+            logger.warning(f"Empty audio data for {file_path.name}")
+            return None, "Failed"
 
         # Detect tempo (BPM)
-        tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        try:
+            tempo, _ = librosa.beat.beat_track(y=y, sr=sr)
+        except Exception as beat_err:
+            logger.warning(f"Beat tracking failed for {file_path.name}: {beat_err}")
+            return None, "Failed"
 
         # Convert to Python scalar if numpy array, then round to nearest integer
-        if hasattr(tempo, 'item'):
-            tempo = tempo.item()
-        bpm = int(round(float(tempo)))
+        try:
+            if hasattr(tempo, 'item'):
+                tempo = tempo.item()
+            bpm = int(round(float(tempo)))
+        except Exception as conv_err:
+            logger.warning(f"BPM conversion failed for {file_path.name}: {conv_err}")
+            return None, "Failed"
 
         # Validate range (typical DJ BPM range: 60-200)
         if 60 <= bpm <= 200:
-            logger.debug(f"Detected BPM: {bpm}")
+            logger.debug(f"Detected BPM: {bpm} for {file_path.name}")
             return str(bpm), "Analyzed"
         else:
-            logger.warning(f"BPM out of range: {bpm}")
+            logger.warning(f"BPM out of range: {bpm} for {file_path.name}")
             return None, "Failed"
 
     except Exception as e:
-        logger.warning(f"BPM detection failed: {e}")
+        logger.error(f"Unexpected error in BPM detection for {file_path.name}: {e}", exc_info=True)
         return None, "Failed"
 
 
@@ -97,34 +114,57 @@ def detect_key_from_audio(file_path: Path, logger: logging.Logger) -> Tuple[Opti
         return None, "Unavailable"
 
     try:
-        # Load audio file
-        y, sr = librosa.load(str(file_path), duration=30, sr=22050)
+        # Load audio file (limit duration to first 30 seconds for speed)
+        try:
+            y, sr = librosa.load(str(file_path), duration=30, sr=22050)
+        except Exception as load_err:
+            logger.warning(f"Failed to load audio file {file_path.name}: {load_err}")
+            return None, "Failed"
+
+        # Check if audio data is valid
+        if y is None or len(y) == 0:
+            logger.warning(f"Empty audio data for {file_path.name}")
+            return None, "Failed"
 
         # Compute chromagram
-        chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
+        try:
+            chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
+        except Exception as chroma_err:
+            logger.warning(f"Chromagram computation failed for {file_path.name}: {chroma_err}")
+            return None, "Failed"
+
+        # Check if chromagram is valid
+        if chroma is None or chroma.size == 0:
+            logger.warning(f"Empty chromagram for {file_path.name}")
+            return None, "Failed"
 
         # Average chromagram over time
-        chroma_mean = np.mean(chroma, axis=1)
-
-        # Find dominant pitch class
-        pitch_class = int(np.argmax(chroma_mean))
+        try:
+            chroma_mean = np.mean(chroma, axis=1)
+            pitch_class = int(np.argmax(chroma_mean))
+        except Exception as analysis_err:
+            logger.warning(f"Chromagram analysis failed for {file_path.name}: {analysis_err}")
+            return None, "Failed"
 
         # Map to key names
         keys = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
         # Simple major/minor detection (comparing strength of major vs minor triads)
-        # This is a simplified approach - more sophisticated methods exist
-        major_strength = chroma_mean[pitch_class] + chroma_mean[(pitch_class + 4) % 12] + chroma_mean[(pitch_class + 7) % 12]
-        minor_strength = chroma_mean[pitch_class] + chroma_mean[(pitch_class + 3) % 12] + chroma_mean[(pitch_class + 7) % 12]
+        try:
+            major_strength = chroma_mean[pitch_class] + chroma_mean[(pitch_class + 4) % 12] + chroma_mean[(pitch_class + 7) % 12]
+            minor_strength = chroma_mean[pitch_class] + chroma_mean[(pitch_class + 3) % 12] + chroma_mean[(pitch_class + 7) % 12]
 
-        mode = "maj" if major_strength > minor_strength else "min"
-        key = f"{keys[pitch_class]} {mode}"
+            mode = "maj" if major_strength > minor_strength else "min"
+            key = f"{keys[pitch_class]} {mode}"
+        except Exception as mode_err:
+            logger.warning(f"Mode detection failed for {file_path.name}: {mode_err}")
+            return None, "Failed"
 
-        logger.debug(f"Detected key: {key}")
+        logger.debug(f"Detected key: {key} for {file_path.name}")
         return key, "Analyzed"
 
     except Exception as e:
-        logger.warning(f"Key detection failed: {e}")
+        logger.error(f"Unexpected error in key detection for {file_path.name}: {e}", exc_info=True)
         return None, "Failed"
 
 
