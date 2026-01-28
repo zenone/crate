@@ -65,7 +65,10 @@ class ResultsPanel(Static):
         table.add_column("→", justify="center", width=3)
         table.add_column("New Name", style="green")
 
-        for result in status.results[:50]:  # Limit to 50 for performance
+        # Show more results for better preview (increased from 50 to 200)
+        display_limit = min(200, len(status.results))
+
+        for result in status.results[:display_limit]:
             if result.status == "renamed":
                 status_icon = "✓" if not is_preview else "→"
                 status_style = "green"
@@ -83,9 +86,9 @@ class ResultsPanel(Static):
                 result.dst.name if result.dst else f"[dim]{result.message}[/dim]",
             )
 
-        if len(status.results) > 50:
+        if len(status.results) > display_limit:
             table.add_row(
-                "", f"[dim]... and {len(status.results) - 50} more files[/dim]", "", ""
+                "", f"[dim]... and {len(status.results) - display_limit} more files (scroll to see all)[/dim]", "", ""
             )
 
         self.update(table)
@@ -237,6 +240,7 @@ class DJRenameTUI(App):
                     yield Button("Preview (P)", variant="primary", id="preview-btn")
                     yield Button("Rename Files (R)", variant="success", id="rename-btn")
                     yield Button("Reset (Ctrl+R)", variant="default", id="reset-btn")
+                    yield Button("Quit (Q)", variant="error", id="quit-btn")
 
             # Stats Panel
             yield StatsPanel(id="stats-panel")
@@ -259,6 +263,10 @@ class DJRenameTUI(App):
         stats = self.query_one("#stats-panel", StatsPanel)
         stats.update("[dim]Enter a directory path and press Preview (P) to see changes[/dim]")
 
+        # Initialize results panel
+        results = self.query_one("#results-panel", ResultsPanel)
+        results.update("[dim]No preview yet - enter a path and press Preview to see what will change[/dim]")
+
     def action_browse(self) -> None:
         """Toggle directory browser (keyboard shortcut)."""
         self.toggle_browser()
@@ -279,11 +287,9 @@ class DJRenameTUI(App):
         path_input = self.query_one("#path-input", Input)
         path_input.value = str(event.path)
 
-        # Hide the browser
-        browser = self.query_one("#browser-section")
-        browser.add_class("hidden")
-
-        self.notify(f"Selected: {event.path}", severity="information")
+        # Keep browser open for easier navigation
+        # User can close it by pressing B or clicking Browse button again
+        self.notify(f"Selected: {event.path} (Browser stays open - press B to close)", severity="information", timeout=3)
 
     @on(Button.Pressed, "#preview-btn")
     async def action_preview(self) -> None:
@@ -316,6 +322,11 @@ class DJRenameTUI(App):
 
         self.last_status = None
         self.query_one("#path-input", Input).focus()
+
+    @on(Button.Pressed, "#quit-btn")
+    def handle_quit_button(self) -> None:
+        """Handle quit button press."""
+        self.exit()
 
     async def _process_files(self, dry_run: bool = True) -> None:
         """Process files using the API."""
