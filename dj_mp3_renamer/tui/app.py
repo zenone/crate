@@ -139,6 +139,13 @@ class DJRenameTUI(App):
         height: 1fr;
         border: solid $accent;
         margin: 1;
+        padding: 1;
+    }
+
+    #results-panel {
+        width: 100%;
+        height: auto;
+        min-height: 10;
     }
 
     #stats-panel {
@@ -315,7 +322,16 @@ class DJRenameTUI(App):
     @on(Button.Pressed, "#preview-btn")
     async def action_preview(self) -> None:
         """Preview rename operation."""
+        # Close browser if open to make room for results
+        browser = self.query_one("#browser-section")
+        if "hidden" not in browser.classes:
+            browser.add_class("hidden")
+
         await self._process_files(dry_run=True)
+
+        # Scroll to results section
+        results_section = self.query_one("#results-section")
+        results_section.scroll_visible()
 
     @on(Button.Pressed, "#rename-btn")
     async def action_rename(self) -> None:
@@ -324,9 +340,18 @@ class DJRenameTUI(App):
             self.notify("Run Preview first to see what will change", severity="warning")
             return
 
+        # Close browser if open to make room for results
+        browser = self.query_one("#browser-section")
+        if "hidden" not in browser.classes:
+            browser.add_class("hidden")
+
         # Confirm
         self.notify("Renaming files...", severity="information")
         await self._process_files(dry_run=False)
+
+        # Scroll to results section
+        results_section = self.query_one("#results-section")
+        results_section.scroll_visible()
 
     @on(Button.Pressed, "#reset-btn")
     def action_reset(self) -> None:
