@@ -115,6 +115,22 @@ class SettingsScreen(ModalScreen):
                     value=self.config.get("enable_musicbrainz", False),
                     id="musicbrainz-check"
                 )
+                yield Checkbox(
+                    "Use MusicBrainz to correct Artist/Title/Album",
+                    value=self.config.get("use_mb_for_all_fields", True),
+                    id="mb-all-fields-check"
+                )
+
+                yield Label("Advanced Options:", classes="setting-label")
+                yield Static(
+                    "[dim]Verify mode re-analyzes even if tags exist (slower but validates data)[/dim]",
+                    classes="setting-help"
+                )
+                yield Checkbox(
+                    "Verify Mode (re-analyze all files)",
+                    value=self.config.get("verify_mode", False),
+                    id="verify-mode-check"
+                )
 
                 yield Label("Auto-Detection Preferences:", classes="setting-label")
                 yield Static(
@@ -142,12 +158,16 @@ class SettingsScreen(ModalScreen):
         # Get values from inputs
         api_key = self.query_one("#api-key-input", Input).value.strip()
         enable_mb = self.query_one("#musicbrainz-check", Checkbox).value
+        use_mb_all = self.query_one("#mb-all-fields-check", Checkbox).value
+        verify_mode = self.query_one("#verify-mode-check", Checkbox).value
         auto_bpm = self.query_one("#auto-bpm-check", Checkbox).value
         auto_key = self.query_one("#auto-key-check", Checkbox).value
 
         # Update config
         self.config["acoustid_api_key"] = api_key or "8XaBELgH"
         self.config["enable_musicbrainz"] = enable_mb
+        self.config["use_mb_for_all_fields"] = use_mb_all
+        self.config["verify_mode"] = verify_mode
         self.config["auto_detect_bpm"] = auto_bpm
         self.config["auto_detect_key"] = auto_key
 

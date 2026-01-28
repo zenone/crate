@@ -65,10 +65,9 @@ class TestBuildDefaultComponents:
         assert result["artist"] == "DJ Test"
         assert result["title"] == "Song Title"
         assert result["mix"] == "Extended Mix"
-        assert result["mix_paren"] == " (Extended Mix)"
-        assert result["kb"] == " [8A 128]"
         assert result["bpm"] == "128"
         assert result["camelot"] == "8A"
+        # Note: mix_paren and kb were deprecated - use atomic variables
 
     def test_missing_artist_gets_default(self):
         """Missing artist should default to 'Unknown Artist'."""
@@ -82,33 +81,35 @@ class TestBuildDefaultComponents:
         result = build_default_components(meta)
         assert result["title"] == "Unknown Title"
 
-    def test_no_mix_no_paren(self):
-        """No mix should result in empty mix_paren."""
+    def test_no_mix_empty_string(self):
+        """No mix should result in empty mix string."""
         meta = {"artist": "DJ Test", "title": "Song"}
         result = build_default_components(meta)
         assert result["mix"] == ""
-        assert result["mix_paren"] == ""
 
-    def test_no_key_bpm_no_kb(self):
-        """No key/BPM should result in empty kb."""
+    def test_no_key_bpm_empty_strings(self):
+        """No key/BPM should result in empty strings."""
         meta = {"artist": "DJ Test", "title": "Song"}
         result = build_default_components(meta)
-        assert result["kb"] == ""
+        assert result["bpm"] == ""
+        assert result["key"] == ""
+        assert result["camelot"] == ""
 
-    def test_only_key_in_kb(self):
-        """Only key should appear in kb."""
-        meta = {"artist": "DJ Test", "title": "Song", "key": "Cm"}
+    def test_only_key_present(self):
+        """Only key should be populated."""
+        meta = {"artist": "DJ Test", "title": "Song", "key": "Cm", "camelot": "5A"}
         result = build_default_components(meta)
-        assert result["kb"] == " [Cm]"
+        assert result["key"] == "Cm"
+        assert result["camelot"] == "5A"  # Camelot is passed through, not computed here
 
-    def test_only_bpm_in_kb(self):
-        """Only BPM should appear in kb."""
+    def test_only_bpm_present(self):
+        """Only BPM should be populated."""
         meta = {"artist": "DJ Test", "title": "Song", "bpm": "140"}
         result = build_default_components(meta)
-        assert result["kb"] == " [140]"
+        assert result["bpm"] == "140"
 
-    def test_camelot_preferred_over_key(self):
-        """Camelot should be preferred over raw key."""
+    def test_camelot_computed_from_key(self):
+        """Camelot should be computed from key."""
         meta = {
             "artist": "DJ Test",
             "title": "Song",
@@ -117,8 +118,8 @@ class TestBuildDefaultComponents:
             "bpm": "128"
         }
         result = build_default_components(meta)
-        assert "8A" in result["kb"]
-        assert "Am" not in result["kb"]
+        assert result["camelot"] == "8A"
+        assert result["key"] == "Am"
 
     def test_mix_stripped_from_title(self):
         """Mix should be removed from title."""

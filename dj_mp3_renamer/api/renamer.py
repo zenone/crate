@@ -10,8 +10,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Optional, Tuple
 
-from ..core.audio_analysis import auto_detect_metadata
+from ..core.audio_analysis import auto_detect_metadata, lookup_acoustid
 from ..core.config import load_config
+from ..core.conflict_resolution import resolve_metadata_conflict
 from ..core.io import ReservationBook, find_mp3s, read_mp3_metadata, write_bpm_key_to_tags
 from ..core.key_conversion import to_camelot
 from ..core.sanitization import safe_filename
@@ -170,6 +171,159 @@ class RenamerAPI:
             self.logger.debug("Trace", exc_info=True)
             return RenameResult(src=src, dst=None, status="error", message=str(exc), metadata=None)
 
+    def _enhance_metadata(self, src: Path, meta: dict) -> dict:
+        """
+        Enhance metadata using MusicBrainz and AI audio analysis with conflict resolution.
+
+        Args:
+            src: Source file path
+            meta: Metadata from ID3 tags
+
+        Returns:
+            Enhanced metadata dictionary
+        """
+        verify_mode = self.config.get("verify_mode", False)
+        enable_mb = self.config.get("enable_musicbrainz", False)
+        use_mb_for_all = self.config.get("use_mb_for_all_fields", True)
+
+        # Check what needs detection
+        needs_bpm = not meta.get("bpm", "").strip() or verify_mode
+        needs_key = not meta.get("key", "").strip() or verify_mode
+        needs_artist = not meta.get("artist", "").strip() or meta.get("artist") == "Unknown Artist"
+        needs_title = not meta.get("title", "").strip() or meta.get("title") == "Unknown Title"
+
+        mb_data = None
+        mb_confidence = 0.0
+
+        # Step 1: MusicBrainz lookup (if enabled)
+        if enable_mb and (needs_bpm or needs_key or (use_mb_for_all and (needs_artist or needs_title))):
+            try:
+                self.logger.info(f"Looking up MusicBrainz data for: {src.name}")
+                mb_data, mb_source = lookup_acoustid(src, self.logger, self.config.get("acoustid_api_key"))
+
+                if mb_data and mb_source == "Database":
+                    mb_confidence = mb_data.get("confidence", 0.0)
+                    self.logger.info(f"  MusicBrainz match found (confidence: {mb_confidence:.2f})")
+            except Exception as mb_err:
+                self.logger.warning(f"MusicBrainz lookup failed: {mb_err}")
+
+        # Step 2: AI Audio analysis for BPM/Key (if still needed)
+        ai_bpm = None
+        ai_key = None
+
+        if needs_bpm or needs_key:
+            try:
+                self.logger.info(f"Analyzing audio for: {src.name}")
+                ai_bpm, bpm_src, ai_key, key_src = auto_detect_metadata(
+                    src,
+                    meta.get("bpm", ""),
+                    meta.get("key", ""),
+                    self.logger,
+                    enable_musicbrainz=False,  # Already did MB lookup above
+                    acoustid_api_key=self.config.get("acoustid_api_key")
+                )
+            except Exception as ai_err:
+                self.logger.error(f"AI audio analysis failed: {ai_err}", exc_info=True)
+
+        # Step 3: Resolve conflicts for each field
+        conflicts = []
+
+        # Artist
+        if use_mb_for_all and mb_data:
+            artist_resolution = resolve_metadata_conflict(
+                "artist",
+                meta.get("artist"),
+                mb_data.get("artist"),
+                None,
+                mb_confidence,
+                verify_mode
+            )
+            if artist_resolution["conflicts"]:
+                conflicts.extend(artist_resolution["conflicts"])
+            if artist_resolution["overridden"]:
+                self.logger.info(f"  Artist: {artist_resolution['overridden']}")
+            meta["artist"] = artist_resolution["final_value"]
+            meta["artist_source"] = artist_resolution["source"]
+
+        # Title
+        if use_mb_for_all and mb_data:
+            title_resolution = resolve_metadata_conflict(
+                "title",
+                meta.get("title"),
+                mb_data.get("title"),
+                None,
+                mb_confidence,
+                verify_mode
+            )
+            if title_resolution["conflicts"]:
+                conflicts.extend(title_resolution["conflicts"])
+            if title_resolution["overridden"]:
+                self.logger.info(f"  Title: {title_resolution['overridden']}")
+            meta["title"] = title_resolution["final_value"]
+            meta["title_source"] = title_resolution["source"]
+
+        # BPM
+        bpm_resolution = resolve_metadata_conflict(
+            "bpm",
+            meta.get("bpm"),
+            mb_data.get("bpm") if mb_data else None,
+            ai_bpm,
+            mb_confidence,
+            verify_mode
+        )
+        if bpm_resolution["conflicts"]:
+            conflicts.extend(bpm_resolution["conflicts"])
+            for conflict in bpm_resolution["conflicts"]:
+                self.logger.warning(f"  BPM conflict: {conflict}")
+        meta["bpm"] = bpm_resolution["final_value"]
+        meta["bpm_source"] = bpm_resolution["source"]
+
+        # Key
+        key_resolution = resolve_metadata_conflict(
+            "key",
+            meta.get("key"),
+            mb_data.get("key") if mb_data else None,
+            ai_key,
+            mb_confidence,
+            verify_mode
+        )
+        if key_resolution["conflicts"]:
+            conflicts.extend(key_resolution["conflicts"])
+            for conflict in key_resolution["conflicts"]:
+                self.logger.warning(f"  Key conflict: {conflict}")
+        meta["key"] = key_resolution["final_value"]
+        meta["key_source"] = key_resolution["source"]
+
+        # Update Camelot from resolved key
+        meta["camelot"] = to_camelot(meta["key"]) if meta["key"] else ""
+
+        # Step 4: Write enhanced data back to tags
+        try:
+            needs_write = False
+            write_bpm = None
+            write_key = None
+
+            if bpm_resolution["source"] in ["MusicBrainz", "AI Audio"] and meta["bpm"]:
+                write_bpm = meta["bpm"]
+                needs_write = True
+
+            if key_resolution["source"] in ["MusicBrainz", "AI Audio"] and meta["key"]:
+                write_key = meta["key"]
+                needs_write = True
+
+            if needs_write:
+                write_success = write_bpm_key_to_tags(src, write_bpm, write_key, self.logger)
+                if write_success:
+                    self.logger.info(f"  Saved enhanced metadata to ID3 tags")
+        except Exception as tag_err:
+            self.logger.error(f"  Failed to write tags: {tag_err}")
+
+        # Add conflicts to metadata for potential UI display
+        if conflicts:
+            meta["conflicts"] = conflicts
+
+        return meta
+
     def _derive_target(
         self,
         src: Path,
@@ -194,57 +348,15 @@ class RenamerAPI:
             return None, err, None
         assert meta is not None
 
-        # Auto-detect BPM/Key if missing and auto_detect is enabled
+        # Enhanced metadata detection and validation
         if auto_detect:
-            needs_bpm = not meta.get("bpm", "").strip()
-            needs_key = not meta.get("key", "").strip()
-
-            if needs_bpm or needs_key:
-                try:
-                    self.logger.info(f"Auto-detecting metadata for: {src.name}")
-
-                    # Run detection (wrapped in try/except for safety)
-                    # Pass config values for MusicBrainz and API key
-                    detected_bpm, bpm_source, detected_key, key_source = auto_detect_metadata(
-                        src,
-                        meta.get("bpm", ""),
-                        meta.get("key", ""),
-                        self.logger,
-                        enable_musicbrainz=self.config.get("enable_musicbrainz", False),
-                        acoustid_api_key=self.config.get("acoustid_api_key")
-                    )
-
-                    # Update metadata dict
-                    if needs_bpm and detected_bpm:
-                        meta["bpm"] = detected_bpm
-                        meta["bpm_source"] = bpm_source
-                        self.logger.info(f"  Detected BPM: {detected_bpm} (source: {bpm_source})")
-
-                    if needs_key and detected_key:
-                        meta["key"] = detected_key
-                        meta["camelot"] = to_camelot(detected_key) if detected_key else ""
-                        meta["key_source"] = key_source
-                        self.logger.info(f"  Detected Key: {detected_key} (source: {key_source})")
-
-                    # Write detected values to ID3 tags (permanent storage)
-                    if (needs_bpm and detected_bpm) or (needs_key and detected_key):
-                        try:
-                            write_success = write_bpm_key_to_tags(
-                                src,
-                                detected_bpm if needs_bpm else None,
-                                detected_key if needs_key else None,
-                                self.logger
-                            )
-                            if write_success:
-                                self.logger.info(f"  Saved detected metadata to ID3 tags")
-                        except Exception as tag_err:
-                            self.logger.error(f"  Failed to write tags: {tag_err}")
-
-                except Exception as detect_err:
-                    self.logger.error(f"Auto-detection failed for {src.name}: {detect_err}", exc_info=True)
-                    # Continue processing even if auto-detection fails
-                    meta["bpm_source"] = "Failed"
-                    meta["key_source"] = "Failed"
+            meta = self._enhance_metadata(src, meta)
+        else:
+            # Just set sources for existing data
+            if meta.get("bpm"):
+                meta["bpm_source"] = "Tags"
+            if meta.get("key"):
+                meta["key_source"] = "Tags"
 
         tokens = build_default_components(meta)
         expanded = build_filename_from_template(tokens, template)

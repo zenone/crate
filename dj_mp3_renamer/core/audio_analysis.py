@@ -172,7 +172,7 @@ def lookup_acoustid(file_path: Path, logger: logging.Logger, api_key: Optional[s
     """
     Lookup track metadata using AcoustID fingerprinting.
 
-    Queries AcoustID/MusicBrainz database for BPM and other metadata.
+    Queries AcoustID/MusicBrainz database for ALL available metadata.
 
     Args:
         file_path: Path to audio file
@@ -181,11 +181,13 @@ def lookup_acoustid(file_path: Path, logger: logging.Logger, api_key: Optional[s
 
     Returns:
         Tuple of (metadata_dict, source)
-        - metadata_dict: Dict with 'bpm', 'key', etc. or None if failed
+        - metadata_dict: Dict with all available fields or None if failed
         - source: "Database" if successful, "Not Found" if no match
 
     Note:
         Requires internet connection and valid AcoustID API key.
+        Returns: artist, title, album, year, recording_id, confidence
+        Rarely returns: bpm, key (limited free tier coverage)
     """
     if not ACOUSTID_AVAILABLE:
         logger.debug("acoustid not installed - skipping database lookup")
@@ -196,25 +198,47 @@ def lookup_acoustid(file_path: Path, logger: logging.Logger, api_key: Optional[s
 
     try:
         # Generate audio fingerprint and lookup
-        results = acoustid.match(key_to_use, str(file_path))
+        # Request additional metadata with 'meta' parameter
+        results = acoustid.match(
+            key_to_use,
+            str(file_path),
+            meta='recordings releasegroups'  # Request extended metadata
+        )
 
-        for score, recording_id, title, artist in results:
-            # Score is confidence (0.0 to 1.0)
-            if score < 0.5:
-                continue
+        best_match = None
+        best_score = 0.0
 
-            logger.debug(f"AcoustID match: {artist} - {title} (score: {score:.2f})")
+        for result in results:
+            # Result format: (score, recording_id, title, artist)
+            # With meta, may include additional fields
+            if isinstance(result, (list, tuple)) and len(result) >= 4:
+                score = result[0]
+                recording_id = result[1]
+                title = result[2] if len(result) > 2 else None
+                artist = result[3] if len(result) > 3 else None
 
-            # Note: AcoustID/MusicBrainz doesn't always have BPM/Key
-            # This is a limitation of the free database
-            # Would need additional queries to get BPM from MusicBrainz
-            # For now, return basic info
-            return {
-                "title": title,
-                "artist": artist,
-                "recording_id": recording_id,
-                "confidence": score
-            }, "Database"
+                # Skip low confidence matches
+                if score < 0.5:
+                    continue
+
+                if score > best_score:
+                    best_score = score
+                    best_match = {
+                        "artist": artist,
+                        "title": title,
+                        "recording_id": recording_id,
+                        "confidence": score,
+                        # Additional fields (may be None)
+                        "album": None,  # Would need MB API call
+                        "year": None,   # Would need MB API call
+                        "bpm": None,    # Rarely available
+                        "key": None,    # Rarely available
+                    }
+
+                    logger.debug(f"AcoustID match: {artist} - {title} (confidence: {score:.2f})")
+
+        if best_match:
+            return best_match, "Database"
 
         logger.debug("No confident AcoustID match found")
         return None, "Not Found"

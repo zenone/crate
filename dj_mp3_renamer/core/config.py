@@ -16,6 +16,8 @@ DEFAULT_CONFIG = {
     "enable_musicbrainz": False,  # Disabled by default (limited data coverage)
     "auto_detect_bpm": True,
     "auto_detect_key": True,
+    "verify_mode": False,  # If True, re-analyze even if tags exist (validation mode)
+    "use_mb_for_all_fields": True,  # Use MusicBrainz to correct artist/title/album/year
     "default_template": "{artist} - {title} [{camelot} {bpm}]",
     "recursive_default": True,
 }

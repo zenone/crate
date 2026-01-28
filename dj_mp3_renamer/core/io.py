@@ -17,6 +17,7 @@ from .metadata_parsing import (
     infer_mix,
 )
 from .sanitization import squash_spaces
+from .validation import is_valid_bpm, is_valid_key
 
 try:
     from mutagen import File as MutagenFile  # type: ignore
@@ -104,6 +105,14 @@ def read_mp3_metadata(
         date = _first_tag(tags, "TDRC", "TYER", "date", "YEAR")
         track = _first_tag(tags, "TRCK", "tracknumber", "TRACKNUMBER")
 
+        # Normalize and validate
+        bpm_normalized = normalize_bpm(bpm or "")
+        key_normalized = normalize_key_raw(key or "")
+
+        # Validate critical DJ fields
+        bpm_valid = is_valid_bpm(bpm_normalized) if bpm_normalized else False
+        key_valid = is_valid_key(key_normalized) if key_normalized else False
+
         meta: Dict[str, str] = {
             "artist": squash_spaces(artist or ""),
             "title": squash_spaces(title or ""),
@@ -111,8 +120,10 @@ def read_mp3_metadata(
             "label": squash_spaces(label or ""),
             "year": extract_year(date or ""),
             "track": extract_track_number(track or ""),
-            "bpm": normalize_bpm(bpm or ""),
-            "key": normalize_key_raw(key or ""),
+            "bpm": bpm_normalized if bpm_valid else "",  # Clear invalid BPM
+            "key": key_normalized if key_valid else "",  # Clear invalid Key
+            "bpm_valid": "true" if bpm_valid else "false",  # Validation flag
+            "key_valid": "true" if key_valid else "false",  # Validation flag
         }
         meta["camelot"] = to_camelot(meta["key"]) if meta["key"] else ""
         meta["mix"] = infer_mix(meta["title"])
