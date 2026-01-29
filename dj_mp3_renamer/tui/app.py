@@ -32,10 +32,17 @@ from textual.widgets import (
     TabPane,
 )
 
-# Import existing API (maintains API-first architecture)
-from ..api import RenamerAPI, RenameRequest, RenameStatus
-from ..core.template import DEFAULT_TEMPLATE
-from ..core.config import load_config, save_config, get_config_path
+# Import ONLY from API layer (maintains API-first architecture)
+# TUI should NEVER import from core/ directly
+from ..api import (
+    RenamerAPI,
+    RenameRequest,
+    RenameStatus,
+    DEFAULT_TEMPLATE,
+    load_config,
+    save_config,
+    get_config_path,
+)
 
 
 class OperationCancelled(Exception):
@@ -822,7 +829,7 @@ class DJRenameTUI(App):
         self.current_path = path
 
         # Quick file count estimation for progress
-        from ..core.io import find_mp3s
+        from ..api import find_mp3s
         mp3_files = find_mp3s(path, recursive=recursive)
         file_count = len(mp3_files)
 
