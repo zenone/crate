@@ -30,7 +30,8 @@
       "Bash(then echo \"Zip exists\")",
       "Bash(/Users/szenone/Library/Python/3.9/bin/pytest tests/test_io.py::TestReadMp3Metadata::test_read_mp3_with_path_traversal_dots -xvs)",
       "Bash(/Users/szenone/Library/Python/3.9/bin/pytest:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(python scripts/benchmark_config.py:*)"
     ]
   }
 }
