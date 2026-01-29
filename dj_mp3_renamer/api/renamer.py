@@ -6,7 +6,7 @@ This orchestrates all core modules and provides a clean interface.
 
 import logging
 import os
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from pathlib import Path
 from typing import Optional, Tuple
 
@@ -89,10 +89,41 @@ class RenamerAPI:
                 for src in mp3s
             ]
 
+            # Call progress callback initially to enable immediate cancellation
             processed_count = 0
+            if request.progress_callback:
+                try:
+                    request.progress_callback(0, "Starting...")
+                except Exception as cb_err:
+                    if "cancel" in type(cb_err).__name__.lower():
+                        self.logger.info(f"Operation cancelled before processing started")
+                        for f in futures:
+                            f.cancel()
+                        raise
+
             try:
                 for future in as_completed(futures):
-                    result = future.result()
+                    # Poll with timeout to enable responsive cancellation
+                    # Instead of blocking indefinitely, check every 100ms
+                    while True:
+                        try:
+                            result = future.result(timeout=0.1)
+                            break  # Got result, exit polling loop
+                        except TimeoutError:
+                            # Future not ready yet - check for cancellation
+                            if request.progress_callback:
+                                try:
+                                    # Callback with same count to trigger cancel check
+                                    request.progress_callback(processed_count, "")
+                                except Exception as cb_err:
+                                    if "cancel" in type(cb_err).__name__.lower():
+                                        self.logger.info(f"Operation cancelled during polling")
+                                        for f in futures:
+                                            if not f.done():
+                                                f.cancel()
+                                        raise
+                            continue  # Keep polling
+
                     results.append(result)
 
                     # Call progress callback if provided

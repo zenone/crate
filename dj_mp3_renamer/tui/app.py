@@ -35,7 +35,7 @@ from textual.widgets import (
 # Import existing API (maintains API-first architecture)
 from ..api import RenamerAPI, RenameRequest, RenameStatus
 from ..core.template import DEFAULT_TEMPLATE
-from ..core.config import load_config, save_config
+from ..core.config import load_config, save_config, get_config_path
 
 
 class OperationCancelled(Exception):
@@ -82,26 +82,46 @@ class SettingsScreen(ModalScreen):
         margin-top: 2;
         align: center middle;
     }
+
+    .validation-error {
+        color: $error;
+        text-style: italic;
+        margin-bottom: 1;
+    }
     """
 
-    def __init__(self):
+    def __init__(self, is_first_run: bool = False):
         super().__init__()
         self.config = load_config()
+        self.is_first_run = is_first_run
 
     def compose(self) -> ComposeResult:
         """Create the settings layout."""
         with Center():
             with Vertical(id="settings-container"):
-                yield Label("⚙️ Settings", id="settings-title")
+                if self.is_first_run:
+                    yield Label("🎉 Welcome to DJ MP3 Renamer!", id="settings-title")
+                    yield Static(
+                        "[bold cyan]First-time setup - Let's configure your preferences[/bold cyan]\n"
+                        "[dim]You can change these settings anytime from the Settings menu[/dim]",
+                        classes="setting-help"
+                    )
+                else:
+                    yield Label("⚙️ Settings", id="settings-title")
 
-                yield Label("AcoustID API Key:", classes="setting-label")
+                # Validation error display (hidden by default)
+                yield Static("", id="validation-error", classes="validation-error")
+
+                yield Label("AcoustID API Key (Optional):", classes="setting-label")
                 yield Static(
-                    "[dim]For MusicBrainz database lookups. Get your own key at: https://acoustid.org/api-key[/dim]",
+                    "[dim]For MusicBrainz database lookups to find metadata.\n"
+                    "• Default: Public key (works but has rate limits)\n"
+                    "• Your own key: Get free at https://acoustid.org/api-key (no limits)[/dim]",
                     classes="setting-help"
                 )
                 yield Input(
                     value=self.config.get("acoustid_api_key", ""),
-                    placeholder="8XaBELgH (default public key)",
+                    placeholder="8XaBELgH (default public key - leave blank to use default)",
                     id="api-key-input"
                 )
 
@@ -149,12 +169,15 @@ class SettingsScreen(ModalScreen):
                 )
 
                 with Horizontal(id="settings-buttons"):
-                    yield Button("Save Settings", variant="success", id="save-settings-btn")
-                    yield Button("Cancel", variant="default", id="cancel-settings-btn")
+                    save_label = "Get Started" if self.is_first_run else "Save Settings"
+                    cancel_label = "Set Defaults" if self.is_first_run else "Cancel"
+                    yield Button(save_label, variant="success", id="save-settings-btn")
+                    if not self.is_first_run:
+                        yield Button(cancel_label, variant="default", id="cancel-settings-btn")
 
     @on(Button.Pressed, "#save-settings-btn")
     def save_settings(self) -> None:
-        """Save settings to config file."""
+        """Save settings to config file with validation."""
         # Get values from inputs
         api_key = self.query_one("#api-key-input", Input).value.strip()
         enable_mb = self.query_one("#musicbrainz-check", Checkbox).value
@@ -162,6 +185,21 @@ class SettingsScreen(ModalScreen):
         verify_mode = self.query_one("#verify-mode-check", Checkbox).value
         auto_bpm = self.query_one("#auto-bpm-check", Checkbox).value
         auto_key = self.query_one("#auto-key-check", Checkbox).value
+
+        # Validation: At least one detection method should be enabled
+        error_msg = ""
+        if not auto_bpm and not auto_key and not enable_mb:
+            error_msg = "⚠️  Warning: All auto-detection options are disabled. Files without metadata won't be renamed."
+            if self.is_first_run:
+                # For first-run, show error and don't save
+                validation_error = self.query_one("#validation-error", Static)
+                validation_error.update(error_msg)
+                self.app.notify(error_msg, severity="warning", timeout=5)
+                return
+
+        # Clear validation error if all is good
+        validation_error = self.query_one("#validation-error", Static)
+        validation_error.update("")
 
         # Update config
         self.config["acoustid_api_key"] = api_key or "8XaBELgH"
@@ -173,17 +211,30 @@ class SettingsScreen(ModalScreen):
 
         # Save to file
         if save_config(self.config):
-            self.app.notify("✓ Settings saved successfully!", severity="information", timeout=3)
+            success_msg = "✓ Setup complete! You can now use the app." if self.is_first_run else "✓ Settings saved successfully!"
+            self.app.notify(success_msg, severity="information", timeout=3)
             # Reload config in API
             self.app.api.config = load_config()
             self.dismiss()
         else:
             self.app.notify("Failed to save settings", severity="error", timeout=3)
 
+    def action_dismiss(self) -> None:
+        """Override dismiss action to prevent closing during first run."""
+        if self.is_first_run:
+            self.app.notify("⚠️  Please complete setup to use the app", severity="warning", timeout=3)
+        else:
+            self.dismiss()
+
     @on(Button.Pressed, "#cancel-settings-btn")
     def cancel_settings(self) -> None:
         """Close settings without saving."""
-        self.dismiss()
+        if self.is_first_run:
+            # First run - can't cancel, must configure
+            self.app.notify("⚠️  Please complete setup to use the app", severity="warning", timeout=3)
+        else:
+            # Regular settings - can cancel
+            self.dismiss()
 
 
 class StatsPanel(Static):
@@ -629,8 +680,16 @@ class DJRenameTUI(App):
         self.title = "DJ MP3 Renamer"
         self.sub_title = "API-First Terminal UI"
 
-        # Focus the path input
-        self.query_one("#path-input", Input).focus()
+        # Check if this is first run (config file doesn't exist)
+        config_path = get_config_path()
+        is_first_run = not config_path.exists()
+
+        if is_first_run:
+            # Show first-run setup dialog
+            self.push_screen(SettingsScreen(is_first_run=True))
+        else:
+            # Focus the path input
+            self.query_one("#path-input", Input).focus()
 
         # Show initial help
         stats = self.query_one("#stats-panel", StatsPanel)
