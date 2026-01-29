@@ -109,6 +109,105 @@
     <!-- Toast Notifications Container -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Preview Rename Modal -->
+    <div id="preview-modal" class="modal hidden" role="dialog" aria-labelledby="preview-modal-title" aria-modal="true">
+        <div class="modal-overlay" aria-hidden="true"></div>
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 id="preview-modal-title">👁️ Preview Rename</h2>
+                <button class="modal-close" aria-label="Close dialog" title="Close">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Preview Statistics -->
+                <div class="preview-stats">
+                    <div class="stat-item">
+                        <span class="stat-value" id="preview-stat-total">0</span>
+                        <span class="stat-label">Total Files</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="preview-stat-rename">0</span>
+                        <span class="stat-label">Will Rename</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="preview-stat-skip">0</span>
+                        <span class="stat-label">Will Skip</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="preview-stat-errors">0</span>
+                        <span class="stat-label">Errors</span>
+                    </div>
+                </div>
+
+                <!-- Controls -->
+                <div class="preview-controls">
+                    <input type="checkbox" id="preview-select-all" aria-label="Select all files">
+                    <label for="preview-select-all">Select All</label>
+                    <span class="preview-selection-count" id="preview-selection-count">0 selected</span>
+                </div>
+
+                <!-- Preview List -->
+                <div class="preview-list-container">
+                    <div id="preview-loading" class="loading-indicator hidden">
+                        <div class="spinner"></div>
+                        <p>Loading preview...</p>
+                    </div>
+
+                    <div id="preview-list" class="preview-list"></div>
+
+                    <div id="preview-empty" class="empty-state hidden">
+                        <p>📂 No files to rename</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="preview-execute-btn" class="btn btn-primary" disabled>
+                    ✅ Rename Selected Files
+                </button>
+                <button id="preview-cancel-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Overlay Modal -->
+    <div id="progress-overlay" class="progress-overlay hidden">
+        <div class="progress-modal">
+            <h3 id="progress-title">Renaming Files...</h3>
+            <div class="progress-stats-grid">
+                <div class="progress-stat">
+                    <div class="progress-stat-value" id="progress-percent">0%</div>
+                    <div class="progress-stat-label">Complete</div>
+                </div>
+                <div class="progress-stat">
+                    <div class="progress-stat-value" id="progress-current">0</div>
+                    <div class="progress-stat-label">Processed</div>
+                </div>
+                <div class="progress-stat">
+                    <div class="progress-stat-value" id="progress-total">0</div>
+                    <div class="progress-stat-label">Total</div>
+                </div>
+            </div>
+
+            <div class="progress-bar-wrapper">
+                <div class="progress-bar-fill" id="progress-bar" style="width: 0%"></div>
+            </div>
+
+            <div class="progress-output" id="progress-output"></div>
+
+            <div id="progress-message" class="progress-message"></div>
+
+            <div class="progress-actions">
+                <button id="progress-cancel-btn" class="btn btn-danger">
+                    Cancel Operation
+                </button>
+                <button id="progress-done-btn" class="btn btn-primary hidden">
+                    Done
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Directory Browser Modal -->
     <div id="directory-browser-modal" class="modal hidden" role="dialog" aria-labelledby="modal-title" aria-modal="true">
         <div class="modal-overlay" aria-hidden="true"></div>

@@ -32,7 +32,22 @@
       "Bash(/Users/szenone/Library/Python/3.9/bin/pytest:*)",
       "Bash(cat:*)",
       "Bash(python scripts/benchmark_config.py:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(source venv/bin/activate)",
+      "Bash(source:*)",
+      "Bash(curl:*)",
+      "Bash(lsof:*)",
+      "Bash(for port in 8002 8003 8004 8005)",
+      "Bash(do)",
+      "Bash(if lsof -i :$port)",
+      "Bash(then)",
+      "Bash(echo:*)",
+      "Bash(else)",
+      "Bash(done)",
+      "Bash(kill 79539 80483 sleep 1 ps aux)",
+      "Bash(./stop_web_ui.sh:*)",
+      "Bash(xargs kill:*)"
     ]
   }
 }

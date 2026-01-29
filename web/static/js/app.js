@@ -70,7 +70,7 @@ class App {
 
         // Preview button
         document.getElementById('preview-btn').addEventListener('click', () => {
-            this.ui.toast('Preview functionality coming in Checkpoint 3!', 'info');
+            this.showPreview();
         });
 
         // Settings button
@@ -358,6 +358,450 @@ class App {
             previewBtn.disabled = true;
             previewBtn.textContent = '👁️ Preview Rename';
         }
+    }
+
+    /**
+     * Show preview modal
+     */
+    async showPreview() {
+        if (!this.currentPath) {
+            this.ui.warning('Please select a directory first');
+            return;
+        }
+
+        try {
+            // Show preview modal
+            const modal = document.getElementById('preview-modal');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            // Show loading
+            this.ui.show('preview-loading');
+            this.ui.hide('preview-list');
+            this.ui.hide('preview-empty');
+
+            // Get file paths to preview (selected or all)
+            const filePaths = this.selectedFiles.size > 0
+                ? Array.from(this.selectedFiles)
+                : this.currentFiles.map(f => f.path);
+
+            // Call preview API
+            const result = await this.api.previewRename(this.currentPath, false, null, filePaths);
+
+            // Hide loading
+            this.ui.hide('preview-loading');
+
+            // Update statistics
+            document.getElementById('preview-stat-total').textContent = result.total;
+            document.getElementById('preview-stat-rename').textContent = result.stats.will_rename;
+            document.getElementById('preview-stat-skip').textContent = result.stats.will_skip;
+            document.getElementById('preview-stat-errors').textContent = result.stats.errors;
+
+            // Render preview items
+            if (result.previews.length === 0) {
+                this.ui.show('preview-empty');
+            } else {
+                this.renderPreviewList(result.previews);
+                this.ui.show('preview-list');
+            }
+
+            // Setup modal event listeners
+            this.setupPreviewModalListeners();
+
+        } catch (error) {
+            this.ui.error(`Failed to generate preview: ${error.message}`);
+            console.error('Preview error:', error);
+            this.closePreviewModal();
+        }
+    }
+
+    /**
+     * Render preview list
+     */
+    renderPreviewList(previews) {
+        const container = document.getElementById('preview-list');
+        container.innerHTML = '';
+
+        previews.forEach(preview => {
+            const item = this.createPreviewItem(preview);
+            container.appendChild(item);
+        });
+    }
+
+    /**
+     * Create a preview item element
+     */
+    createPreviewItem(preview) {
+        const item = document.createElement('div');
+        item.className = `preview-item ${preview.status}`;
+        item.dataset.path = preview.src;
+
+        // Checkbox (only for items that will rename)
+        const checkboxDiv = document.createElement('div');
+        checkboxDiv.className = 'preview-checkbox';
+
+        if (preview.status === 'will_rename') {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = true;
+            checkbox.dataset.path = preview.src;
+            checkbox.addEventListener('change', () => this.updatePreviewExecuteButton());
+            checkboxDiv.appendChild(checkbox);
+        }
+        item.appendChild(checkboxDiv);
+
+        // Info section
+        const info = document.createElement('div');
+        info.className = 'preview-info';
+
+        // Original name
+        const originalName = preview.src.split('/').pop();
+        const originalDiv = document.createElement('div');
+        originalDiv.className = 'preview-original';
+        originalDiv.textContent = `Original: ${originalName}`;
+        info.appendChild(originalDiv);
+
+        // New name or reason
+        if (preview.status === 'will_rename') {
+            const newName = preview.dst.split('/').pop();
+            const newDiv = document.createElement('div');
+            newDiv.className = 'preview-new';
+            newDiv.innerHTML = `<span class="preview-arrow">→</span> ${newName}`;
+            info.appendChild(newDiv);
+
+            // Metadata source badges
+            if (preview.metadata) {
+                const sourcesDiv = document.createElement('div');
+                sourcesDiv.className = 'preview-metadata-sources';
+
+                // Show unique metadata sources
+                const sources = new Set();
+                if (preview.metadata.artist_source) sources.add(preview.metadata.artist_source);
+                if (preview.metadata.title_source) sources.add(preview.metadata.title_source);
+                if (preview.metadata.bpm_source) sources.add(preview.metadata.bpm_source);
+                if (preview.metadata.key_source) sources.add(preview.metadata.key_source);
+
+                sources.forEach(source => {
+                    const badge = document.createElement('span');
+                    badge.className = 'metadata-badge';
+
+                    if (source === 'Tags') {
+                        badge.classList.add('source-tags');
+                        badge.textContent = '🏷️ ID3 Tags';
+                    } else if (source === 'MusicBrainz') {
+                        badge.classList.add('source-musicbrainz');
+                        badge.textContent = '🎵 MusicBrainz';
+                    } else if (source === 'AI Audio') {
+                        badge.classList.add('source-ai');
+                        badge.textContent = '🤖 AI Analysis';
+                    }
+
+                    sourcesDiv.appendChild(badge);
+                });
+
+                if (sources.size > 0) {
+                    info.appendChild(sourcesDiv);
+                }
+            }
+        } else {
+            const reasonDiv = document.createElement('div');
+            reasonDiv.className = 'preview-reason';
+            reasonDiv.textContent = preview.reason || 'Cannot rename';
+            info.appendChild(reasonDiv);
+        }
+
+        item.appendChild(info);
+
+        // Status icon
+        const statusIcon = document.createElement('div');
+        statusIcon.className = 'preview-status-icon';
+        if (preview.status === 'will_rename') {
+            statusIcon.textContent = '✅';
+        } else if (preview.status === 'will_skip') {
+            statusIcon.textContent = '⏭️';
+        } else {
+            statusIcon.textContent = '❌';
+        }
+        item.appendChild(statusIcon);
+
+        return item;
+    }
+
+    /**
+     * Setup preview modal event listeners
+     */
+    setupPreviewModalListeners() {
+        // Close button
+        const closeBtn = document.querySelector('#preview-modal .modal-close');
+        closeBtn.onclick = () => this.closePreviewModal();
+
+        // Cancel button
+        const cancelBtn = document.getElementById('preview-cancel-btn');
+        cancelBtn.onclick = () => this.closePreviewModal();
+
+        // Overlay click
+        const overlay = document.querySelector('#preview-modal .modal-overlay');
+        overlay.onclick = () => this.closePreviewModal();
+
+        // Select all checkbox
+        const selectAllCheckbox = document.getElementById('preview-select-all');
+        selectAllCheckbox.onchange = (e) => {
+            const checkboxes = document.querySelectorAll('#preview-list input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = e.target.checked);
+            this.updatePreviewExecuteButton();
+        };
+
+        // Execute button
+        const executeBtn = document.getElementById('preview-execute-btn');
+        executeBtn.onclick = () => this.executeRename();
+
+        // Keyboard shortcuts
+        const modal = document.getElementById('preview-modal');
+        modal.onkeydown = (e) => {
+            if (e.key === 'Escape') this.closePreviewModal();
+        };
+
+        // Initial button state
+        this.updatePreviewExecuteButton();
+    }
+
+    /**
+     * Update execute button state
+     */
+    updatePreviewExecuteButton() {
+        const executeBtn = document.getElementById('preview-execute-btn');
+        const checkboxes = document.querySelectorAll('#preview-list input[type="checkbox"]:checked');
+        const count = checkboxes.length;
+
+        executeBtn.disabled = count === 0;
+        executeBtn.textContent = count > 0
+            ? `✅ Rename Selected Files (${count})`
+            : '✅ Rename Selected Files';
+
+        // Update selection count
+        document.getElementById('preview-selection-count').textContent = `${count} selected`;
+    }
+
+    /**
+     * Close preview modal
+     */
+    closePreviewModal() {
+        const modal = document.getElementById('preview-modal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    /**
+     * Execute rename operation
+     */
+    async executeRename() {
+        // Get selected file paths
+        const checkboxes = document.querySelectorAll('#preview-list input[type="checkbox"]:checked');
+        const filePaths = Array.from(checkboxes).map(cb => cb.dataset.path);
+
+        if (filePaths.length === 0) {
+            this.ui.warning('No files selected');
+            return;
+        }
+
+        // Close preview modal
+        this.closePreviewModal();
+
+        // Show progress overlay
+        this.showProgressOverlay(filePaths.length);
+
+        try {
+            // Start rename operation
+            const result = await this.api.executeRename(this.currentPath, filePaths);
+            const operationId = result.operation_id;
+
+            // Poll for progress
+            await this.pollOperationProgress(operationId);
+
+        } catch (error) {
+            this.ui.error(`Failed to start rename operation: ${error.message}`);
+            console.error('Execute error:', error);
+            this.closeProgressOverlay();
+        }
+    }
+
+    /**
+     * Show progress overlay
+     */
+    showProgressOverlay(totalFiles) {
+        const overlay = document.getElementById('progress-overlay');
+        overlay.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        // Initialize progress
+        document.getElementById('progress-percent').textContent = '0%';
+        document.getElementById('progress-current').textContent = '0';
+        document.getElementById('progress-total').textContent = totalFiles;
+        document.getElementById('progress-bar').style.width = '0%';
+        document.getElementById('progress-output').innerHTML = '';
+        document.getElementById('progress-message').textContent = 'Starting rename operation...';
+
+        // Show cancel button, hide done button
+        document.getElementById('progress-cancel-btn').classList.remove('hidden');
+        document.getElementById('progress-done-btn').classList.add('hidden');
+
+        // Setup cancel button
+        document.getElementById('progress-cancel-btn').onclick = () => this.cancelOperation();
+    }
+
+    /**
+     * Poll operation progress
+     */
+    async pollOperationProgress(operationId) {
+        const pollInterval = 500; // 500ms
+        let cancelled = false;
+
+        // Store operation ID for cancellation
+        this.currentOperationId = operationId;
+
+        while (!cancelled) {
+            try {
+                const status = await this.api.getOperationStatus(operationId);
+
+                // Update progress
+                const percent = status.total > 0
+                    ? Math.round((status.progress / status.total) * 100)
+                    : 0;
+
+                document.getElementById('progress-percent').textContent = `${percent}%`;
+                document.getElementById('progress-current').textContent = status.progress;
+                document.getElementById('progress-bar').style.width = `${percent}%`;
+                document.getElementById('progress-message').textContent =
+                    status.current_file ? `Processing: ${status.current_file}` : '';
+
+                // Check if operation is complete
+                if (status.status === 'completed') {
+                    this.onOperationComplete(status);
+                    break;
+                } else if (status.status === 'cancelled') {
+                    this.onOperationCancelled();
+                    break;
+                } else if (status.status === 'error') {
+                    this.onOperationError(status.error);
+                    break;
+                }
+
+                // Wait before next poll
+                await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+            } catch (error) {
+                console.error('Error polling operation:', error);
+                this.ui.error('Lost connection to operation');
+                this.closeProgressOverlay();
+                break;
+            }
+        }
+    }
+
+    /**
+     * Cancel current operation
+     */
+    async cancelOperation() {
+        if (!this.currentOperationId) return;
+
+        try {
+            await this.api.cancelOperation(this.currentOperationId);
+            document.getElementById('progress-message').textContent = 'Cancelling...';
+        } catch (error) {
+            console.error('Error cancelling operation:', error);
+        }
+    }
+
+    /**
+     * Handle operation complete
+     */
+    onOperationComplete(status) {
+        const results = status.results;
+
+        // Update progress output
+        const output = document.getElementById('progress-output');
+        output.innerHTML = '';
+
+        results.results.forEach(result => {
+            const line = document.createElement('div');
+            line.className = 'progress-output-line';
+
+            if (result.status === 'renamed') {
+                line.classList.add('success');
+                const oldName = result.src.split('/').pop();
+                const newName = result.dst.split('/').pop();
+                line.textContent = `✓ ${oldName} → ${newName}`;
+            } else if (result.status === 'skipped') {
+                line.classList.add('skip');
+                const name = result.src.split('/').pop();
+                line.textContent = `⏭ ${name}: ${result.message}`;
+            } else {
+                line.classList.add('error');
+                const name = result.src.split('/').pop();
+                line.textContent = `✗ ${name}: ${result.message}`;
+            }
+
+            output.appendChild(line);
+        });
+
+        // Update message
+        document.getElementById('progress-message').textContent =
+            `✅ Complete! Renamed ${results.renamed} of ${results.total} files`;
+
+        // Show done button, hide cancel
+        document.getElementById('progress-cancel-btn').classList.add('hidden');
+        const doneBtn = document.getElementById('progress-done-btn');
+        doneBtn.classList.remove('hidden');
+        doneBtn.onclick = () => {
+            this.closeProgressOverlay();
+            this.loadDirectory(); // Refresh file list
+        };
+
+        // Show success toast
+        this.ui.success(`Successfully renamed ${results.renamed} files!`);
+    }
+
+    /**
+     * Handle operation cancelled
+     */
+    onOperationCancelled() {
+        document.getElementById('progress-message').textContent = '⚠️ Operation cancelled by user';
+
+        // Show done button
+        document.getElementById('progress-cancel-btn').classList.add('hidden');
+        const doneBtn = document.getElementById('progress-done-btn');
+        doneBtn.classList.remove('hidden');
+        doneBtn.onclick = () => {
+            this.closeProgressOverlay();
+            this.loadDirectory();
+        };
+
+        this.ui.warning('Rename operation cancelled');
+    }
+
+    /**
+     * Handle operation error
+     */
+    onOperationError(errorMessage) {
+        document.getElementById('progress-message').textContent = `❌ Error: ${errorMessage}`;
+
+        // Show done button
+        document.getElementById('progress-cancel-btn').classList.add('hidden');
+        const doneBtn = document.getElementById('progress-done-btn');
+        doneBtn.classList.remove('hidden');
+        doneBtn.onclick = () => this.closeProgressOverlay();
+
+        this.ui.error(`Operation failed: ${errorMessage}`);
+    }
+
+    /**
+     * Close progress overlay
+     */
+    closeProgressOverlay() {
+        const overlay = document.getElementById('progress-overlay');
+        overlay.classList.add('hidden');
+        document.body.style.overflow = '';
+        this.currentOperationId = null;
     }
 }
 

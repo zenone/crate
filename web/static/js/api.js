@@ -94,12 +94,60 @@ class RenamerAPI {
      * @param {string} path - Directory path
      * @param {boolean} recursive - Include subdirectories
      * @param {string} template - Optional custom template
-     * @returns {Promise<Object>} { path, previews, total }
+     * @param {Array<string>} filePaths - Optional specific files to preview
+     * @param {boolean} enhanceMetadata - Enable MusicBrainz/AI metadata
+     * @returns {Promise<Object>} { path, previews, total, stats }
      */
-    async previewRename(path, recursive = false, template = null) {
+    async previewRename(path, recursive = false, template = null, filePaths = null, enhanceMetadata = false) {
         return this._fetch('/api/rename/preview', {
             method: 'POST',
-            body: JSON.stringify({ path, recursive, template })
+            body: JSON.stringify({
+                path,
+                recursive,
+                template,
+                file_paths: filePaths,
+                enhance_metadata: enhanceMetadata
+            })
+        });
+    }
+
+    /**
+     * Execute rename operation
+     * @param {string} path - Directory path
+     * @param {Array<string>} filePaths - Files to rename
+     * @param {string} template - Optional custom template
+     * @param {boolean} dryRun - Dry run mode
+     * @returns {Promise<Object>} { operation_id, status, message }
+     */
+    async executeRename(path, filePaths, template = null, dryRun = false) {
+        return this._fetch('/api/rename/execute', {
+            method: 'POST',
+            body: JSON.stringify({
+                path,
+                file_paths: filePaths,
+                template,
+                dry_run: dryRun
+            })
+        });
+    }
+
+    /**
+     * Get operation status
+     * @param {string} operationId - Operation ID
+     * @returns {Promise<Object>} Operation status
+     */
+    async getOperationStatus(operationId) {
+        return this._fetch(`/api/operation/${operationId}`);
+    }
+
+    /**
+     * Cancel operation
+     * @param {string} operationId - Operation ID
+     * @returns {Promise<Object>} { success, message }
+     */
+    async cancelOperation(operationId) {
+        return this._fetch(`/api/operation/${operationId}/cancel`, {
+            method: 'POST'
         });
     }
 

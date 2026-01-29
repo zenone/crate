@@ -48,6 +48,15 @@ class PreviewRequest(BaseModel):
     path: str
     recursive: bool = False
     template: Optional[str] = None
+    file_paths: Optional[List[str]] = None  # Specific files to preview
+    enhance_metadata: bool = False  # Enable MusicBrainz/AI metadata
+
+
+class ExecuteRenameRequest(BaseModel):
+    path: str
+    file_paths: List[str]  # Specific files to rename
+    template: Optional[str] = None
+    dry_run: bool = False
 
 
 class ConfigUpdate(BaseModel):
@@ -252,22 +261,110 @@ async def preview_rename(request: PreviewRequest):
             recursive=request.recursive,
             dry_run=True,  # Always dry run for preview
             template=request.template,
-            auto_detect=True
+            auto_detect=request.enhance_metadata  # Enable expensive metadata lookup if requested
         )
 
         previews = renamer_api.preview_rename(rename_request)
 
+        # Filter to specific files if requested
+        if request.file_paths:
+            file_paths_set = set(Path(p).resolve() for p in request.file_paths)
+            previews = [p for p in previews if p.src.resolve() in file_paths_set]
+
         # Convert to JSON-serializable format
         preview_list = [preview.to_dict() for preview in previews]
+
+        # Calculate statistics
+        will_rename = sum(1 for p in previews if p.status == "will_rename")
+        will_skip = sum(1 for p in previews if p.status == "will_skip")
+        errors = sum(1 for p in previews if p.status == "error")
 
         return {
             "path": str(path),
             "previews": preview_list,
-            "total": len(preview_list)
+            "total": len(preview_list),
+            "stats": {
+                "will_rename": will_rename,
+                "will_skip": will_skip,
+                "errors": errors
+            }
         }
 
     except Exception as e:
         logger.error(f"Error generating preview: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Execute rename endpoint
+@app.post("/api/rename/execute")
+async def execute_rename(request: ExecuteRenameRequest):
+    """Execute rename operation on specific files."""
+    try:
+        path = Path(request.path).expanduser().resolve()
+
+        if not request.file_paths:
+            raise HTTPException(status_code=400, detail="No files specified for rename")
+
+        # Start async rename operation
+        rename_request = RenameRequest(
+            path=path,
+            recursive=False,  # We're operating on specific files
+            dry_run=request.dry_run,
+            template=request.template,
+            auto_detect=False  # Don't re-analyze, use existing metadata
+        )
+
+        # Start async operation
+        operation_id = renamer_api.start_rename_async(rename_request)
+
+        return {
+            "operation_id": operation_id,
+            "status": "started",
+            "message": "Rename operation started"
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error executing rename: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Operation status endpoint
+@app.get("/api/operation/{operation_id}")
+async def get_operation_status(operation_id: str):
+    """Get status of an async operation."""
+    try:
+        status = renamer_api.get_operation_status(operation_id)
+
+        if status is None:
+            raise HTTPException(status_code=404, detail="Operation not found")
+
+        return status.to_dict()
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting operation status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Cancel operation endpoint
+@app.post("/api/operation/{operation_id}/cancel")
+async def cancel_operation(operation_id: str):
+    """Cancel a running operation."""
+    try:
+        success = renamer_api.cancel_operation(operation_id)
+
+        if not success:
+            raise HTTPException(status_code=404, detail="Operation not found or already complete")
+
+        return {"success": True, "message": "Cancellation requested"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error cancelling operation: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

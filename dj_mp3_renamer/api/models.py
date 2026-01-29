@@ -29,6 +29,16 @@ class RenameResult:
     message: Optional[str] = None
     metadata: Optional[dict[str, str]] = None  # MP3 metadata (artist, title, bpm, key, etc.)
 
+    def to_dict(self) -> dict:
+        """Convert to JSON-serializable dict for web API."""
+        return {
+            "src": str(self.src),
+            "dst": str(self.dst) if self.dst else None,
+            "status": self.status,
+            "message": self.message,
+            "metadata": self.metadata,
+        }
+
 
 @dataclass(frozen=True)
 class RenameStatus:
@@ -125,6 +135,7 @@ class OperationStatus:
                 "renamed": self.results.renamed,
                 "skipped": self.results.skipped,
                 "errors": self.results.errors,
+                "results": [r.to_dict() for r in self.results.results],
             } if self.results else None,
             "error": self.error,
         }
