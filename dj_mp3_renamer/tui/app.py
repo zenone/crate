@@ -895,13 +895,42 @@ class DJRenameTUI(App):
                 progress_callback=progress_callback,
             )
 
-            # Use Textual's run_in_thread which keeps event loop responsive
+            # Use Textual's run_worker with thread=True to keep UI responsive
+            # This allows button clicks and key presses to be processed during execution
             import sys
-            print("🔄 Starting API call in thread...", file=sys.stderr)
+            print("🔄 Starting worker thread...", file=sys.stderr)
 
-            status = await self.run_in_thread(self.api.rename_files, request)
+            # Create a wrapper that stores the result
+            result_container = {}
 
-            print("✅ API call completed", file=sys.stderr)
+            def worker_func():
+                """Worker function that runs in background thread."""
+                try:
+                    result = self.api.rename_files(request)
+                    result_container['status'] = result
+                    result_container['error'] = None
+                except Exception as e:
+                    result_container['status'] = None
+                    result_container['error'] = e
+
+            # Run in background thread (UI stays responsive!)
+            worker = self.run_worker(
+                worker_func,
+                thread=True,
+                name="file_processor",
+                exclusive=True
+            )
+
+            # Wait for worker to complete (non-blocking - event loop stays active)
+            await worker.wait()
+
+            print("✅ Worker completed", file=sys.stderr)
+
+            # Check result
+            if result_container.get('error'):
+                raise result_container['error']
+
+            status = result_container['status']
             self.last_status = status
 
             # Dismiss progress overlay
