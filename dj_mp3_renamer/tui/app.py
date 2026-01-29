@@ -13,6 +13,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich import box
 from textual import on, work
+from textual.worker import get_current_worker
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Horizontal, Vertical, VerticalScroll, Center
@@ -894,42 +895,14 @@ class DJRenameTUI(App):
                 progress_callback=progress_callback,
             )
 
-            # Run API call in background thread WITHOUT awaiting (so event loop stays responsive)
-            from concurrent.futures import ThreadPoolExecutor
+            # Use Textual's run_in_thread which keeps event loop responsive
             import sys
+            print("🔄 Starting API call in thread...", file=sys.stderr)
 
-            executor = ThreadPoolExecutor(max_workers=1)
-            future = executor.submit(self.api.rename_files, request)
+            status = await self.run_in_thread(self.api.rename_files, request)
 
-            # Poll for completion while keeping event loop responsive
-            print("🔄 Starting polling loop...", file=sys.stderr)
-            while not future.done():
-                # Check cancellation BEFORE sleeping
-                if progress_screen.cancelled.is_set():
-                    print("🛑 CANCELLATION DETECTED IN POLLING LOOP", file=sys.stderr)
-                    # Future is still running, but we stop waiting
-                    break
-
-                # Sleep briefly to let event loop process events (button clicks, etc.)
-                await asyncio.sleep(0.1)
-
-            # Get result if completed, or None if cancelled
-            if future.done():
-                status = future.result()
-                print("✅ API call completed normally", file=sys.stderr)
-            else:
-                print("⚠️ API call was cancelled, waiting for cleanup...", file=sys.stderr)
-                # Give it a moment to clean up
-                await asyncio.sleep(0.5)
-                # Try to get result or handle cancellation
-                try:
-                    status = future.result(timeout=1.0)
-                except Exception as e:
-                    print(f"API call exception: {e}", file=sys.stderr)
-                    raise
-
+            print("✅ API call completed", file=sys.stderr)
             self.last_status = status
-            executor.shutdown(wait=False)
 
             # Dismiss progress overlay
             self.pop_screen()
