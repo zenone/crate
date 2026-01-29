@@ -121,6 +121,75 @@ class TestReadMp3Metadata:
             assert meta is None
             assert error is not None
 
+    def test_read_mp3_with_path_traversal_dots(self):
+        """Should reject paths with .. (path traversal attack)."""
+        logger = logging.getLogger("test")
+
+        # Attempt path traversal with relative path
+        meta, error = read_mp3_metadata(Path("../../etc/passwd"), logger)
+
+        assert meta is None
+        assert error is not None
+        assert "path traversal" in error.lower()
+
+    def test_read_mp3_with_path_traversal_relative(self):
+        """Should reject relative paths with multiple .. components."""
+        logger = logging.getLogger("test")
+
+        # Multiple traversal attempts
+        meta, error = read_mp3_metadata(Path("../../../sensitive/file.mp3"), logger)
+
+        assert meta is None
+        assert error is not None
+        assert "path traversal" in error.lower()
+
+    def test_read_mp3_with_valid_absolute_path(self, tmp_path):
+        """Should accept valid absolute paths."""
+        logger = logging.getLogger("test")
+
+        # Create a test MP3 file
+        test_file = tmp_path / "test.mp3"
+        test_file.touch()
+
+        # Mock MP3 data
+        mock_tags = {
+            "TPE1": Mock(text=["Test Artist"]),
+            "TIT2": Mock(text=["Test Title"]),
+        }
+        mock_audio = Mock()
+        mock_audio.tags = mock_tags
+
+        with patch("dj_mp3_renamer.core.io.MutagenFile", return_value=mock_audio):
+            meta, error = read_mp3_metadata(test_file, logger)
+
+            assert error is None
+            assert meta is not None
+            assert meta["artist"] == "Test Artist"
+
+    def test_read_mp3_with_valid_relative_path(self, tmp_path):
+        """Should accept valid relative paths (without ..)."""
+        logger = logging.getLogger("test")
+
+        # Create test file in subdir
+        subdir = tmp_path / "music"
+        subdir.mkdir()
+        test_file = subdir / "song.mp3"
+        test_file.touch()
+
+        # Mock MP3 data
+        mock_tags = {
+            "TPE1": Mock(text=["Artist"]),
+            "TIT2": Mock(text=["Title"]),
+        }
+        mock_audio = Mock()
+        mock_audio.tags = mock_tags
+
+        with patch("dj_mp3_renamer.core.io.MutagenFile", return_value=mock_audio):
+            meta, error = read_mp3_metadata(test_file, logger)
+
+            assert error is None
+            assert meta is not None
+
 
 class TestFindMp3s:
     """Test find_mp3s function."""

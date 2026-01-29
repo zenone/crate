@@ -80,17 +80,31 @@ def read_mp3_metadata(
         If successful, metadata_dict is populated and error is None.
         If failed, metadata_dict is None and error is a string.
 
+    Security:
+        Validates path to prevent traversal attacks (e.g., ../../etc/passwd).
+
     Examples:
         >>> logger = logging.getLogger("test")
         >>> meta, err = read_mp3_metadata(Path("song.mp3"), logger)
         >>> if err is None:
         ...     print(meta["artist"])
     """
+    # Security: Validate path to prevent traversal attacks (check BEFORE dependency check)
+    # Check for ".." in ORIGINAL path (before resolution) to block traversal attempts
+    if ".." in path.parts:
+        return None, "Invalid file path: path traversal detected"
+
+    try:
+        resolved_path = path.resolve()
+    except (OSError, RuntimeError) as e:
+        logger.debug("Path resolution error for %s: %s", path, e)
+        return None, f"Invalid file path: {e}"
+
     if MutagenFile is None:
         return None, "Missing dependency: mutagen (pip3 install mutagen)"
 
     try:
-        audio = MutagenFile(path.as_posix(), easy=False)
+        audio = MutagenFile(resolved_path.as_posix(), easy=False)
         if audio is None or not getattr(audio, "tags", None):
             return None, "No readable tags"
 
