@@ -482,16 +482,21 @@ class ProgressOverlay(ModalScreen):
                 speed_label = self.query_one("#progress-speed", Label)
                 speed_label.update(f"Speed: {files_per_second:.1f} files/second")
 
-    @on(Button.Pressed, "#cancel-btn")
-    def handle_cancel(self) -> None:
-        """Handle cancel button press."""
-        self.cancelled.set()  # Signal cancellation
-        # DO NOT dismiss here - let the exception handling in _process_files dismiss it
-        # Dismissing immediately removes from screen_stack and breaks cancellation check
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle button press events (standard ModalScreen pattern)."""
+        if event.button.id == "cancel-btn":
+            self.app.log.warning("🖱️  CANCEL BUTTON CLICKED - setting cancelled flag")
+            self.cancelled.set()  # Signal cancellation
+            self.app.notify("Cancelling operation...", severity="warning", timeout=2)
+            # DO NOT dismiss here - let the exception handling in _process_files dismiss it
+            # Dismissing immediately removes from screen_stack and breaks cancellation check
+            event.stop()  # Stop event propagation
 
     def action_cancel(self) -> None:
         """Handle 'c' key press to cancel."""
-        self.handle_cancel()
+        self.app.log.warning("⌨️  'C' KEY PRESSED - setting cancelled flag")
+        self.cancelled.set()
+        self.app.notify("Cancelling operation...", severity="warning", timeout=2)
 
 
 class DJRenameTUI(App):
@@ -832,7 +837,12 @@ class DJRenameTUI(App):
         def progress_callback(processed: int, filename: str):
             """Update progress overlay from API callback."""
             # Check if user cancelled the operation
-            if progress_screen.cancelled.is_set():
+            is_cancelled = progress_screen.cancelled.is_set()
+            if processed % 10 == 0:  # Log every 10 files
+                self.log.debug(f"progress_callback: processed={processed}, cancelled={is_cancelled}")
+
+            if is_cancelled:
+                self.log.warning(f"⚠️  CANCELLATION DETECTED - raising OperationCancelled")
                 raise OperationCancelled("User cancelled the operation")
 
             try:

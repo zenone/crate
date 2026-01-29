@@ -19,7 +19,8 @@
       "Bash(pytest:*)",
       "Bash(python run_web.py:*)",
       "Bash(grep:*)",
-      "WebFetch(domain:textual.textualize.io)"
+      "WebFetch(domain:textual.textualize.io)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

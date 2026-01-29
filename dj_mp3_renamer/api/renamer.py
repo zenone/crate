@@ -114,8 +114,9 @@ class RenamerAPI:
                         try:
                             request.progress_callback(processed_count, "")
                         except Exception as cb_err:
+                            self.logger.warning(f"progress_callback raised: {type(cb_err).__name__}: {cb_err}")
                             if "cancel" in type(cb_err).__name__.lower():
-                                self.logger.info(f"Operation cancelled during processing")
+                                self.logger.warning(f"⚠️  CANCELLATION EXCEPTION CAUGHT - cancelling {len(pending_futures)} pending futures")
                                 for f in pending_futures:
                                     f.cancel()
                                 raise
