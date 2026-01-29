@@ -109,6 +109,57 @@
     <!-- Toast Notifications Container -->
     <div id="toast-container" class="toast-container"></div>
 
+    <!-- Directory Browser Modal -->
+    <div id="directory-browser-modal" class="modal hidden" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+        <div class="modal-overlay" aria-hidden="true"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modal-title">📁 Browse Directories</h2>
+                <button class="modal-close" aria-label="Close dialog" title="Close">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <!-- Breadcrumb Navigation -->
+                <div class="browser-breadcrumb">
+                    <button class="breadcrumb-home" title="Go to home directory">🏠</button>
+                    <span class="breadcrumb-separator">/</span>
+                    <div id="breadcrumb-parts" class="breadcrumb-parts"></div>
+                </div>
+
+                <!-- Directory List -->
+                <div class="browser-list-container">
+                    <div id="browser-loading" class="browser-loading hidden">
+                        <div class="spinner"></div>
+                        <p>Loading directories...</p>
+                    </div>
+
+                    <div id="browser-list" class="browser-list"></div>
+
+                    <div id="browser-empty" class="browser-empty hidden">
+                        <p>📂 No subdirectories found</p>
+                    </div>
+                </div>
+
+                <!-- Current Path Display -->
+                <div class="browser-current-path">
+                    <label for="browser-path-display">Selected:</label>
+                    <input
+                        type="text"
+                        id="browser-path-display"
+                        class="browser-path-display"
+                        readonly
+                        aria-label="Currently selected path"
+                    >
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button id="browser-select-btn" class="btn btn-primary">Select Folder</button>
+                <button id="browser-cancel-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="/static/js/api.js"></script>
     <script src="/static/js/ui.js"></script>

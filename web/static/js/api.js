@@ -42,6 +42,18 @@ class RenamerAPI {
     }
 
     /**
+     * Browse directory for selection (shows folders only)
+     * @param {string} path - Directory path (null for home)
+     * @returns {Promise<Object>} { current_path, parent_path, directories, path_parts }
+     */
+    async browseDirectory(path = null) {
+        return this._fetch('/api/directory/browse', {
+            method: 'POST',
+            body: JSON.stringify({ path, include_parent: true })
+        });
+    }
+
+    /**
      * List directory contents
      * @param {string} path - Directory path
      * @returns {Promise<Object>} { path, files, total_files, mp3_count }

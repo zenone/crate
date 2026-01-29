@@ -156,5 +156,234 @@ class UI {
     }
 }
 
+/**
+ * Directory Browser Modal
+ * Provides filesystem navigation for directory selection
+ */
+class DirectoryBrowser {
+    constructor(api, ui) {
+        this.api = api;
+        this.ui = ui;
+        this.currentPath = null;
+        this.selectedPath = null;
+        this.onSelect = null; // Callback when directory selected
+
+        this.initElements();
+        this.setupEventListeners();
+    }
+
+    /**
+     * Initialize DOM elements
+     */
+    initElements() {
+        this.modal = document.getElementById('directory-browser-modal');
+        this.overlay = this.modal.querySelector('.modal-overlay');
+        this.closeBtn = this.modal.querySelector('.modal-close');
+        this.homeBtn = this.modal.querySelector('.breadcrumb-home');
+        this.breadcrumbParts = document.getElementById('breadcrumb-parts');
+        this.browserList = document.getElementById('browser-list');
+        this.browserLoading = document.getElementById('browser-loading');
+        this.browserEmpty = document.getElementById('browser-empty');
+        this.pathDisplay = document.getElementById('browser-path-display');
+        this.selectBtn = document.getElementById('browser-select-btn');
+        this.cancelBtn = document.getElementById('browser-cancel-btn');
+    }
+
+    /**
+     * Setup event listeners
+     */
+    setupEventListeners() {
+        // Close modal
+        this.closeBtn.addEventListener('click', () => this.close());
+        this.cancelBtn.addEventListener('click', () => this.close());
+        this.overlay.addEventListener('click', () => this.close());
+
+        // Select directory
+        this.selectBtn.addEventListener('click', () => this.selectCurrent());
+
+        // Home button
+        this.homeBtn.addEventListener('click', () => this.navigateToHome());
+
+        // Keyboard shortcuts
+        this.modal.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') this.close();
+            if (e.key === 'Enter' && this.selectedPath) this.selectCurrent();
+        });
+    }
+
+    /**
+     * Open the directory browser
+     */
+    async open(startPath = null) {
+        this.modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden'; // Prevent background scroll
+
+        // Load initial directory
+        await this.navigate(startPath);
+    }
+
+    /**
+     * Close the directory browser
+     */
+    close() {
+        this.modal.classList.add('hidden');
+        document.body.style.overflow = '';
+        this.selectedPath = null;
+    }
+
+    /**
+     * Navigate to a directory
+     */
+    async navigate(path = null) {
+        try {
+            // Show loading
+            this.ui.show(this.browserLoading);
+            this.ui.hide(this.browserEmpty);
+            this.browserList.innerHTML = '';
+
+            // Fetch directory contents
+            const result = await this.api.browseDirectory(path);
+
+            this.currentPath = result.current_path;
+            this.selectedPath = result.current_path; // Auto-select current directory
+            this.pathDisplay.value = result.current_path;
+
+            // Update breadcrumb
+            this.updateBreadcrumb(result.path_parts, result.current_path);
+
+            // Hide loading
+            this.ui.hide(this.browserLoading);
+
+            // Render directories
+            if (result.directories.length === 0 && !result.parent_path) {
+                this.ui.show(this.browserEmpty);
+            } else {
+                this.renderDirectories(result.directories, result.parent_path);
+            }
+
+        } catch (error) {
+            this.ui.hide(this.browserLoading);
+            this.ui.error(`Failed to browse directory: ${error.message}`);
+            console.error('Directory browse error:', error);
+        }
+    }
+
+    /**
+     * Update breadcrumb navigation
+     */
+    updateBreadcrumb(parts, currentPath) {
+        this.breadcrumbParts.innerHTML = '';
+
+        parts.forEach((part, index) => {
+            // Add separator
+            if (index > 0) {
+                const sep = document.createElement('span');
+                sep.className = 'breadcrumb-separator';
+                sep.textContent = '/';
+                this.breadcrumbParts.appendChild(sep);
+            }
+
+            // Add part button
+            const partBtn = document.createElement('button');
+            partBtn.className = 'breadcrumb-part';
+            partBtn.textContent = part;
+
+            // Mark current part
+            if (index === parts.length - 1) {
+                partBtn.classList.add('current');
+            } else {
+                // Build path for this part
+                const partPath = '/' + parts.slice(1, index + 1).join('/');
+                partBtn.addEventListener('click', () => this.navigate(partPath));
+            }
+
+            this.breadcrumbParts.appendChild(partBtn);
+        });
+    }
+
+    /**
+     * Render directory list
+     */
+    renderDirectories(directories, parentPath) {
+        this.browserList.innerHTML = '';
+
+        // Add parent directory option if exists
+        if (parentPath) {
+            const parentItem = this.createDirectoryItem(
+                '.. (parent directory)',
+                parentPath,
+                '⬆️',
+                true
+            );
+            this.browserList.appendChild(parentItem);
+        }
+
+        // Add subdirectories
+        directories.forEach(dir => {
+            const item = this.createDirectoryItem(dir.name, dir.path, '📁', false);
+            this.browserList.appendChild(item);
+        });
+    }
+
+    /**
+     * Create a directory item element
+     */
+    createDirectoryItem(name, path, icon, isParent = false) {
+        const item = document.createElement('div');
+        item.className = 'browser-item';
+        if (isParent) item.classList.add('parent');
+        item.dataset.path = path;
+
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'browser-item-icon';
+        iconSpan.textContent = icon;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'browser-item-name';
+        nameSpan.textContent = name;
+
+        item.appendChild(iconSpan);
+        item.appendChild(nameSpan);
+
+        // Single click to select
+        item.addEventListener('click', () => {
+            // Remove previous selection
+            this.browserList.querySelectorAll('.browser-item').forEach(el => {
+                el.classList.remove('selected');
+            });
+
+            // Select this item
+            item.classList.add('selected');
+            this.selectedPath = path;
+            this.pathDisplay.value = path;
+        });
+
+        // Double click to navigate
+        item.addEventListener('dblclick', () => {
+            this.navigate(path);
+        });
+
+        return item;
+    }
+
+    /**
+     * Navigate to home directory
+     */
+    async navigateToHome() {
+        await this.navigate(null); // null = home directory
+    }
+
+    /**
+     * Select current directory and close
+     */
+    selectCurrent() {
+        if (this.selectedPath && this.onSelect) {
+            this.onSelect(this.selectedPath);
+        }
+        this.close();
+    }
+}
+
 // Export for use in app.js
 window.UI = UI;
+window.DirectoryBrowser = DirectoryBrowser;

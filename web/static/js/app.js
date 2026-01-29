@@ -7,6 +7,7 @@ class App {
     constructor() {
         this.api = new RenamerAPI();
         this.ui = new UI();
+        this.directoryBrowser = null; // Will be initialized after DOM ready
         this.currentPath = '';
         this.currentFiles = [];
         this.selectedFiles = new Set();
@@ -22,6 +23,10 @@ class App {
 
         // Initialize UI
         this.ui.init();
+
+        // Initialize directory browser
+        this.directoryBrowser = new DirectoryBrowser(this.api, this.ui);
+        this.directoryBrowser.onSelect = (path) => this.onDirectorySelected(path);
 
         // Setup event listeners
         this.setupEventListeners();
@@ -39,9 +44,9 @@ class App {
      * Setup all event listeners
      */
     setupEventListeners() {
-        // Browse button
+        // Browse button - open directory browser modal
         document.getElementById('browse-btn').addEventListener('click', () => {
-            this.loadDirectory();
+            this.openDirectoryBrowser();
         });
 
         // Directory input - Enter key
@@ -99,6 +104,26 @@ class App {
 
         document.getElementById('directory-path').value = musicDir;
         document.getElementById('directory-path').placeholder = musicDir;
+    }
+
+    /**
+     * Open directory browser modal
+     */
+    async openDirectoryBrowser() {
+        // Start with current path or home
+        const currentPath = document.getElementById('directory-path').value.trim() || null;
+        await this.directoryBrowser.open(currentPath);
+    }
+
+    /**
+     * Handle directory selection from browser
+     */
+    onDirectorySelected(path) {
+        // Fill the input with selected path
+        document.getElementById('directory-path').value = path;
+
+        // Automatically load the directory
+        this.loadDirectory();
     }
 
     /**

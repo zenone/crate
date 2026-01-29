@@ -54,6 +54,23 @@ class ConfigUpdate(BaseModel):
     updates: dict
 
 
+class DirectoryBrowseRequest(BaseModel):
+    path: Optional[str] = None  # None = start at home
+    include_parent: bool = True
+
+
+class DirectoryInfo(BaseModel):
+    name: str
+    path: str
+
+
+class DirectoryBrowseResponse(BaseModel):
+    current_path: str
+    parent_path: Optional[str]
+    directories: List[DirectoryInfo]
+    path_parts: List[str]
+
+
 # Create FastAPI app
 app = FastAPI(
     title="DJ MP3 Renamer",
@@ -79,6 +96,56 @@ async def health_check():
         "version": "1.0.0",
         "api": "ready"
     }
+
+
+# Directory browser endpoint (for modal navigation)
+@app.post("/api/directory/browse", response_model=DirectoryBrowseResponse)
+async def browse_directory(request: DirectoryBrowseRequest):
+    """Browse filesystem for directory selection (shows folders only)."""
+    try:
+        # Default to home directory if no path provided
+        if request.path is None or request.path == '':
+            dir_path = Path.home()
+        else:
+            dir_path = Path(request.path).expanduser().resolve()
+
+        if not dir_path.exists():
+            raise HTTPException(status_code=404, detail=f"Directory not found: {request.path}")
+
+        if not dir_path.is_dir():
+            raise HTTPException(status_code=400, detail=f"Path is not a directory: {request.path}")
+
+        # Get parent directory
+        parent_path = str(dir_path.parent) if dir_path.parent != dir_path else None
+
+        # List subdirectories only (not files)
+        directories = []
+        try:
+            for item in sorted(dir_path.iterdir()):
+                if item.is_dir() and not item.name.startswith('.'):
+                    directories.append(DirectoryInfo(
+                        name=item.name,
+                        path=str(item)
+                    ))
+        except PermissionError:
+            # If we can't read the directory, return empty list
+            pass
+
+        # Build path parts for breadcrumb
+        path_parts = list(dir_path.parts)
+
+        return DirectoryBrowseResponse(
+            current_path=str(dir_path),
+            parent_path=parent_path,
+            directories=directories,
+            path_parts=path_parts
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error browsing directory: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Directory browsing endpoint
