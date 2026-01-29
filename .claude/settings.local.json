@@ -20,7 +20,8 @@
       "Bash(python run_web.py:*)",
       "Bash(grep:*)",
       "WebFetch(domain:textual.textualize.io)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(unzip:*)"
     ]
   }
 }

@@ -921,10 +921,26 @@ class DJRenameTUI(App):
                 exclusive=True
             )
 
-            # Wait for worker to complete (non-blocking - event loop stays active)
-            await worker.wait()
+            # Poll worker status while checking for cancellation
+            # DO NOT use await worker.wait() - it blocks the event loop!
+            print("🔄 Polling worker status (checking cancellation)...", file=sys.stderr)
 
-            print("✅ Worker completed", file=sys.stderr)
+            poll_count = 0
+            while not worker.is_finished:
+                poll_count += 1
+                if poll_count % 10 == 0:
+                    print(f"  Poll #{poll_count}: worker running, cancelled={progress_screen.cancelled.is_set()}", file=sys.stderr)
+
+                # Check if user cancelled
+                if progress_screen.cancelled.is_set():
+                    print("⚠️  CANCELLATION DETECTED IN POLL LOOP", file=sys.stderr)
+                    # Worker will stop naturally when it checks the flag
+                    break
+
+                # Yield control to event loop (allows button events to be processed!)
+                await self.app.animator.wait_for_idle()
+
+            print(f"✅ Worker finished after {poll_count} polls", file=sys.stderr)
 
             # Check result
             if result_container.get('error'):
