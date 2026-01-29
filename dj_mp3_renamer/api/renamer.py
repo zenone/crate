@@ -6,7 +6,9 @@ This orchestrates all core modules and provides a clean interface.
 
 import logging
 import os
+import threading
 import time
+import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from pathlib import Path
 from typing import Optional, Tuple
@@ -18,7 +20,12 @@ from ..core.io import ReservationBook, find_mp3s, read_mp3_metadata, write_bpm_k
 from ..core.key_conversion import to_camelot
 from ..core.sanitization import safe_filename
 from ..core.template import DEFAULT_TEMPLATE, build_default_components, build_filename_from_template
-from .models import RenameRequest, RenameResult, RenameStatus
+from .models import RenameRequest, RenameResult, RenameStatus, OperationStatus
+
+
+class OperationCancelled(Exception):
+    """Raised when operation is cancelled by user."""
+    pass
 
 
 class RenamerAPI:
@@ -39,6 +46,10 @@ class RenamerAPI:
         self.workers = max(1, workers)
         self.logger = logger or logging.getLogger("dj_mp3_renamer")
         self.config = load_config()  # Load user configuration
+
+        # Async operation tracking
+        self._operations: dict[str, dict] = {}
+        self._lock = threading.Lock()
 
     def rename_files(self, request: RenameRequest) -> RenameStatus:
         """
@@ -421,3 +432,232 @@ class RenamerAPI:
         # File needs renaming - use collision detection
         dst = book.reserve_unique(src.parent, stem, ext)
         return dst, None, meta
+
+    # Async Operation Support
+
+    def start_rename_async(self, request: RenameRequest) -> str:
+        """
+        Start rename operation asynchronously.
+
+        This method returns immediately with an operation ID. Use
+        get_operation_status() to poll for progress and results.
+
+        Args:
+            request: RenameRequest with path, options, and template
+
+        Returns:
+            operation_id: UUID for tracking operation
+
+        Examples:
+            >>> api = RenamerAPI()
+            >>> request = RenameRequest(path=Path("/music"), dry_run=False)
+            >>> operation_id = api.start_rename_async(request)
+            >>>
+            >>> # Poll for status
+            >>> while True:
+            >>>     status = api.get_operation_status(operation_id)
+            >>>     if status.status != "running":
+            >>>         break
+            >>>     print(f"Progress: {status.progress}/{status.total}")
+            >>>     time.sleep(0.5)
+        """
+        operation_id = str(uuid.uuid4())
+
+        # Initialize operation state
+        with self._lock:
+            self._operations[operation_id] = {
+                "status": "running",
+                "progress": 0,
+                "total": 0,
+                "current_file": "",
+                "start_time": time.time(),
+                "end_time": None,
+                "results": None,
+                "error": None,
+                "cancelled": False,
+            }
+
+        # Start operation in background thread
+        thread = threading.Thread(
+            target=self._run_operation_async,
+            args=(operation_id, request),
+            daemon=True,
+            name=f"rename-{operation_id[:8]}"
+        )
+        thread.start()
+
+        self.logger.info(f"Started async operation {operation_id}")
+        return operation_id
+
+    def _run_operation_async(self, operation_id: str, request: RenameRequest) -> None:
+        """
+        Run operation asynchronously in background thread.
+
+        Updates operation state as it progresses. Called by start_rename_async().
+
+        Args:
+            operation_id: Operation ID
+            request: RenameRequest
+        """
+        # Find files to get total count
+        target = request.path.expanduser().resolve()
+        if not target.exists():
+            with self._lock:
+                self._operations[operation_id]["status"] = "error"
+                self._operations[operation_id]["error"] = f"Path does not exist: {target}"
+                self._operations[operation_id]["end_time"] = time.time()
+            return
+
+        if target.is_file():
+            mp3s = [target] if target.suffix.lower() == ".mp3" else []
+        else:
+            mp3s = find_mp3s(target, recursive=request.recursive)
+
+        # Update total count
+        with self._lock:
+            self._operations[operation_id]["total"] = len(mp3s)
+
+        if not mp3s:
+            with self._lock:
+                self._operations[operation_id]["status"] = "completed"
+                self._operations[operation_id]["end_time"] = time.time()
+                self._operations[operation_id]["results"] = RenameStatus(
+                    total=0, renamed=0, skipped=0, errors=0, results=[]
+                )
+            return
+
+        # Define progress callback that updates state and checks cancellation
+        def progress_callback(count: int, filename: str):
+            with self._lock:
+                if self._operations[operation_id]["cancelled"]:
+                    raise OperationCancelled("Operation cancelled by user")
+                self._operations[operation_id]["progress"] = count
+                self._operations[operation_id]["current_file"] = filename
+
+        # Create modified request with our progress callback
+        async_request = RenameRequest(
+            path=request.path,
+            recursive=request.recursive,
+            dry_run=request.dry_run,
+            template=request.template,
+            auto_detect=request.auto_detect,
+            progress_callback=progress_callback
+        )
+
+        try:
+            # Run the operation (this blocks until complete)
+            results = self.rename_files(async_request)
+
+            # Update state with results
+            with self._lock:
+                self._operations[operation_id]["status"] = "completed"
+                self._operations[operation_id]["end_time"] = time.time()
+                self._operations[operation_id]["results"] = results
+
+            self.logger.info(f"Operation {operation_id} completed: {results.renamed} renamed")
+
+        except OperationCancelled:
+            with self._lock:
+                self._operations[operation_id]["status"] = "cancelled"
+                self._operations[operation_id]["end_time"] = time.time()
+            self.logger.info(f"Operation {operation_id} cancelled by user")
+
+        except Exception as e:
+            self.logger.error(f"Operation {operation_id} failed: {e}", exc_info=True)
+            with self._lock:
+                self._operations[operation_id]["status"] = "error"
+                self._operations[operation_id]["end_time"] = time.time()
+                self._operations[operation_id]["error"] = str(e)
+
+    def get_operation_status(self, operation_id: str) -> Optional[OperationStatus]:
+        """
+        Get status of an asynchronous operation.
+
+        Args:
+            operation_id: Operation ID from start_rename_async()
+
+        Returns:
+            OperationStatus or None if operation not found
+
+        Examples:
+            >>> status = api.get_operation_status(operation_id)
+            >>> if status:
+            >>>     print(f"Status: {status.status}")
+            >>>     print(f"Progress: {status.progress}/{status.total}")
+            >>> else:
+            >>>     print("Operation not found")
+        """
+        with self._lock:
+            if operation_id not in self._operations:
+                return None
+
+            op = self._operations[operation_id]
+            return OperationStatus(
+                operation_id=operation_id,
+                status=op["status"],
+                progress=op["progress"],
+                total=op["total"],
+                current_file=op["current_file"],
+                start_time=op["start_time"],
+                end_time=op["end_time"],
+                results=op["results"],
+                error=op["error"]
+            )
+
+    def cancel_operation(self, operation_id: str) -> bool:
+        """
+        Cancel a running operation.
+
+        The operation will stop gracefully after processing the current file.
+
+        Args:
+            operation_id: Operation ID to cancel
+
+        Returns:
+            True if operation was cancelled, False if not found or already complete
+
+        Examples:
+            >>> success = api.cancel_operation(operation_id)
+            >>> if success:
+            >>>     print("Cancellation requested")
+            >>> else:
+            >>>     print("Operation not running or already complete")
+        """
+        with self._lock:
+            if operation_id not in self._operations:
+                return False
+
+            op = self._operations[operation_id]
+            if op["status"] != "running":
+                return False  # Already complete/cancelled/error
+
+            op["cancelled"] = True
+            self.logger.info(f"Cancellation requested for operation {operation_id}")
+            return True
+
+    def clear_operation(self, operation_id: str) -> bool:
+        """
+        Remove operation from tracking (cleanup).
+
+        Use this after retrieving results to free memory. Operations are
+        kept indefinitely until cleared.
+
+        Args:
+            operation_id: Operation ID to remove
+
+        Returns:
+            True if removed, False if not found
+
+        Examples:
+            >>> # Get final results
+            >>> status = api.get_operation_status(operation_id)
+            >>> # Process results...
+            >>> # Clean up
+            >>> api.clear_operation(operation_id)
+        """
+        with self._lock:
+            if operation_id in self._operations:
+                del self._operations[operation_id]
+                self.logger.debug(f"Cleared operation {operation_id}")
+                return True
+            return False

@@ -39,3 +39,42 @@ class RenameStatus:
     skipped: int
     errors: int
     results: list[RenameResult]
+
+
+@dataclass(frozen=True)
+class OperationStatus:
+    """
+    Status of an asynchronous operation.
+
+    Used for polling operation progress in web UI.
+    Enables non-blocking operations with real-time status updates.
+    """
+
+    operation_id: str
+    status: str  # "running" | "completed" | "cancelled" | "error"
+    progress: int  # Files processed so far
+    total: int  # Total files to process
+    current_file: str  # Currently processing file
+    start_time: float  # Unix timestamp
+    end_time: Optional[float] = None  # Unix timestamp when finished
+    results: Optional[RenameStatus] = None  # Final results (when completed)
+    error: Optional[str] = None  # Error message (when error)
+
+    def to_dict(self) -> dict:
+        """Convert to JSON-serializable dict for web API."""
+        return {
+            "operation_id": self.operation_id,
+            "status": self.status,
+            "progress": self.progress,
+            "total": self.total,
+            "current_file": self.current_file,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "results": {
+                "total": self.results.total,
+                "renamed": self.results.renamed,
+                "skipped": self.results.skipped,
+                "errors": self.results.errors,
+            } if self.results else None,
+            "error": self.error,
+        }
