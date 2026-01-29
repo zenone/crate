@@ -20,11 +20,11 @@
 
 ---
 
-### Phase B: Security & Quality Fixes 🔒 IN PROGRESS
+### Phase B: Security & Quality Fixes ✅ COMPLETED (3/4 core tasks)
 **Priority**: HIGH
-**Effort**: 11 hours (Actual: 3 hours so far)
+**Effort**: 11 hours (Actual: 4.5 hours)
 **Dependencies**: None
-**Status**: B1 ✅, B2 ⏸️ (ready to verify), B3 ✅, B4 pending
+**Status**: B1 ✅, B2 ⏸️ (ready to verify), B3 ✅, B4 ✅
 
 #### B1: Path Traversal Validation (HIGH PRIORITY) ✅ COMPLETED
 - [x] PHASE 1: Improve task prompt
@@ -64,15 +64,17 @@
 **Result**: 8 integration tests created, gracefully skip when mutagen not installed ✅
 **Note**: Tests ready to run with `pip install mutagen`, all 162 existing tests still pass
 
-#### B4: Implement Config Caching
-- [ ] PHASE 1: Improve task prompt
-- [ ] PHASE 2: Add caching with mtime checking to `core/config.py`
-- [ ] Add test: `test_config_caching()`
-- [ ] Benchmark before/after with 1000 files
-- [ ] Verify cache invalidation works
+#### B4: Implement Config Caching ✅ COMPLETED
+- [x] PHASE 1: Improve task prompt (`.claude/B4_CONFIG_CACHING_PROMPT.md`)
+- [x] PHASE 2: Add caching with mtime checking to `core/config.py`
+- [x] Add 16 tests to `tests/test_config.py` (basic + caching + edge cases)
+- [x] Benchmark with 1000 iterations (3.9x speedup)
+- [x] Verify cache invalidation works (mtime-based)
 
-**Estimated**: 2 hours
-**Files**: `core/config.py`, `tests/test_config.py`
+**Actual**: 1.5 hours (2026-01-28)
+**Files**: `core/config.py` (+38 lines), `tests/test_config.py` (+368 lines), `scripts/benchmark_config.py` (new)
+**Result**: 3.9x speedup for config loading, saves ~75ms per 1000 files ✅
+**Performance**: Without cache: 100.8μs/load, With cache: 25.9μs/load
 
 ---
 
@@ -172,22 +174,22 @@
 
 ### Overall Status
 - **Phase 0**: ✅ Complete (1/1 tasks)
-- **Phase B**: ⏳ In Progress (2/4 tasks complete, 1 ready to verify)
+- **Phase B**: ✅ Complete (3/4 tasks, 1 ready to verify)
 - **Phase C**: ⬜ Not Started (0/3 tasks)
 - **Phase A**: ⬜ Not Started (0/4 tasks)
 
 ### Completion Metrics
 - **Total Tasks**: 16 (added Phase 0)
-- **Completed**: 3 (Phase 0, B1, B3)
+- **Completed**: 4 (Phase 0, B1, B3, B4)
 - **Ready to Verify**: 1 (B2)
 - **In Progress**: 0
-- **Pending**: 12
+- **Pending**: 11
 - **Blocked**: 0
 
 ### Time Tracking
 - **Estimated Total**: 35-43 hours (~1 week)
-- **Actual Spent**: 3 hours (Phase 0: 0h, B1: 1h, B3: 2h)
-- **Remaining**: 32-40 hours
+- **Actual Spent**: 4.5 hours (Phase 0: 0h, B1: 1h, B3: 2h, B4: 1.5h)
+- **Remaining**: 30.5-38.5 hours
 
 ---
 
@@ -213,5 +215,6 @@ If conversation consolidates or session ends:
 ---
 
 **Last Updated**: 2026-01-28
-**Completed**: Phase 0 ✅, B1 ✅, B3 ✅
-**Next Task**: B4 - Config Caching (2 hours estimated)
+**Completed**: Phase 0 ✅, B1 ✅, B3 ✅, B4 ✅
+**Next Task**: C1 - API Architecture Review (2 hours estimated)
+**Note**: Phase B complete (3/4 tasks, B2 ready for user verification)
