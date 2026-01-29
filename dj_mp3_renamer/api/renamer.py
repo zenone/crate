@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from ..core.audio_analysis import auto_detect_metadata, lookup_acoustid
-from ..core.config import load_config
+from ..core.config import load_config, save_config, clear_config_cache, get_config_value as core_get_config_value, set_config_value as core_set_config_value, DEFAULT_CONFIG
 from ..core.conflict_resolution import resolve_metadata_conflict
 from ..core.io import ReservationBook, find_mp3s, read_mp3_metadata, write_bpm_key_to_tags
 from ..core.key_conversion import to_camelot
@@ -748,3 +748,112 @@ class RenamerAPI:
                 ))
 
         return previews
+
+    # Config Management Support
+
+    def get_config(self) -> dict:
+        """
+        Get current configuration.
+
+        Returns all configuration settings including user overrides
+        and defaults.
+
+        Returns:
+            Configuration dictionary with all settings
+
+        Examples:
+            >>> api = RenamerAPI()
+            >>> config = api.get_config()
+            >>> print(config["default_template"])
+            {artist} - {title} [{camelot} {bpm}]
+        """
+        return load_config()
+
+    def update_config(self, updates: dict) -> bool:
+        """
+        Update configuration values.
+
+        Merges provided updates into existing configuration and saves.
+        Automatically updates the instance config and clears cache.
+
+        Args:
+            updates: Dictionary of key-value pairs to update
+
+        Returns:
+            True if successful, False otherwise
+
+        Examples:
+            >>> api = RenamerAPI()
+            >>> success = api.update_config({
+            >>>     "default_template": "{bpm} - {artist} - {title}",
+            >>>     "auto_detect_bpm": False
+            >>> })
+            >>> if success:
+            >>>     print("Config updated")
+        """
+        config = load_config()
+        config.update(updates)
+        success = save_config(config)
+        if success:
+            self.config = config
+            clear_config_cache()
+        return success
+
+    def get_config_value(self, key: str, default=None):
+        """
+        Get single configuration value.
+
+        Args:
+            key: Configuration key
+            default: Default value if key not found
+
+        Returns:
+            Configuration value or default
+
+        Examples:
+            >>> api = RenamerAPI()
+            >>> template = api.get_config_value("default_template")
+            >>> print(template)
+        """
+        return self.config.get(key, default)
+
+    def set_config_value(self, key: str, value) -> bool:
+        """
+        Set single configuration value.
+
+        Args:
+            key: Configuration key
+            value: Value to set
+
+        Returns:
+            True if successful, False otherwise
+
+        Examples:
+            >>> api = RenamerAPI()
+            >>> success = api.set_config_value("auto_detect_bpm", False)
+            >>> if success:
+            >>>     print("Config updated")
+        """
+        self.config[key] = value
+        success = save_config(self.config)
+        if success:
+            clear_config_cache()
+        return success
+
+    def get_default_config(self) -> dict:
+        """
+        Get default configuration values.
+
+        Returns configuration defaults without any user overrides.
+        Useful for reset functionality.
+
+        Returns:
+            Default configuration dictionary
+
+        Examples:
+            >>> api = RenamerAPI()
+            >>> defaults = api.get_default_config()
+            >>> print(defaults["auto_detect_bpm"])
+            True
+        """
+        return DEFAULT_CONFIG.copy()
