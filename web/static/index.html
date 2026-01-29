@@ -13,59 +13,105 @@
         <header class="app-header">
             <h1>🎵 DJ MP3 Renamer</h1>
             <p class="subtitle">Batch rename your music files with metadata-based templates</p>
+            <div class="header-status">
+                <span id="api-status-badge" class="status-badge loading">Connecting...</span>
+            </div>
         </header>
 
         <!-- Main Content -->
         <main class="app-main">
-            <!-- Status Card -->
-            <div class="status-card">
-                <h2>System Status</h2>
-                <div id="status-display" class="status-display">
-                    <div class="status-item">
-                        <span class="status-label">API Status:</span>
-                        <span id="api-status" class="status-value loading">Checking...</span>
-                    </div>
-                    <div class="status-item">
-                        <span class="status-label">Version:</span>
-                        <span id="api-version" class="status-value">-</span>
+            <!-- Directory Selector -->
+            <section class="file-browser-section">
+                <div class="section-header">
+                    <h2>📁 Select Music Directory</h2>
+                    <button id="refresh-btn" class="btn btn-secondary" title="Refresh file list">
+                        <span>🔄</span>
+                    </button>
+                </div>
+
+                <div class="directory-input-group">
+                    <input
+                        type="text"
+                        id="directory-path"
+                        class="directory-input"
+                        placeholder="/path/to/your/music/folder"
+                        aria-label="Directory path"
+                    >
+                    <button id="browse-btn" class="btn btn-primary">Browse</button>
+                </div>
+
+                <div id="path-breadcrumb" class="breadcrumb hidden"></div>
+            </section>
+
+            <!-- File List -->
+            <section id="file-list-section" class="file-list-section hidden">
+                <div class="section-header">
+                    <h2>🎧 MP3 Files</h2>
+                    <div class="file-stats">
+                        <span id="file-count" class="stat-badge">0 files</span>
+                        <span id="mp3-count" class="stat-badge">0 MP3s</span>
                     </div>
                 </div>
-            </div>
 
-            <!-- Welcome Message -->
-            <div class="welcome-card">
-                <h2>Welcome to Checkpoint 1</h2>
-                <p>This is the basic backend + health check milestone.</p>
+                <div class="file-list-container">
+                    <table id="file-list" class="file-table">
+                        <thead>
+                            <tr>
+                                <th class="col-checkbox">
+                                    <input type="checkbox" id="select-all" aria-label="Select all files">
+                                </th>
+                                <th class="col-name">Filename</th>
+                                <th class="col-artist">Artist</th>
+                                <th class="col-title">Title</th>
+                                <th class="col-bpm">BPM</th>
+                                <th class="col-key">Key</th>
+                                <th class="col-actions">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="file-list-body">
+                            <!-- Files will be inserted here -->
+                        </tbody>
+                    </table>
+                </div>
 
-                <h3>What's Working:</h3>
-                <ul>
-                    <li>✅ FastAPI server running</li>
-                    <li>✅ Health check endpoint</li>
-                    <li>✅ Static file serving</li>
-                    <li>✅ Basic HTML page (you're looking at it!)</li>
-                </ul>
+                <div id="loading-files" class="loading-indicator hidden">
+                    <div class="spinner"></div>
+                    <p>Loading files...</p>
+                </div>
 
-                <h3>Manual Testing:</h3>
-                <ol>
-                    <li>Check the API status above (should show "Ready")</li>
-                    <li>Open <a href="/api/health" target="_blank">/api/health</a> in a new tab</li>
-                    <li>Verify you see JSON response with status "ok"</li>
-                    <li>Check the browser console (F12) for any errors</li>
-                </ol>
+                <div id="no-files-message" class="empty-state hidden">
+                    <p>📂 No MP3 files found in this directory</p>
+                    <p class="empty-state-hint">Try selecting a different folder</p>
+                </div>
+            </section>
 
-                <h3>Next Checkpoint:</h3>
-                <p>Checkpoint 2 will add file browsing, directory selection, and core API endpoints.</p>
-            </div>
+            <!-- Actions Section -->
+            <section id="actions-section" class="actions-section hidden">
+                <button id="preview-btn" class="btn btn-primary btn-large" disabled>
+                    👁️ Preview Rename
+                </button>
+                <button id="settings-btn" class="btn btn-secondary btn-large">
+                    ⚙️ Settings
+                </button>
+            </section>
         </main>
 
         <!-- Footer -->
         <footer class="app-footer">
-            <p>DJ MP3 Renamer v1.0.0 | Built with FastAPI & Vanilla JavaScript</p>
+            <p>DJ MP3 Renamer v1.0.0 | Checkpoint 2: File Browser</p>
+            <p class="footer-links">
+                <a href="/docs" target="_blank">API Docs</a> •
+                <a href="/api/health" target="_blank">Health Check</a>
+            </p>
         </footer>
     </div>
 
+    <!-- Toast Notifications Container -->
+    <div id="toast-container" class="toast-container"></div>
+
     <!-- Scripts -->
     <script src="/static/js/api.js"></script>
+    <script src="/static/js/ui.js"></script>
     <script src="/static/js/app.js"></script>
 </body>
 </html>
