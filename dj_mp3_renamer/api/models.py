@@ -68,6 +68,30 @@ class FilePreview:
 
 
 @dataclass(frozen=True)
+class TemplateValidation:
+    """
+    Result of template validation.
+
+    Shows whether a template is valid and provides helpful error messages
+    and example output. Used for real-time validation in template editors.
+    """
+
+    valid: bool  # Whether template is valid
+    errors: list[str]  # List of error messages
+    warnings: list[str]  # List of warning messages
+    example: Optional[str] = None  # Example output with sample data
+
+    def to_dict(self) -> dict:
+        """Convert to JSON-serializable dict for web API."""
+        return {
+            "valid": self.valid,
+            "errors": self.errors,
+            "warnings": self.warnings,
+            "example": self.example,
+        }
+
+
+@dataclass(frozen=True)
 class OperationStatus:
     """
     Status of an asynchronous operation.

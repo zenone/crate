@@ -20,7 +20,7 @@ from ..core.io import ReservationBook, find_mp3s, read_mp3_metadata, write_bpm_k
 from ..core.key_conversion import to_camelot
 from ..core.sanitization import safe_filename
 from ..core.template import DEFAULT_TEMPLATE, build_default_components, build_filename_from_template
-from .models import RenameRequest, RenameResult, RenameStatus, OperationStatus, FilePreview
+from .models import RenameRequest, RenameResult, RenameStatus, OperationStatus, FilePreview, TemplateValidation
 
 
 class OperationCancelled(Exception):
@@ -857,3 +857,111 @@ class RenamerAPI:
             True
         """
         return DEFAULT_CONFIG.copy()
+
+    # Template Validation Support
+
+    def validate_template(self, template: str) -> TemplateValidation:
+        """
+        Validate filename template.
+
+        Checks template for invalid characters, unknown variables, and
+        generates example output with sample data. Useful for real-time
+        validation in template editors.
+
+        Args:
+            template: Template string to validate
+
+        Returns:
+            TemplateValidation with errors, warnings, and example
+
+        Examples:
+            >>> api = RenamerAPI()
+            >>> result = api.validate_template("{artist} - {title}")
+            >>> if result.valid:
+            >>>     print(f"Valid! Example: {result.example}")
+            >>> else:
+            >>>     print(f"Errors: {result.errors}")
+        """
+        errors = []
+        warnings = []
+
+        # Check for empty template
+        if not template or template.strip() == "":
+            errors.append("Template cannot be empty")
+            return TemplateValidation(
+                valid=False,
+                errors=errors,
+                warnings=warnings,
+                example=None
+            )
+
+        # Check for invalid filename characters
+        invalid_chars = r'\/:*?"<>|'
+        found_invalid = [c for c in invalid_chars if c in template]
+        if found_invalid:
+            errors.append(
+                f"Template contains invalid filename characters: {', '.join(repr(c) for c in found_invalid)}"
+            )
+
+        # Check for leading/trailing spaces
+        if template.startswith(" ") or template.endswith(" "):
+            warnings.append("Template has leading or trailing spaces (will be trimmed)")
+
+        # Check for multiple consecutive spaces
+        if "  " in template:
+            warnings.append("Template contains multiple consecutive spaces")
+
+        # Try to expand with sample data
+        sample_meta = {
+            "artist": "Sample Artist",
+            "title": "Sample Title",
+            "bpm": "128",
+            "key": "Am",
+            "camelot": "8A",
+            "album": "Sample Album",
+            "year": "2024",
+            "label": "Sample Label",
+            "track": "01",
+            "mix": "Original Mix",
+        }
+
+        example = None
+        try:
+            tokens = build_default_components(sample_meta)
+            expanded = build_filename_from_template(tokens, template)
+            example = safe_filename(expanded)
+
+            # Check if example is empty after sanitization
+            if not example or example.strip() == "":
+                errors.append("Template produces empty filename after sanitization")
+
+            # Check for unresolved template variables in output
+            if example and "{" in example and "}" in example:
+                # Find unresolved variables
+                import re
+                unresolved = re.findall(r'\{(\w+)\}', example)
+                if unresolved:
+                    for var in unresolved:
+                        errors.append(f"Unknown template variable: {{{var}}}")
+
+            # Check for very long filenames
+            if example and len(example) > 200:
+                warnings.append(f"Template produces long filename ({len(example)} characters)")
+
+        except KeyError as e:
+            # Unknown template variable (shouldn't happen with build_filename_from_template)
+            var_name = str(e).strip("'\"")
+            errors.append(f"Unknown template variable: {{{var_name}}}")
+        except Exception as e:
+            # Other template expansion error
+            errors.append(f"Template expansion error: {str(e)}")
+
+        # Final validation
+        valid = len(errors) == 0
+
+        return TemplateValidation(
+            valid=valid,
+            errors=errors,
+            warnings=warnings,
+            example=example
+        )
