@@ -20,7 +20,7 @@ from ..core.io import ReservationBook, find_mp3s, read_mp3_metadata, write_bpm_k
 from ..core.key_conversion import to_camelot
 from ..core.sanitization import safe_filename
 from ..core.template import DEFAULT_TEMPLATE, build_default_components, build_filename_from_template
-from .models import RenameRequest, RenameResult, RenameStatus, OperationStatus
+from .models import RenameRequest, RenameResult, RenameStatus, OperationStatus, FilePreview
 
 
 class OperationCancelled(Exception):
@@ -661,3 +661,90 @@ class RenamerAPI:
                 self.logger.debug(f"Cleared operation {operation_id}")
                 return True
             return False
+
+    # File Preview Support
+
+    def preview_rename(self, request: RenameRequest) -> list[FilePreview]:
+        """
+        Preview rename operation without executing.
+
+        Shows what files would be renamed and their new names. Useful for
+        displaying confirmation dialog before applying changes.
+
+        Args:
+            request: RenameRequest (dry_run and progress_callback ignored)
+
+        Returns:
+            List of FilePreview objects showing old → new names
+
+        Examples:
+            >>> api = RenamerAPI()
+            >>> request = RenameRequest(path=Path("/music"))
+            >>> previews = api.preview_rename(request)
+            >>> for p in previews:
+            >>>     if p.status == "will_rename":
+            >>>         print(f"{p.src.name} → {p.dst.name}")
+            >>>     elif p.status == "will_skip":
+            >>>         print(f"{p.src.name}: {p.reason}")
+
+        Notes:
+            - This is a fast operation (no audio analysis)
+            - Does not modify any files
+            - Uses collision detection (ReservationBook)
+        """
+        target = request.path.expanduser().resolve()
+
+        if not target.exists():
+            self.logger.warning(f"Path does not exist: {target}")
+            return []
+
+        # Find MP3 files
+        if target.is_file():
+            mp3s = [target] if target.suffix.lower() == ".mp3" else []
+        else:
+            mp3s = find_mp3s(target, recursive=request.recursive)
+
+        if not mp3s:
+            self.logger.info(f"No MP3 files found at: {target}")
+            return []
+
+        # Calculate targets for each file
+        previews = []
+        book = ReservationBook()
+        template = request.template or DEFAULT_TEMPLATE
+
+        for src in mp3s:
+            try:
+                # Get target path (no auto-detection for speed)
+                dst, reason, meta = self._derive_target(
+                    src, template, book,
+                    auto_detect=False  # Skip expensive audio analysis
+                )
+
+                if dst:
+                    previews.append(FilePreview(
+                        src=src,
+                        dst=dst,
+                        status="will_rename",
+                        metadata=meta
+                    ))
+                else:
+                    previews.append(FilePreview(
+                        src=src,
+                        dst=None,
+                        status="will_skip",
+                        reason=reason,
+                        metadata=meta
+                    ))
+
+            except Exception as e:
+                self.logger.error(f"Preview error for {src}: {e}")
+                previews.append(FilePreview(
+                    src=src,
+                    dst=None,
+                    status="error",
+                    reason=str(e),
+                    metadata=None
+                ))
+
+        return previews

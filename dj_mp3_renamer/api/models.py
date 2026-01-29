@@ -42,6 +42,32 @@ class RenameStatus:
 
 
 @dataclass(frozen=True)
+class FilePreview:
+    """
+    Preview of a file rename operation.
+
+    Shows what would happen to a file without executing the rename.
+    Used by web UI to display confirmation dialog before applying changes.
+    """
+
+    src: Path  # Original filename
+    dst: Optional[Path]  # New filename (None if will be skipped)
+    status: str  # "will_rename" | "will_skip" | "error"
+    reason: Optional[str] = None  # Why skipped/error
+    metadata: Optional[dict[str, str]] = None  # MP3 metadata
+
+    def to_dict(self) -> dict:
+        """Convert to JSON-serializable dict for web API."""
+        return {
+            "src": str(self.src),
+            "dst": str(self.dst) if self.dst else None,
+            "status": self.status,
+            "reason": self.reason,
+            "metadata": self.metadata,
+        }
+
+
+@dataclass(frozen=True)
 class OperationStatus:
     """
     Status of an asynchronous operation.
