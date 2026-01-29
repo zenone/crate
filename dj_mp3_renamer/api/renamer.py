@@ -108,10 +108,15 @@ class RenamerAPI:
 
             try:
                 # Poll for completed futures while checking for cancellation
+                iteration = 0
                 while pending_futures:
+                    iteration += 1
                     # Check for cancellation every iteration
                     if request.progress_callback:
                         try:
+                            # DEBUG: Log every 10 iterations
+                            if iteration % 10 == 0:
+                                self.logger.info(f"🔄 Polling iteration {iteration}: {len(pending_futures)} pending, {processed_count} processed")
                             request.progress_callback(processed_count, "")
                         except Exception as cb_err:
                             self.logger.warning(f"progress_callback raised: {type(cb_err).__name__}: {cb_err}")

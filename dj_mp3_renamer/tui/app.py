@@ -491,7 +491,19 @@ class ProgressOverlay(ModalScreen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button press events (standard ModalScreen pattern)."""
+        # AGGRESSIVE DEBUGGING - print to stdout AND log
+        import sys
+        print(f"\n{'='*60}", file=sys.stderr)
+        print(f"on_button_pressed CALLED!", file=sys.stderr)
+        print(f"Button ID: {event.button.id}", file=sys.stderr)
+        print(f"Looking for: cancel-btn", file=sys.stderr)
+        print(f"Match: {event.button.id == 'cancel-btn'}", file=sys.stderr)
+        print(f"{'='*60}\n", file=sys.stderr)
+
+        self.app.log.warning(f"🔍 on_button_pressed called with button.id={event.button.id}")
+
         if event.button.id == "cancel-btn":
+            print(f"\n🖱️  CANCEL BUTTON CLICKED - SETTING FLAG\n", file=sys.stderr)
             self.app.log.warning("🖱️  CANCEL BUTTON CLICKED - setting cancelled flag")
             self.cancelled.set()  # Signal cancellation
             self.app.notify("Cancelling operation...", severity="warning", timeout=2)
@@ -501,8 +513,11 @@ class ProgressOverlay(ModalScreen):
 
     def action_cancel(self) -> None:
         """Handle 'c' key press to cancel."""
+        import sys
+        print(f"\n⌨️  'C' KEY PRESSED - SETTING FLAG\n", file=sys.stderr)
         self.app.log.warning("⌨️  'C' KEY PRESSED - setting cancelled flag")
         self.cancelled.set()
+        print(f"   Flag is_set: {self.cancelled.is_set()}\n", file=sys.stderr)
         self.app.notify("Cancelling operation...", severity="warning", timeout=2)
 
 
@@ -845,10 +860,15 @@ class DJRenameTUI(App):
             """Update progress overlay from API callback."""
             # Check if user cancelled the operation
             is_cancelled = progress_screen.cancelled.is_set()
-            if processed % 10 == 0:  # Log every 10 files
+
+            # AGGRESSIVE DEBUGGING - check EVERY call
+            import sys
+            if processed % 5 == 0 or is_cancelled:  # More frequent logging
+                print(f"📊 progress_callback: processed={processed}, cancelled={is_cancelled}", file=sys.stderr)
                 self.log.debug(f"progress_callback: processed={processed}, cancelled={is_cancelled}")
 
             if is_cancelled:
+                print(f"\n⚠️  CANCELLATION DETECTED - RAISING EXCEPTION\n", file=sys.stderr)
                 self.log.warning(f"⚠️  CANCELLATION DETECTED - raising OperationCancelled")
                 raise OperationCancelled("User cancelled the operation")
 
@@ -874,9 +894,42 @@ class DJRenameTUI(App):
                 progress_callback=progress_callback,
             )
 
-            # Run API call in background thread (blocking but progress overlay remains responsive)
-            status = await asyncio.to_thread(self.api.rename_files, request)
+            # Run API call in background thread WITHOUT awaiting (so event loop stays responsive)
+            from concurrent.futures import ThreadPoolExecutor
+            import sys
+
+            executor = ThreadPoolExecutor(max_workers=1)
+            future = executor.submit(self.api.rename_files, request)
+
+            # Poll for completion while keeping event loop responsive
+            print("🔄 Starting polling loop...", file=sys.stderr)
+            while not future.done():
+                # Check cancellation BEFORE sleeping
+                if progress_screen.cancelled.is_set():
+                    print("🛑 CANCELLATION DETECTED IN POLLING LOOP", file=sys.stderr)
+                    # Future is still running, but we stop waiting
+                    break
+
+                # Sleep briefly to let event loop process events (button clicks, etc.)
+                await asyncio.sleep(0.1)
+
+            # Get result if completed, or None if cancelled
+            if future.done():
+                status = future.result()
+                print("✅ API call completed normally", file=sys.stderr)
+            else:
+                print("⚠️ API call was cancelled, waiting for cleanup...", file=sys.stderr)
+                # Give it a moment to clean up
+                await asyncio.sleep(0.5)
+                # Try to get result or handle cancellation
+                try:
+                    status = future.result(timeout=1.0)
+                except Exception as e:
+                    print(f"API call exception: {e}", file=sys.stderr)
+                    raise
+
             self.last_status = status
+            executor.shutdown(wait=False)
 
             # Dismiss progress overlay
             self.pop_screen()
