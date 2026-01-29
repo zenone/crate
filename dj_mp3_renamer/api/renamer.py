@@ -6,6 +6,7 @@ This orchestrates all core modules and provides a clean interface.
 
 import logging
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError
 from pathlib import Path
 from typing import Optional, Tuple
@@ -89,58 +90,67 @@ class RenamerAPI:
                 for src in mp3s
             ]
 
-            # Call progress callback initially to enable immediate cancellation
+            # Manual polling loop for responsive cancellation
+            # (as_completed blocks, so we poll manually every 100ms)
             processed_count = 0
+            pending_futures = set(futures)
+
+            # Call initial progress callback to enable immediate cancellation
             if request.progress_callback:
                 try:
                     request.progress_callback(0, "Starting...")
                 except Exception as cb_err:
                     if "cancel" in type(cb_err).__name__.lower():
                         self.logger.info(f"Operation cancelled before processing started")
-                        for f in futures:
+                        for f in pending_futures:
                             f.cancel()
                         raise
 
             try:
-                for future in as_completed(futures):
-                    # Poll with timeout to enable responsive cancellation
-                    # Instead of blocking indefinitely, check every 100ms
-                    while True:
-                        try:
-                            result = future.result(timeout=0.1)
-                            break  # Got result, exit polling loop
-                        except TimeoutError:
-                            # Future not ready yet - check for cancellation
-                            if request.progress_callback:
-                                try:
-                                    # Callback with same count to trigger cancel check
-                                    request.progress_callback(processed_count, "")
-                                except Exception as cb_err:
-                                    if "cancel" in type(cb_err).__name__.lower():
-                                        self.logger.info(f"Operation cancelled during polling")
-                                        for f in futures:
-                                            if not f.done():
-                                                f.cancel()
-                                        raise
-                            continue  # Keep polling
-
-                    results.append(result)
-
-                    # Call progress callback if provided
-                    processed_count += 1
+                # Poll for completed futures while checking for cancellation
+                while pending_futures:
+                    # Check for cancellation every iteration
                     if request.progress_callback:
                         try:
-                            request.progress_callback(processed_count, result.src.name)
+                            request.progress_callback(processed_count, "")
                         except Exception as cb_err:
-                            # Check if this is a cancellation request (exception name contains "cancel")
                             if "cancel" in type(cb_err).__name__.lower():
-                                self.logger.info(f"Operation cancelled via progress callback")
-                                # Cancel all pending futures before raising
-                                for f in futures:
-                                    if not f.done():
-                                        f.cancel()
-                                raise  # Re-raise cancellation exceptions to stop processing
-                            self.logger.warning(f"Progress callback error: {cb_err}")
+                                self.logger.info(f"Operation cancelled during processing")
+                                for f in pending_futures:
+                                    f.cancel()
+                                raise
+
+                    # Find completed futures
+                    done_futures = {f for f in pending_futures if f.done()}
+
+                    # Process completed futures
+                    for future in done_futures:
+                        try:
+                            result = future.result()
+                            results.append(result)
+
+                            # Update progress
+                            processed_count += 1
+                            if request.progress_callback:
+                                try:
+                                    request.progress_callback(processed_count, result.src.name)
+                                except Exception as cb_err:
+                                    if "cancel" in type(cb_err).__name__.lower():
+                                        self.logger.info(f"Operation cancelled via progress callback")
+                                        for f in pending_futures:
+                                            f.cancel()
+                                        raise
+                                    self.logger.warning(f"Progress callback error: {cb_err}")
+                        except Exception as e:
+                            # Future raised an exception - still count as processed
+                            self.logger.error(f"Future error: {e}")
+
+                    # Remove completed futures from pending set
+                    pending_futures -= done_futures
+
+                    # Sleep briefly to avoid busy-waiting (100ms polling interval)
+                    if pending_futures:
+                        time.sleep(0.1)
             except Exception:
                 # On any exception (including cancellation), cancel pending futures
                 for f in futures:
