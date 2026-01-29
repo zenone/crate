@@ -21,7 +21,16 @@
       "Bash(grep:*)",
       "WebFetch(domain:textual.textualize.io)",
       "WebFetch(domain:github.com)",
-      "Bash(unzip:*)"
+      "Bash(unzip:*)",
+      "Bash(wc:*)",
+      "Bash(if [ ! -d \"mac-maintenance\" ])",
+      "Bash(then unzip -q mac-maintenance.zip)",
+      "Bash(fi)",
+      "Bash(if [ -f \"mac-maintenance.zip\" ])",
+      "Bash(then echo \"Zip exists\")",
+      "Bash(/Users/szenone/Library/Python/3.9/bin/pytest tests/test_io.py::TestReadMp3Metadata::test_read_mp3_with_path_traversal_dots -xvs)",
+      "Bash(/Users/szenone/Library/Python/3.9/bin/pytest:*)",
+      "Bash(cat:*)"
     ]
   }
 }
