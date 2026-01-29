@@ -965,3 +965,48 @@ class RenamerAPI:
             warnings=warnings,
             example=example
         )
+
+    # Metadata Enhancement Support
+
+    def analyze_file(self, file_path: Path) -> Optional[dict]:
+        """
+        Analyze single file metadata.
+
+        Performs comprehensive metadata analysis including:
+        - Reading existing ID3 tags
+        - MusicBrainz lookup (if enabled)
+        - AI audio analysis for BPM/Key
+        - Conflict resolution between sources
+        - Returns enhanced metadata
+
+        Args:
+            file_path: Path to MP3 file
+
+        Returns:
+            Enhanced metadata dict or None if error
+
+        Examples:
+            >>> api = RenamerAPI()
+            >>> metadata = api.analyze_file(Path("/music/track.mp3"))
+            >>> if metadata:
+            >>>     print(f"BPM: {metadata['bpm']} (from {metadata['bpm_source']})")
+            >>>     print(f"Key: {metadata['key']} (from {metadata['key_source']})")
+
+        Notes:
+            - Respects config settings (enable_musicbrainz, auto_detect_*)
+            - May take several seconds for full analysis
+            - Returns None if file cannot be read
+        """
+        # Read existing metadata
+        meta, err = read_mp3_metadata(file_path, self.logger)
+        if err:
+            self.logger.error(f"Failed to read {file_path}: {err}")
+            return None
+
+        # Enhance with MusicBrainz + AI analysis
+        try:
+            enhanced = self._enhance_metadata(file_path, meta)
+            return enhanced
+        except Exception as e:
+            self.logger.error(f"Failed to enhance metadata for {file_path}: {e}", exc_info=True)
+            return None
