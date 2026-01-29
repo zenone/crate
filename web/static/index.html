@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="DJ MP3 Renamer - Batch rename music files with metadata-based templates">
+    <title>DJ MP3 Renamer</title>
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>🎵 DJ MP3 Renamer</h1>
+            <p class="subtitle">Batch rename your music files with metadata-based templates</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Status Card -->
+            <div class="status-card">
+                <h2>System Status</h2>
+                <div id="status-display" class="status-display">
+                    <div class="status-item">
+                        <span class="status-label">API Status:</span>
+                        <span id="api-status" class="status-value loading">Checking...</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Version:</span>
+                        <span id="api-version" class="status-value">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Welcome Message -->
+            <div class="welcome-card">
+                <h2>Welcome to Checkpoint 1</h2>
+                <p>This is the basic backend + health check milestone.</p>
+
+                <h3>What's Working:</h3>
+                <ul>
+                    <li>✅ FastAPI server running</li>
+                    <li>✅ Health check endpoint</li>
+                    <li>✅ Static file serving</li>
+                    <li>✅ Basic HTML page (you're looking at it!)</li>
+                </ul>
+
+                <h3>Manual Testing:</h3>
+                <ol>
+                    <li>Check the API status above (should show "Ready")</li>
+                    <li>Open <a href="/api/health" target="_blank">/api/health</a> in a new tab</li>
+                    <li>Verify you see JSON response with status "ok"</li>
+                    <li>Check the browser console (F12) for any errors</li>
+                </ol>
+
+                <h3>Next Checkpoint:</h3>
+                <p>Checkpoint 2 will add file browsing, directory selection, and core API endpoints.</p>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>DJ MP3 Renamer v1.0.0 | Built with FastAPI & Vanilla JavaScript</p>
+        </footer>
+    </div>
+
+    <!-- Scripts -->
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
