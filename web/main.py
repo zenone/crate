@@ -14,6 +14,7 @@ import logging
 
 # Import the RenamerAPI
 from dj_mp3_renamer.api import RenamerAPI, RenameRequest
+from dj_mp3_renamer.core.io import find_mp3s
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 # Pydantic models for request/response validation
 class DirectoryRequest(BaseModel):
     path: str
+    recursive: bool = False  # Include subdirectories
 
 
 class FileInfo(BaseModel):
@@ -160,7 +162,7 @@ async def browse_directory(request: DirectoryBrowseRequest):
 # Directory browsing endpoint
 @app.post("/api/directory/list", response_model=DirectoryContents)
 async def list_directory(request: DirectoryRequest):
-    """List files in a directory with MP3 metadata."""
+    """List files in a directory with MP3 metadata (optionally recursive)."""
     try:
         dir_path = Path(request.path).expanduser().resolve()
 
@@ -170,30 +172,51 @@ async def list_directory(request: DirectoryRequest):
         if not dir_path.is_dir():
             raise HTTPException(status_code=400, detail=f"Path is not a directory: {request.path}")
 
-        # List all files
-        files = []
-        mp3_count = 0
+        # Find MP3 files (optionally recursive)
+        if request.recursive:
+            # Use find_mp3s for recursive scanning
+            mp3_files = find_mp3s(dir_path, recursive=True)
 
-        for file_path in sorted(dir_path.iterdir()):
-            if file_path.is_file():
-                is_mp3 = file_path.suffix.lower() == '.mp3'
-
-                file_info = FileInfo(
-                    path=str(file_path),
-                    name=file_path.name,
-                    size=file_path.stat().st_size,
-                    is_mp3=is_mp3,
+            # Create FileInfo objects for MP3s
+            files = []
+            for mp3_path in sorted(mp3_files):
+                files.append(FileInfo(
+                    path=str(mp3_path),
+                    name=mp3_path.name,
+                    size=mp3_path.stat().st_size,
+                    is_mp3=True,
                     metadata=None  # Will load on demand
-                )
+                ))
 
-                files.append(file_info)
-                if is_mp3:
-                    mp3_count += 1
+            mp3_count = len(files)
+            total_files = len(files)
+        else:
+            # Non-recursive: list immediate directory only
+            files = []
+            mp3_count = 0
+
+            for file_path in sorted(dir_path.iterdir()):
+                if file_path.is_file():
+                    is_mp3 = file_path.suffix.lower() == '.mp3'
+
+                    file_info = FileInfo(
+                        path=str(file_path),
+                        name=file_path.name,
+                        size=file_path.stat().st_size,
+                        is_mp3=is_mp3,
+                        metadata=None  # Will load on demand
+                    )
+
+                    files.append(file_info)
+                    if is_mp3:
+                        mp3_count += 1
+
+            total_files = len(files)
 
         return DirectoryContents(
             path=str(dir_path),
             files=files,
-            total_files=len(files),
+            total_files=total_files,
             mp3_count=mp3_count
         )
 

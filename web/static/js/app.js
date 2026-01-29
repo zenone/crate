@@ -73,6 +73,11 @@ class App {
             this.showPreview();
         });
 
+        // Rename Now button
+        document.getElementById('rename-now-btn').addEventListener('click', () => {
+            this.showRenameConfirmation();
+        });
+
         // Settings button
         document.getElementById('settings-btn').addEventListener('click', () => {
             this.ui.toast('Settings coming in Checkpoint 5!', 'info');
@@ -127,7 +132,7 @@ class App {
     }
 
     /**
-     * Load directory contents
+     * Load directory contents (recursive by default)
      */
     async loadDirectory() {
         const pathInput = document.getElementById('directory-path');
@@ -145,8 +150,8 @@ class App {
             this.ui.hide('no-files-message');
             document.getElementById('file-list-body').innerHTML = '';
 
-            // Fetch directory contents
-            const result = await this.api.listDirectory(path);
+            // Fetch directory contents RECURSIVELY (includes subdirectories)
+            const result = await this.api.listDirectory(path, true);
 
             // Update state
             this.currentPath = result.path;
@@ -181,7 +186,7 @@ class App {
      */
     updateBreadcrumb(path) {
         const breadcrumb = document.getElementById('path-breadcrumb');
-        breadcrumb.textContent = `📂 ${path}`;
+        breadcrumb.textContent = `📂 ${path} (including subdirectories)`;
         this.ui.show('path-breadcrumb');
     }
 
@@ -230,11 +235,35 @@ class App {
         checkboxCell.appendChild(checkbox);
         row.appendChild(checkboxCell);
 
-        // Filename
+        // Filename (show relative path for subdirectories)
         const nameCell = document.createElement('td');
         nameCell.className = 'col-name';
-        nameCell.textContent = file.name;
-        nameCell.title = file.name;
+
+        // Show relative path if file is in subdirectory
+        const filePath = file.path;
+        const currentPath = this.currentPath;
+
+        if (filePath.startsWith(currentPath)) {
+            // Calculate relative path
+            const relativePath = filePath.substring(currentPath.length);
+            const cleanPath = relativePath.startsWith('/') ? relativePath.substring(1) : relativePath;
+
+            // If in subdirectory, show subdirectory with file name
+            if (cleanPath.includes('/')) {
+                const parts = cleanPath.split('/');
+                const subdir = parts.slice(0, -1).join('/');
+                const filename = parts[parts.length - 1];
+
+                // Show subdirectory in muted color + filename
+                nameCell.innerHTML = `<span style="color: var(--text-secondary);">${subdir}/</span>${filename}`;
+            } else {
+                nameCell.textContent = cleanPath;
+            }
+        } else {
+            nameCell.textContent = file.name;
+        }
+
+        nameCell.title = file.path;  // Full path on hover
         row.appendChild(nameCell);
 
         // Metadata cells (will load on demand)
@@ -347,16 +376,25 @@ class App {
     }
 
     /**
-     * Update preview button state
+     * Update preview and rename button states
      */
     updatePreviewButton() {
         const previewBtn = document.getElementById('preview-btn');
-        if (this.selectedFiles.size > 0 || this.currentFiles.length > 0) {
+        const renameNowBtn = document.getElementById('rename-now-btn');
+        const fileCount = this.selectedFiles.size || this.currentFiles.length;
+
+        if (fileCount > 0) {
             previewBtn.disabled = false;
-            previewBtn.textContent = `👁️ Preview Rename (${this.selectedFiles.size || this.currentFiles.length} files)`;
+            previewBtn.textContent = `👁️ Preview Rename (${fileCount} files)`;
+
+            renameNowBtn.disabled = false;
+            renameNowBtn.textContent = `✅ Rename Now (${fileCount} files)`;
         } else {
             previewBtn.disabled = true;
             previewBtn.textContent = '👁️ Preview Rename';
+
+            renameNowBtn.disabled = true;
+            renameNowBtn.textContent = '✅ Rename Now';
         }
     }
 
@@ -802,6 +840,112 @@ class App {
         overlay.classList.add('hidden');
         document.body.style.overflow = '';
         this.currentOperationId = null;
+    }
+
+    /**
+     * Show rename confirmation dialog
+     */
+    showRenameConfirmation() {
+        if (!this.currentPath) {
+            this.ui.warning('Please select a directory first');
+            return;
+        }
+
+        const fileCount = this.selectedFiles.size || this.currentFiles.length;
+
+        if (fileCount === 0) {
+            this.ui.warning('No files to rename');
+            return;
+        }
+
+        // Show modal
+        const modal = document.getElementById('rename-confirm-modal');
+        modal.classList.remove('hidden');
+        document.body.style.overflow = 'hidden';
+
+        // Update file count
+        document.getElementById('rename-file-count').textContent = fileCount;
+
+        // Setup event listeners
+        this.setupRenameConfirmListeners();
+    }
+
+    /**
+     * Setup rename confirmation modal listeners
+     */
+    setupRenameConfirmListeners() {
+        // Close button
+        const closeBtn = document.querySelector('#rename-confirm-modal .modal-close');
+        closeBtn.onclick = () => this.closeRenameConfirmation();
+
+        // Cancel button
+        const cancelBtn = document.getElementById('rename-confirm-cancel-btn');
+        cancelBtn.onclick = () => this.closeRenameConfirmation();
+
+        // Overlay click
+        const overlay = document.querySelector('#rename-confirm-modal .modal-overlay');
+        overlay.onclick = () => this.closeRenameConfirmation();
+
+        // Preview button (change mind - show preview instead)
+        const previewBtn = document.getElementById('rename-confirm-preview-btn');
+        previewBtn.onclick = () => {
+            this.closeRenameConfirmation();
+            this.showPreview();
+        };
+
+        // Execute button
+        const executeBtn = document.getElementById('rename-confirm-execute-btn');
+        executeBtn.onclick = () => {
+            this.closeRenameConfirmation();
+            this.executeRenameNow();
+        };
+
+        // Keyboard shortcuts
+        const modal = document.getElementById('rename-confirm-modal');
+        modal.onkeydown = (e) => {
+            if (e.key === 'Escape') this.closeRenameConfirmation();
+        };
+    }
+
+    /**
+     * Close rename confirmation modal
+     */
+    closeRenameConfirmation() {
+        const modal = document.getElementById('rename-confirm-modal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+
+    /**
+     * Execute rename immediately (without preview)
+     */
+    async executeRenameNow() {
+        // Get file paths (selected or all)
+        const filePaths = this.selectedFiles.size > 0
+            ? Array.from(this.selectedFiles)
+            : this.currentFiles.map(f => f.path);
+
+        if (filePaths.length === 0) {
+            this.ui.warning('No files to rename');
+            return;
+        }
+
+        // Show progress overlay
+        this.showProgressOverlay(filePaths.length);
+
+        try {
+            // Start rename operation
+            const result = await this.api.executeRename(this.currentPath, filePaths);
+            const operationId = result.operation_id;
+
+            // Poll for progress
+            await this.pollOperationProgress(operationId);
+
+        } catch (error) {
+            this.ui.error(`Failed to start rename operation: ${error.message}`);
+            console.error('Execute error:', error);
+            this.closeProgressOverlay();
+        }
     }
 }
 

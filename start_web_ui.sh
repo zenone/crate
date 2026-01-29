@@ -10,6 +10,48 @@ PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 cd "$PROJECT_DIR"
 
+# Graceful shutdown handler
+cleanup() {
+    echo ""
+    echo "🛑 Shutting down DJ MP3 Renamer..."
+
+    if [ -f "$PIDFILE" ]; then
+        local pid=$(cat "$PIDFILE")
+
+        # Send SIGTERM for graceful shutdown
+        if ps -p $pid > /dev/null 2>&1; then
+            kill $pid 2>/dev/null || true
+
+            # Wait up to 5 seconds for graceful shutdown
+            for i in {1..5}; do
+                if ! ps -p $pid > /dev/null 2>&1; then
+                    break
+                fi
+                sleep 1
+            done
+
+            # Force kill if still running
+            if ps -p $pid > /dev/null 2>&1; then
+                kill -9 $pid 2>/dev/null || true
+            fi
+        fi
+
+        # Clean up PID file
+        rm -f "$PIDFILE"
+        echo "✓ Server stopped gracefully"
+        echo "✓ PID file cleaned up"
+    else
+        echo "✓ Server stopped"
+    fi
+
+    echo ""
+    echo "Goodbye! 👋"
+    exit 0
+}
+
+# Trap Ctrl+C (SIGINT) and SIGTERM
+trap cleanup SIGINT SIGTERM
+
 echo "🎵 DJ MP3 Renamer - Smart Startup"
 echo "================================"
 echo ""

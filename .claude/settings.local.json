@@ -47,7 +47,8 @@
       "Bash(done)",
       "Bash(kill 79539 80483 sleep 1 ps aux)",
       "Bash(./stop_web_ui.sh:*)",
-      "Bash(xargs kill:*)"
+      "Bash(xargs kill:*)",
+      "Bash(bash:*)"
     ]
   }
 }

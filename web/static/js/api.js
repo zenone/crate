@@ -56,12 +56,13 @@ class RenamerAPI {
     /**
      * List directory contents
      * @param {string} path - Directory path
+     * @param {boolean} recursive - Include subdirectories (default: false)
      * @returns {Promise<Object>} { path, files, total_files, mp3_count }
      */
-    async listDirectory(path) {
+    async listDirectory(path, recursive = false) {
         return this._fetch('/api/directory/list', {
             method: 'POST',
-            body: JSON.stringify({ path })
+            body: JSON.stringify({ path, recursive })
         });
     }
 

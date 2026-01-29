@@ -1220,6 +1220,56 @@ a:hover {
     border-color: #dc2626;
 }
 
+/* ==================== Rename Confirmation Modal ==================== */
+
+.confirm-message {
+    font-size: 1.1rem;
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.confirm-message strong {
+    color: var(--accent-primary);
+    font-size: 1.3rem;
+}
+
+.confirm-warning {
+    font-weight: 600;
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.confirm-details {
+    list-style: none;
+    padding-left: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.confirm-details li {
+    padding: var(--spacing-xs) 0;
+    color: var(--text-secondary);
+}
+
+.confirm-details li::before {
+    content: "✓ ";
+    color: var(--success);
+    font-weight: bold;
+    margin-right: var(--spacing-xs);
+}
+
+.confirm-note {
+    padding: var(--spacing-sm);
+    background: rgba(255, 152, 0, 0.1);
+    border-left: 3px solid var(--warning);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.confirm-note strong {
+    color: var(--warning);
+}
+
 @media (max-width: 768px) {
     .preview-stats,
     .progress-stats-grid {

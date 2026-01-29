@@ -90,6 +90,9 @@
                 <button id="preview-btn" class="btn btn-primary btn-large" disabled>
                     👁️ Preview Rename
                 </button>
+                <button id="rename-now-btn" class="btn btn-primary btn-large" disabled>
+                    ✅ Rename Now
+                </button>
                 <button id="settings-btn" class="btn btn-secondary btn-large">
                     ⚙️ Settings
                 </button>
@@ -203,6 +206,47 @@
                 </button>
                 <button id="progress-done-btn" class="btn btn-primary hidden">
                     Done
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename Now Confirmation Modal -->
+    <div id="rename-confirm-modal" class="modal hidden" role="dialog" aria-labelledby="rename-confirm-title" aria-modal="true">
+        <div class="modal-overlay" aria-hidden="true"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="rename-confirm-title">⚠️ Confirm Rename Operation</h2>
+                <button class="modal-close" aria-label="Close dialog" title="Close">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <p class="confirm-message">
+                    You are about to rename <strong id="rename-file-count">0</strong> MP3 file(s).
+                </p>
+                <p class="confirm-warning">
+                    This operation will:
+                </p>
+                <ul class="confirm-details">
+                    <li>Rename files based on their ID3 metadata</li>
+                    <li>Keep files in their current subdirectories (no moving)</li>
+                    <li>Skip files that already have the correct name</li>
+                    <li>Show progress in real-time</li>
+                </ul>
+                <p class="confirm-note">
+                    <strong>Note:</strong> You can cancel the operation at any time.
+                </p>
+            </div>
+
+            <div class="modal-footer">
+                <button id="rename-confirm-preview-btn" class="btn btn-secondary">
+                    👁️ Show Preview First
+                </button>
+                <button id="rename-confirm-execute-btn" class="btn btn-primary">
+                    ✅ Rename Now
+                </button>
+                <button id="rename-confirm-cancel-btn" class="btn btn-secondary">
+                    Cancel
                 </button>
             </div>
         </div>
