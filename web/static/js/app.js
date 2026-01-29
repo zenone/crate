@@ -80,7 +80,7 @@ class App {
 
         // Settings button
         document.getElementById('settings-btn').addEventListener('click', () => {
-            this.ui.toast('Settings coming in Checkpoint 5!', 'info');
+            this.showSettings();
         });
     }
 
@@ -946,6 +946,199 @@ class App {
             console.error('Execute error:', error);
             this.closeProgressOverlay();
         }
+    }
+
+    /**
+     * Show settings modal
+     */
+    async showSettings() {
+        try {
+            // Show modal
+            const modal = document.getElementById('settings-modal');
+            modal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+
+            // Load current settings
+            await this.loadSettings();
+
+            // Setup event listeners
+            this.setupSettingsListeners();
+
+        } catch (error) {
+            this.ui.error(`Failed to load settings: ${error.message}`);
+            console.error('Settings error:', error);
+        }
+    }
+
+    /**
+     * Load settings from API
+     */
+    async loadSettings() {
+        try {
+            const config = await this.api.getConfig();
+
+            // Populate form fields
+            document.getElementById('acoustid-api-key').value = config.acoustid_api_key || '';
+            document.getElementById('enable-musicbrainz').checked = config.enable_musicbrainz || false;
+            document.getElementById('auto-detect-bpm').checked = config.auto_detect_bpm !== false;
+            document.getElementById('auto-detect-key').checked = config.auto_detect_key !== false;
+            document.getElementById('use-mb-for-all-fields').checked = config.use_mb_for_all_fields !== false;
+            document.getElementById('verify-mode').checked = config.verify_mode || false;
+            document.getElementById('default-template').value = config.default_template || '{artist} - {title} [{camelot} {bpm}]';
+            document.getElementById('recursive-default').checked = config.recursive_default !== false;
+
+            // Update template preview
+            this.updateTemplatePreview();
+
+        } catch (error) {
+            console.error('Error loading settings:', error);
+            this.ui.error('Failed to load settings');
+        }
+    }
+
+    /**
+     * Setup settings modal listeners
+     */
+    setupSettingsListeners() {
+        // Close button
+        const closeBtn = document.querySelector('#settings-modal .modal-close');
+        closeBtn.onclick = () => this.closeSettings();
+
+        // Cancel button
+        const cancelBtn = document.getElementById('settings-cancel-btn');
+        cancelBtn.onclick = () => this.closeSettings();
+
+        // Overlay click
+        const overlay = document.querySelector('#settings-modal .modal-overlay');
+        overlay.onclick = () => this.closeSettings();
+
+        // Save button
+        const saveBtn = document.getElementById('settings-save-btn');
+        saveBtn.onclick = () => this.saveSettings();
+
+        // Reset button
+        const resetBtn = document.getElementById('settings-reset-btn');
+        resetBtn.onclick = () => this.resetSettings();
+
+        // Template preview on input
+        const templateInput = document.getElementById('default-template');
+        templateInput.oninput = () => this.updateTemplatePreview();
+
+        // Keyboard shortcuts
+        const modal = document.getElementById('settings-modal');
+        modal.onkeydown = (e) => {
+            if (e.key === 'Escape') this.closeSettings();
+        };
+    }
+
+    /**
+     * Update template preview
+     */
+    updateTemplatePreview() {
+        const template = document.getElementById('default-template').value;
+        const preview = document.getElementById('template-preview');
+
+        if (!template) {
+            preview.textContent = '';
+            return;
+        }
+
+        // Sample metadata for preview
+        const sample = template
+            .replace('{artist}', 'Sample Artist')
+            .replace('{title}', 'Sample Title')
+            .replace('{album}', 'Sample Album')
+            .replace('{year}', '2024')
+            .replace('{bpm}', '128')
+            .replace('{key}', 'Am')
+            .replace('{camelot}', '8A')
+            .replace('{label}', 'Sample Label')
+            .replace('{track}', '01')
+            .replace('{mix}', 'Original Mix');
+
+        preview.textContent = `Example: ${sample}.mp3`;
+    }
+
+    /**
+     * Save settings to API
+     */
+    async saveSettings() {
+        try {
+            // Collect form data
+            const updates = {
+                acoustid_api_key: document.getElementById('acoustid-api-key').value,
+                enable_musicbrainz: document.getElementById('enable-musicbrainz').checked,
+                auto_detect_bpm: document.getElementById('auto-detect-bpm').checked,
+                auto_detect_key: document.getElementById('auto-detect-key').checked,
+                use_mb_for_all_fields: document.getElementById('use-mb-for-all-fields').checked,
+                verify_mode: document.getElementById('verify-mode').checked,
+                default_template: document.getElementById('default-template').value,
+                recursive_default: document.getElementById('recursive-default').checked,
+            };
+
+            // Validate template
+            if (updates.default_template) {
+                const validation = await this.api.validateTemplate(updates.default_template);
+                if (!validation.valid) {
+                    this.ui.error(`Invalid template: ${validation.errors.join(', ')}`);
+                    return;
+                }
+            }
+
+            // Save to API
+            await this.api.updateConfig(updates);
+
+            this.ui.success('Settings saved successfully!');
+            this.closeSettings();
+
+        } catch (error) {
+            console.error('Error saving settings:', error);
+            this.ui.error(`Failed to save settings: ${error.message}`);
+        }
+    }
+
+    /**
+     * Reset settings to defaults
+     */
+    async resetSettings() {
+        if (!confirm('Reset all settings to defaults? This cannot be undone.')) {
+            return;
+        }
+
+        try {
+            // Get default config from API
+            const defaults = {
+                acoustid_api_key: '8XaBELgH',  // Default public key
+                enable_musicbrainz: false,
+                auto_detect_bpm: true,
+                auto_detect_key: true,
+                use_mb_for_all_fields: true,
+                verify_mode: false,
+                default_template: '{artist} - {title} [{camelot} {bpm}]',
+                recursive_default: true,
+            };
+
+            // Save defaults
+            await this.api.updateConfig(defaults);
+
+            // Reload settings in form
+            await this.loadSettings();
+
+            this.ui.success('Settings reset to defaults');
+
+        } catch (error) {
+            console.error('Error resetting settings:', error);
+            this.ui.error('Failed to reset settings');
+        }
+    }
+
+    /**
+     * Close settings modal
+     */
+    closeSettings() {
+        const modal = document.getElementById('settings-modal');
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
     }
 }
 

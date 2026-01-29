@@ -252,6 +252,180 @@
         </div>
     </div>
 
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal hidden" role="dialog" aria-labelledby="settings-title" aria-modal="true">
+        <div class="modal-overlay" aria-hidden="true"></div>
+        <div class="modal-content large">
+            <div class="modal-header">
+                <h2 id="settings-title">⚙️ Settings</h2>
+                <button class="modal-close" aria-label="Close dialog" title="Close">✕</button>
+            </div>
+
+            <div class="modal-body">
+                <form id="settings-form">
+                    <!-- API Keys Section -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">🔑 API Keys</h3>
+                        <div class="settings-description">
+                            Configure external service API keys for enhanced metadata lookup.
+                        </div>
+
+                        <div class="form-group">
+                            <label for="acoustid-api-key">
+                                AcoustID API Key
+                                <span class="label-hint">(for MusicBrainz audio fingerprinting)</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="acoustid-api-key"
+                                name="acoustid_api_key"
+                                class="form-control"
+                                placeholder="Enter your AcoustID API key"
+                            >
+                            <small class="form-help">
+                                Get a free API key at <a href="https://acoustid.org/api-key" target="_blank">acoustid.org/api-key</a>
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Metadata Detection Section -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">🎵 Metadata Detection</h3>
+                        <div class="settings-description">
+                            Configure how metadata is detected and enhanced.
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="enable-musicbrainz"
+                                    name="enable_musicbrainz"
+                                >
+                                <span>Enable MusicBrainz Lookup</span>
+                            </label>
+                            <small class="form-help">
+                                Use AcoustID/MusicBrainz to identify tracks by audio fingerprint
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="auto-detect-bpm"
+                                    name="auto_detect_bpm"
+                                >
+                                <span>Auto-detect BPM</span>
+                            </label>
+                            <small class="form-help">
+                                Use AI audio analysis (librosa) to detect BPM if missing
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="auto-detect-key"
+                                    name="auto_detect_key"
+                                >
+                                <span>Auto-detect Key</span>
+                            </label>
+                            <small class="form-help">
+                                Use AI audio analysis (librosa) to detect musical key if missing
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="use-mb-for-all-fields"
+                                    name="use_mb_for_all_fields"
+                                >
+                                <span>Use MusicBrainz for Artist/Title/Album</span>
+                            </label>
+                            <small class="form-help">
+                                Allow MusicBrainz to correct artist, title, album, and year fields
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="verify-mode"
+                                    name="verify_mode"
+                                >
+                                <span>Verify Mode (Re-analyze All)</span>
+                            </label>
+                            <small class="form-help">
+                                Re-analyze files even if they already have metadata (validation mode)
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Filename Template Section -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">📝 Filename Template</h3>
+                        <div class="settings-description">
+                            Customize the filename format using template variables.
+                        </div>
+
+                        <div class="form-group">
+                            <label for="default-template">
+                                Default Template
+                            </label>
+                            <input
+                                type="text"
+                                id="default-template"
+                                name="default_template"
+                                class="form-control"
+                                placeholder="{artist} - {title} [{camelot} {bpm}]"
+                            >
+                            <small class="form-help">
+                                Available variables: {artist}, {title}, {album}, {year}, {bpm}, {key}, {camelot}, {label}, {track}, {mix}
+                            </small>
+                            <div id="template-preview" class="template-preview"></div>
+                        </div>
+                    </div>
+
+                    <!-- Other Options Section -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">🔧 Other Options</h3>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="recursive-default"
+                                    name="recursive_default"
+                                >
+                                <span>Scan Subdirectories by Default</span>
+                            </label>
+                            <small class="form-help">
+                                Include subdirectories when loading a directory
+                            </small>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button id="settings-save-btn" class="btn btn-primary">
+                    💾 Save Settings
+                </button>
+                <button id="settings-reset-btn" class="btn btn-secondary">
+                    🔄 Reset to Defaults
+                </button>
+                <button id="settings-cancel-btn" class="btn btn-secondary">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Directory Browser Modal -->
     <div id="directory-browser-modal" class="modal hidden" role="dialog" aria-labelledby="modal-title" aria-modal="true">
         <div class="modal-overlay" aria-hidden="true"></div>
