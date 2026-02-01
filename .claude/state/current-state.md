@@ -1,212 +1,205 @@
-# Current State
+# Current State - Crate Batch Renamer
 
-**Last Updated**: 2026-02-01 (Session End - Ready to Restart)
-
-**Purpose**: This file tells Claude (and you) exactly where the project is RIGHT NOW. Update this after every significant work session.
+**Last Updated**: 2026-02-01
+**Session**: Documentation Migration Complete
+**Status**: ✅ Ready for User Testing
 
 ---
 
 ## Project Overview
 
-**Project Name**: Claude Code Project Template
+**Project Name**: Crate (formerly DJ MP3 Renamer)
+**Project Type**: Music file batch renamer with web UI
+**Phase**: Testing & Refinement
+**Server**: Running at http://localhost:8000 ✅
 
-**Project Type**: Production-Ready Template (reusable starting point for all future projects)
-
-**Phase**: ✅ COMPLETE → Ready for Use
-
-**Repository**: Local template at `/Users/szenone/Documents/CODE/Claude/Project Template/`
+**Purpose**: Batch rename music files for DJs/producers using metadata-based templates with smart detection.
 
 ---
 
 ## Current Sprint/Focus
 
-### Template Creation - COMPLETE ✅
+### Low-Friction Smart Detection Workflow - IMPLEMENTED ✅
 
-All deliverables finished:
-- ✅ CLAUDE.md (main system prompt - 450+ lines)
-- ✅ .claude/ directory structure (complete)
-- ✅ Knowledge base files (lessons-learned, tech-stack, market-research - 1,600+ lines)
-- ✅ State tracking (this file)
-- ✅ Workflow templates (feature-development, quality-assurance, github-preparation - 2,550+ lines)
-- ✅ Quality checklists (two-phase-prompt, quality-checklist - 1,000+ lines)
-- ✅ Comprehensive .gitignore template
-- ✅ PROJECT_SETUP_COMPLETE.md (comprehensive guide - 600+ lines)
+**Status**: All features implemented, ready for user testing
 
-**Total**: 6,200+ lines of production-ready documentation
-
----
-
-## Project Status
-
-### Completed ✅
-- ✅ Research of Claude Code best practices (2026)
-- ✅ Directory structure (.claude/ with subdirectories)
-- ✅ Core documentation framework
-- ✅ Knowledge base scaffolding (with detailed templates)
-- ✅ State management system
-- ✅ Feature development workflow (19-step comprehensive guide)
-- ✅ Quality assurance workflow (9-section comprehensive checklist)
-- ✅ GitHub preparation workflow (23-step guide with exact commands)
-- ✅ Two-phase prompt template (reusable planning template)
-- ✅ Quality checklist template (3-tier checklist system)
-- ✅ Comprehensive .gitignore (all languages, OSes, IDEs)
-- ✅ Integration of user's ASF OS v3.0 system
-- ✅ Integration of two-phase workflow
-- ✅ Integration of API-first architecture
-- ✅ Integration of GitHub preparation workflow
-- ✅ All user requirements addressed
-
-### In Progress 🔄
-- None (template complete)
-
-### Blocked 🚫
-- None
-
-### Not Started 📋
-- Optional: Test template with real project (user can do this)
-- Optional: Create language-specific variants (Python, Node, Go)
-- Optional: GitHub repository for template distribution
+**Completed Tasks** (Tasks #126-132):
+1. ✅ Task #126: Cancel metadata loading
+2. ✅ Task #127: Cancel preview generation
+3. ✅ Task #128: Auto-apply for high confidence (≥0.9)
+4. ✅ Task #129: Auto-select per-album for high confidence
+5. ✅ Task #130: Toast notification system
+6. ✅ Task #131: Business logic documentation
+7. ✅ Task #132: Backend confidence verification
 
 ---
 
-## Key Files & Locations
+## Latest Features (Ready for Testing)
 
-### Entry Point
-- `CLAUDE.md` - Main instructions, auto-loaded by Claude
+### 1. Cancel Buttons ✅
+- Cancel metadata loading mid-operation
+- Cancel preview generation mid-operation
+- Keeps partial results
+- Shows notification with progress
 
-### Knowledge Base (Persistent Memory)
-- `.claude/knowledge-base/lessons-learned.md` - Mistakes and solutions
-- `.claude/knowledge-base/tech-stack-decisions.md` - Technology choices
-- `.claude/knowledge-base/market-research.md` - User needs and competitive analysis
+**UX Impact**: User can escape from wrong directory selection
 
-### State Management
-- `.claude/state/current-state.md` - This file (update frequently!)
+### 2. Toast Notifications ✅
+- Non-intrusive notifications (top-right corner)
+- 4 types: success, info, warning, error
+- Action buttons (Undo, Dismiss)
+- Auto-dismiss after 5-8 seconds
+- Stacks multiple toasts
 
-### Workflows & Templates
-- `.claude/workflows/feature-development.md` - How to build features
-- `.claude/workflows/quality-assurance.md` - QA checklist
-- `.claude/workflows/github-preparation.md` - Prepare for GitHub
-- `.claude/templates/two-phase-prompt.md` - Planning + execution template
-- `.claude/templates/quality-checklist.md` - Pre-commit checklist
+**UX Impact**: Awareness of auto-applied changes without interruption
 
----
+### 3. Auto-Apply Logic ✅
+- **High confidence (≥0.9)**: Auto-applies template, shows toast with Undo
+- **Medium confidence (≥0.7)**: Shows banner with "Suggested" label
+- **Low confidence (<0.7)**: Shows banner with "Consider" label
 
-## Architecture Overview
+**UX Impact**: 100% click reduction for high-confidence suggestions
 
-### Current Structure
-```
-Project Template/
-├── CLAUDE.md (main instructions)
-├── .claude/
-│   ├── README.md (how to use this template)
-│   ├── knowledge-base/ (persistent memory)
-│   ├── state/ (current status - you are here)
-│   ├── workflows/ (process templates)
-│   └── templates/ (reusable prompts)
-```
+### 4. Per-Album Auto-Select ✅
+- Auto-checks albums with high confidence track numbering
+- User reviews and clicks "Apply to Selected" (1 click for all)
+- Unchecks uncertain cases for manual review
 
-### When This Template Is Used
-```
-[New Project]/
-├── CLAUDE.md (copied from template)
-├── .gitignore (project-specific)
-├── .claude/ (copied from template)
-├── core/ (business logic)
-├── api/ (API layer)
-├── cli/ (CLI interface)
-├── ui/ (GUI interface)
-└── tests/ (test suite)
-```
+**UX Impact**: 90%+ click reduction for multi-album workflows
 
 ---
 
-## Recent Changes
+## Architecture Status
 
-### [2026-02-01] Template Creation - COMPLETE
-- **Changed**: Created entire template structure with all documentation
-- **Why**: Need reusable starting point for consistent high-quality code across projects
-- **Files Created**:
-  - Root: CLAUDE.md, .gitignore, PROJECT_SETUP_COMPLETE.md
-  - .claude/: README.md
-  - knowledge-base/: lessons-learned.md, tech-stack-decisions.md, market-research.md
-  - state/: current-state.md (this file)
-  - workflows/: feature-development.md, quality-assurance.md, github-preparation.md
-  - templates/: two-phase-prompt.md, quality-checklist.md
-- **Research**: Based on official Claude Code 2026 best practices
-- **Integration**: Successfully integrated ASF OS, two-phase workflow, API-first architecture
-- **Tests**: Not applicable (template, not executable code)
-- **Status**: ✅ COMPLETE and ready for use
+### Tech Stack
+- **Backend**: Python 3.14, FastAPI
+- **Frontend**: Vanilla JavaScript, CSS
+- **Audio Analysis**: Essentia (parallel processing, 8x speedup)
+- **Streaming**: Server-Sent Events (SSE)
+- **API**: RESTful + streaming endpoints
+
+### Directory Structure
+```
+crate/
+├── core/           # Business logic (metadata, templates, audio analysis)
+├── api/            # API layer (FastAPI endpoints)
+├── cli/            # CLI interface
+├── tui/            # Terminal UI
+└── web/            # Web UI (HTML, CSS, JS)
+```
+
+### Recent Rebrand
+- Renamed from `dj_mp3_renamer` → `crate`
+- Updated all imports, scripts, and documentation
+- Start script: `./start_crate_web.sh`
+- Stop script: `./stop_crate_web.sh`
+
+---
+
+## Testing Status
+
+**Current Phase**: ⏳ USER TESTING REQUIRED
+
+### Test Scenarios
+1. **Cancel Metadata Loading**
+   - Load 100+ files, cancel at 50%
+   - Verify: 50 files remain, notification shows progress
+
+2. **Cancel Preview Generation**
+   - Load directory, click preview, cancel mid-operation
+   - Verify: Partial previews remain
+
+3. **Auto-Apply (High Confidence)**
+   - Load sequential album (Fleetwood Mac, 57 files)
+   - Verify: Toast appears, template auto-applied, no banner
+   - Click Undo, verify revert
+
+4. **Manual Review (Medium/Low Confidence)**
+   - Load non-sequential tracks
+   - Verify: Banner shows (not auto-applied)
+
+5. **Per-Album Auto-Select**
+   - Load 10+ album subdirectories
+   - Verify: High-confidence albums auto-checked
+   - Verify: Toast notification
+
+6. **Toast Notifications**
+   - Verify: Slide-in animation, auto-dismiss
+   - Verify: Undo/Dismiss buttons work
+   - Verify: Multiple toasts stack
+
+---
+
+## Performance Metrics
+
+| Feature | Before | After | Improvement |
+|---------|--------|-------|-------------|
+| Preview (write to disk) | Slow | Read-only | ∞ (no I/O) |
+| Audio Analysis (50K) | 27.7 hours | 3.5 hours | 8x faster |
+| Streaming | 30s timeout | No timeout | ∞ (SSE) |
+| Undo Window | 30 seconds | 10 minutes | 20x longer |
+| Click Reduction (100 albums) | 101 clicks | 1 click | 99% |
 
 ---
 
 ## Known Issues & Limitations
 
-### Current Issues
-- None (template phase)
+### Fixed ✅
+- ✅ Cancel button (v24 - sequential metadata loading)
+- ✅ Preview loading (v23 - auto-preview for <200 files)
+- ✅ Metadata saving during preview (v22 - read-only)
+- ✅ Connection status monitoring (v21)
 
-### Technical Debt
-- None (template phase)
+### Pending (Lower Priority)
+- Virtual scrolling for 10K+ files (Task #133 - deferred)
+- EventSource integration for streaming (frontend not connected yet)
+- Album cover art display (Task #135 - nice-to-have)
 
-### Limitations
-- Template needs to be tested with real project
-- May need adjustments based on specific project types (web app vs CLI tool vs library)
+---
+
+## Documentation
+
+### Knowledge Base (1.4 MB, 83 files)
+- **Designs** (5 files): Low-friction automation, per-album detection, UI design
+- **Implementations** (28 files): Task summaries, implementation plans
+- **Business Logic** (4 files): Smart detection, edge cases, UX review
+- **Research** (9 files): DJ conventions, market research, UX research
+- **Testing** (3 files): Test plans, user guides
+- **Bugs** (5 files): Bug analysis, debugging notes
+- **Sessions** (18 files): Progress summaries, lesson summaries
+
+### Key Documents
+- `.claude/knowledge-base/lessons-learned.md` - What works, what doesn't
+- `.claude/knowledge-base/implementations/complete-implementation-summary.md` - Latest features
+- `.claude/knowledge-base/business-logic/business-logic-low-friction-smart-detection.md` - Decision matrices
+
+---
+
+## Recent Commits
+
+- `bfbf3a1` (2026-02-01): docs: Migrate documentation from claude/ to .claude/ structure
+- `c57aafb`: feat: Add comprehensive Settings page for configuration
+- `c33b581`: feat: Add graceful shutdown, recursive scanning, and Rename Now button
+- `784fdf6`: test: Add comprehensive tests for web API endpoints
 
 ---
 
 ## Next Steps
 
-### Immediate (User Action Required)
-1. ✅ Template complete - Review PROJECT_SETUP_COMPLETE.md
-2. ⏭️ Read .claude/README.md (usage guide)
-3. ⏭️ Copy template to new project when ready:
-   ```bash
-   cp -r "Project Template" my-new-project && cd my-new-project && claude
-   ```
+### Immediate (Now)
+1. **User Testing** - Test all 6 scenarios above
+2. **Feedback Collection** - Note any issues or confusing behavior
+3. **Confidence Accuracy Check** - Are high-confidence suggestions correct?
 
-### Short Term (Optional)
-1. Test template with a real project
-2. Customize workflows for personal preferences (if needed)
-3. Add project-specific rules to .claude/rules/ (if needed)
+### Short Term (Next Session)
+1. **Fix Any Bugs Found** - Based on user testing
+2. **Add Feature Flags** - Config option to disable auto-apply
+3. **Tune Confidence Thresholds** - Adjust if needed (0.9 → 0.95?)
 
-### Long Term (Optional Enhancements)
-1. Create language-specific variants (Python, Node, Go templates)
-2. Add Docker development environment templates
-3. Create example projects showing template in action
-4. Share template via GitHub repository
-5. Add CI/CD workflow templates for different platforms
-
----
-
-## Dependencies & Blockers
-
-### Dependencies
-- None (template is self-contained)
-
-### Blocked By
-- None
-
-### Blocking Others
-- None
-
----
-
-## Metrics & Progress
-
-### Template Completeness
-- Core Documentation: 100%
-- Knowledge Base: 100%
-- Workflows: 0% (not started)
-- Templates: 0% (not started)
-- Examples: 0% (not started)
-
-**Overall**: ~60% complete
-
-### Lines of Documentation
-- CLAUDE.md: ~450 lines
-- README.md: ~400 lines
-- Knowledge base: ~600 lines
-- State: ~200 lines (this file)
-- **Total**: ~1,650 lines
+### Medium Term (Next Week)
+1. **Virtual Scrolling** - Handle 10K+ files without lag
+2. **EventSource Integration** - Real-time streaming progress
+3. **Warning System** - Show warnings for massive libraries
 
 ---
 
@@ -214,55 +207,43 @@ Project Template/
 
 ### If You're Reading This After Conversation Compression
 
-**Where We Are**: Building a reusable project template for Claude Code
+**Where We Are**: Crate batch renamer with web UI for DJs/music producers
 
 **What's Done**:
-- Research complete (see sources in .claude/README.md)
-- Core documentation written
-- Knowledge base structure created
+- ✅ Low-friction smart detection workflow (Tasks #126-132)
+- ✅ Cancel buttons, toast notifications, auto-apply logic
+- ✅ Per-album detection with auto-select
+- ✅ Comprehensive documentation (1.4 MB)
+- ✅ Directory migration (claude/ → .claude/)
 
 **What's Next**:
-- Finish workflow templates
-- Create prompt templates
-- Test with sample project
+- User testing of implemented features
+- Bug fixes based on feedback
+- Virtual scrolling for massive libraries
 
 **Key Decisions Made**:
-- Use native .claude/ structure (not third-party MCP)
-- API-first architecture as default pattern
-- TDD enforcement built into workflow
-- Two-phase workflow (plan → execute)
+- Auto-apply for confidence ≥0.9 (no feature flag yet)
+- Toast notifications for awareness
+- Sequential metadata loading for cancel support
+- Confidence-based decision matrix
 
-**No Blockers**: Ready to continue
-
----
-
-## Questions & Decisions Needed
-
-### Open Questions
-- Should template include Docker setup by default?
-- Should we create language-specific variants (Python vs Node vs Go)?
-- How to handle monorepo scenarios?
-
-### Decisions Made
-- ✅ Use .claude/ directory (not external tools)
-- ✅ API-first as default architecture
-- ✅ Include comprehensive quality gates
-- ✅ Make it language-agnostic where possible
+**Server**: Running at http://localhost:8000 ✅
 
 ---
 
 ## Resources & References
 
-### Official Documentation Used
-- https://code.claude.com/docs/en/best-practices
-- https://code.claude.com/docs/en/memory
-- https://claude.com/blog/using-claude-md-files
+### Official Documentation
+- README.md - User guide and installation
+- INSTALLATION.md - Setup instructions
+- CLAUDE.md - Development guidelines
 
-### Community Resources
-- https://www.builder.io/blog/claude-md-guide
-- https://dometrain.com/blog/creating-the-perfect-claudemd-for-claude-code/
-- https://github.com/ChrisWiles/claude-code-showcase
+### Key Files
+- `web/static/js/app.js` - Main frontend logic (7000+ lines)
+- `crate/api/renamer.py` - Backend API
+- `crate/core/context_detection.py` - Per-album smart detection
+- `web/streaming.py` - SSE streaming responses
 
 ---
 
-*Remember to update this file after every significant work session. Future Claude (and future you) depends on it!*
+**Remember**: Update this file after every significant work session!
