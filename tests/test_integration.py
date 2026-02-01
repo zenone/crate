@@ -13,7 +13,7 @@ import logging
 import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
-from dj_mp3_renamer.api import RenamerAPI, RenameRequest
+from crate.api import RenamerAPI, RenameRequest
 
 # Check if mutagen is available
 try:
@@ -102,8 +102,8 @@ class TestFullRenameWorkflow:
         tmp_path, files = test_mp3_files
 
         # Mock MutagenFile availability and MP3 reading
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True) as mock_mutagen, \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True) as mock_mutagen, \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
 
             # Make MutagenFile appear available
             mock_mutagen.return_value = Mock()
@@ -167,7 +167,7 @@ class TestFullRenameWorkflow:
             (tmp_path / "subdir2" / f"sub2_{i}.mp3").write_bytes(b"FAKE MP3")
 
         # Mock metadata
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = mock_mp3_metadata(), None
 
             # Execute recursive rename
@@ -206,7 +206,7 @@ class TestPreviewWorkflow:
         tmp_path, files = test_mp3_files
 
         # Mock metadata
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = mock_mp3_metadata(), None
 
             # Execute dry-run
@@ -267,7 +267,7 @@ class TestCancellationWorkflow:
                 raise OperationCancelled("User cancelled")
 
         # Mock metadata
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = mock_mp3_metadata(), None
 
             request = RenameRequest(
@@ -332,7 +332,7 @@ class TestErrorHandlingWorkflow:
                 return None, "Metadata read error: corrupted file"
             return mock_mp3_metadata(), None
 
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.side_effect = mock_read_side_effect
 
             request = RenameRequest(
@@ -411,7 +411,7 @@ class TestConcurrentOperations:
                 title=f"Title {index}"
             ), None
 
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.side_effect = mock_read_side_effect
 
             request = RenameRequest(
@@ -455,7 +455,7 @@ class TestSkipWorkflow:
         file = tmp_path / "Test Artist - Test Title [128].mp3"
         file.write_bytes(b"FAKE MP3")
 
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = mock_mp3_metadata(), None
 
             request = RenameRequest(

@@ -38,22 +38,84 @@ This installs:
 python3 -c "from dj_mp3_renamer.api import RenamerAPI; print('API OK')"
 ```
 
+## HTTPS Support 🔒
+
+The web UI **automatically sets up HTTPS** with trusted certificates for localhost!
+
+### First Run (Automatic Setup)
+
+```bash
+./start_web_ui.sh
+```
+
+**What happens:**
+1. Script checks if `mkcert` is installed
+2. If not, prompts to install it automatically (one-time setup)
+3. Generates trusted SSL certificates for localhost
+4. Starts server at **https://localhost:8000** (green padlock, no warnings!)
+
+**Total user interaction:** Press Enter once. That's it!
+
+### Subsequent Runs
+
+```bash
+./start_web_ui.sh
+```
+
+Server starts instantly at **https://localhost:8000** — certificates persist across restarts.
+
+### HTTP Fallback
+
+If certificate generation fails or you prefer HTTP:
+
+```bash
+./start_web_ui.sh --no-https
+```
+
+Server falls back gracefully to **http://localhost:8000**
+
+### Why HTTPS on Localhost?
+
+- **Future-proof**: Modern web APIs require secure contexts (Service Workers, Web Audio, camera/microphone)
+- **Production parity**: Test in conditions matching real-world deployment
+- **Zero friction**: `mkcert` eliminates browser warnings and manual trust store editing
+- **Professional**: Green padlock inspires confidence
+
+### Troubleshooting
+
+**mkcert not found:**
+- macOS: `brew install mkcert`
+- Linux: `sudo apt install mkcert` or `sudo dnf install mkcert`
+- Windows: `choco install mkcert` or `scoop install mkcert`
+- Manual: https://github.com/FiloSottile/mkcert#installation
+
+**Certificate generation failed:**
+- Check system permissions (mkcert requires admin/sudo for CA installation)
+- Ensure mkcert CA is installed: `mkcert -CAROOT`
+- Re-run: `./start_web_ui.sh --force`
+
+**Browser still shows warning:**
+- Firefox users: mkcert should auto-configure, but if not, manually trust the CA
+- Check mkcert installation: `mkcert -install`
+
+---
+
 ## Usage
 
 ### Quick Start
 
 ```bash
-# Launch web server
-python run_web.py
+# Launch web server (HTTPS with auto-provisioning)
+./start_web_ui.sh
 
-# Or with custom host/port
-python run_web.py --host 0.0.0.0 --port 8080
+# Force HTTP mode
+./start_web_ui.sh --no-https
 
-# Development mode with auto-reload
-python run_web.py --reload
+# Force restart (stops existing instance first)
+./start_web_ui.sh --force
 ```
 
-Then open your browser to **http://localhost:8000**
+Then open your browser to **https://localhost:8000** (or http if using --no-https)
 
 ### Step-by-Step Workflow
 

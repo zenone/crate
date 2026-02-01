@@ -17,7 +17,7 @@ from pathlib import Path
 from unittest.mock import patch, mock_open
 import pytest
 
-from dj_mp3_renamer.core.config import (
+from crate.core.config import (
     load_config,
     save_config,
     clear_config_cache,
@@ -37,7 +37,7 @@ def mock_config_path(tmp_path, monkeypatch):
     def mock_get_config_path():
         return config_file
 
-    monkeypatch.setattr("dj_mp3_renamer.core.config.get_config_path", mock_get_config_path)
+    monkeypatch.setattr("crate.core.config.get_config_path", mock_get_config_path)
 
     # Clear cache before each test
     clear_config_cache()

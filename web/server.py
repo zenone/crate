@@ -1,7 +1,7 @@
 """
-FastAPI web server for DJ MP3 Renamer.
+FastAPI web server for Crate.
 
-This server wraps the existing dj_mp3_renamer API and provides
+This server wraps the existing crate API and provides
 a REST API for the web frontend.
 """
 
@@ -18,8 +18,8 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 # Import the existing API (maintains API-first architecture)
-from dj_mp3_renamer.api import RenamerAPI, RenameRequest, RenameStatus
-from dj_mp3_renamer.core.template import DEFAULT_TEMPLATE
+from crate.api import RenamerAPI, RenameRequest, RenameStatus
+from crate.core.template import DEFAULT_TEMPLATE
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 # Initialize FastAPI app
 app = FastAPI(
-    title="DJ MP3 Renamer Web API",
+    title="Crate Web API",
     description="Modern web interface for batch MP3 renaming",
     version="1.0.0",
 )
@@ -215,7 +215,7 @@ async def rename_files(request: RenameRequestModel):
     """
     Execute rename operation using the existing API.
 
-    This endpoint wraps dj_mp3_renamer.api.RenamerAPI
+    This endpoint wraps crate.api.RenamerAPI
     """
     session_dir = UPLOAD_DIR / request.session_id
 

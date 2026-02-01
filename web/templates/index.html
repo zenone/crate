@@ -224,7 +224,8 @@
         <!-- Footer -->
         <footer class="footer">
             <p>Powered by <strong>DJ MP3 Renamer API</strong> v2.0 |
-            <a href="https://github.com/yourusername/dj-mp3-renamer" target="_blank">GitHub</a></p>
+            <a href="https://github.com/yourusername/dj-mp3-renamer" target="_blank">GitHub</a> |
+            <span class="keyboard-hint">Press <kbd>?</kbd> for keyboard shortcuts</span></p>
         </footer>
     </div>
 
@@ -236,6 +237,66 @@
 
     <!-- Toast Notification -->
     <div id="toast" class="toast hidden"></div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcuts-modal" class="modal-container hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal shortcuts-modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Keyboard Shortcuts</h2>
+                <button class="modal-close" aria-label="Close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="shortcuts-grid">
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-section-title">File Selection</h3>
+                        <div class="shortcut-item">
+                            <kbd class="shortcut-key"><span class="key-modifier">Ctrl</span> + <span class="key-char">A</span></kbd>
+                            <span class="shortcut-desc">Select all files</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd class="shortcut-key"><span class="key-modifier">Ctrl</span> + <span class="key-char">D</span></kbd>
+                            <span class="shortcut-desc">Deselect all files</span>
+                        </div>
+                    </div>
+
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-section-title">Actions</h3>
+                        <div class="shortcut-item">
+                            <kbd class="shortcut-key"><span class="key-modifier">Ctrl</span> + <span class="key-char">P</span></kbd>
+                            <span class="shortcut-desc">Preview rename changes</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd class="shortcut-key"><span class="key-modifier">Ctrl</span> + <span class="key-char">Enter</span></kbd>
+                            <span class="shortcut-desc">Execute rename (in preview)</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd class="shortcut-key"><span class="key-modifier">Ctrl</span> + <span class="key-char">Z</span></kbd>
+                            <span class="shortcut-desc">Undo last rename</span>
+                        </div>
+                    </div>
+
+                    <div class="shortcuts-section">
+                        <h3 class="shortcuts-section-title">Navigation</h3>
+                        <div class="shortcut-item">
+                            <kbd class="shortcut-key"><span class="key-char">Esc</span></kbd>
+                            <span class="shortcut-desc">Close modal or blur input</span>
+                        </div>
+                        <div class="shortcut-item">
+                            <kbd class="shortcut-key"><span class="key-char">?</span></kbd>
+                            <span class="shortcut-desc">Show this help</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="shortcuts-note">
+                    <strong>Note:</strong> On Mac, use <kbd><span class="key-modifier">Cmd</span></kbd> instead of <kbd><span class="key-modifier">Ctrl</span></kbd>
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="shortcuts-close-btn">Got it!</button>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/js/app.js"></script>
 </body>

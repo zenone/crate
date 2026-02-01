@@ -56,7 +56,7 @@ class TestPreviewEndpoint:
 
     def test_preview_returns_json(self, client, test_files, mock_metadata):
         """Should return JSON response with preview data."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             response = client.post(
@@ -84,7 +84,7 @@ class TestPreviewEndpoint:
 
     def test_preview_with_specific_files(self, client, test_files, mock_metadata):
         """Should filter to specific files when file_paths provided."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             # Get list of files
@@ -108,7 +108,7 @@ class TestPreviewEndpoint:
 
     def test_preview_with_custom_template(self, client, test_files, mock_metadata):
         """Should respect custom template."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             response = client.post(
@@ -130,8 +130,8 @@ class TestPreviewEndpoint:
 
     def test_preview_with_enhance_metadata(self, client, test_files):
         """Should include enhanced metadata when requested."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read, \
-             patch("dj_mp3_renamer.core.audio_analysis.auto_detect_metadata") as mock_ai:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read, \
+             patch("crate.core.audio_analysis.auto_detect_metadata") as mock_ai:
 
             # ID3 tags have missing BPM
             mock_read.return_value = (
@@ -179,7 +179,7 @@ class TestPreviewEndpoint:
 
     def test_preview_returns_metadata_sources(self, client, test_files, mock_metadata):
         """Should include metadata source attribution."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             response = client.post(
@@ -206,7 +206,7 @@ class TestExecuteRenameEndpoint:
 
     def test_execute_starts_async_operation(self, client, test_files, mock_metadata):
         """Should start async rename operation."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             files = [str(f) for f in test_files.iterdir() if f.suffix == ".mp3"]
@@ -247,7 +247,7 @@ class TestExecuteRenameEndpoint:
 
     def test_execute_with_dry_run(self, client, test_files, mock_metadata):
         """Should respect dry_run flag."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             files = [str(f) for f in test_files.iterdir() if f.suffix == ".mp3"]
@@ -279,7 +279,7 @@ class TestOperationStatusEndpoint:
 
     def test_get_operation_status(self, client, test_files, mock_metadata):
         """Should return operation status."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             # Start operation
@@ -320,7 +320,7 @@ class TestOperationStatusEndpoint:
 
     def test_operation_status_includes_results(self, client, test_files, mock_metadata):
         """Should include results when operation completes."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             # Start operation
@@ -362,7 +362,7 @@ class TestCancelOperationEndpoint:
         for i in range(50):
             (tmp_path / f"test_{i:03d}.mp3").write_bytes(b"FAKE MP3")
 
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             # Add delay to make operation slower
             def slow_read(*args):
                 time.sleep(0.03)
@@ -405,7 +405,7 @@ class TestCancelOperationEndpoint:
 
     def test_cancel_completed_operation(self, client, test_files, mock_metadata):
         """Should return error for already completed operation."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             # Start operation
@@ -455,7 +455,7 @@ class TestRequestValidation:
 
     def test_preview_accepts_optional_parameters(self, client, test_files, mock_metadata):
         """Should accept all optional parameters."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             response = client.post(
@@ -478,7 +478,7 @@ class TestErrorHandling:
 
     def test_preview_with_invalid_template(self, client, test_files):
         """Should handle invalid template gracefully."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Test", "title": "Test", "bpm": "128", "key": "Am"},
                 None
@@ -500,7 +500,7 @@ class TestErrorHandling:
         # Create file
         (tmp_path / "test.mp3").write_bytes(b"FAKE MP3")
 
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             files = [str(tmp_path / "test.mp3")]
@@ -525,7 +525,7 @@ class TestIntegrationFlow:
 
     def test_complete_rename_workflow(self, client, test_files, mock_metadata):
         """Should complete full preview → execute → poll → results workflow."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             # Step 1: Preview
@@ -576,7 +576,7 @@ class TestIntegrationFlow:
 
     def test_preview_select_subset_execute(self, client, test_files, mock_metadata):
         """Should allow previewing all files but executing on subset."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata, None)
 
             # Preview all files

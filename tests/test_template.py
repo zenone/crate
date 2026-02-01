@@ -3,7 +3,7 @@ Tests for template module (RED phase - tests written first).
 """
 
 import pytest
-from dj_mp3_renamer.core.template import (
+from crate.core.template import (
     build_filename_from_template,
     build_default_components,
     DEFAULT_TEMPLATE,
@@ -131,6 +131,65 @@ class TestBuildDefaultComponents:
         result = build_default_components(meta)
         assert result["title"] == "Song"
         assert result["mix"] == "Extended Mix"
+
+    def test_mix_paren_with_mix(self):
+        """mix_paren should format mix with parentheses."""
+        meta = {
+            "artist": "DJ Test",
+            "title": "Song",
+            "mix": "Extended Mix"
+        }
+        result = build_default_components(meta)
+        assert result["mix_paren"] == " (Extended Mix)"
+
+    def test_mix_paren_without_mix(self):
+        """mix_paren should be empty when no mix."""
+        meta = {
+            "artist": "DJ Test",
+            "title": "Song"
+        }
+        result = build_default_components(meta)
+        assert result["mix_paren"] == ""
+
+    def test_kb_with_both_camelot_and_bpm(self):
+        """kb should format camelot and bpm in brackets."""
+        meta = {
+            "artist": "DJ Test",
+            "title": "Song",
+            "camelot": "8A",
+            "bpm": "128"
+        }
+        result = build_default_components(meta)
+        assert result["kb"] == " [8A 128]"
+
+    def test_kb_with_only_camelot(self):
+        """kb should show only camelot when bpm missing."""
+        meta = {
+            "artist": "DJ Test",
+            "title": "Song",
+            "camelot": "8A"
+        }
+        result = build_default_components(meta)
+        assert result["kb"] == " [8A]"
+
+    def test_kb_with_only_bpm(self):
+        """kb should show only bpm when camelot missing."""
+        meta = {
+            "artist": "DJ Test",
+            "title": "Song",
+            "bpm": "128"
+        }
+        result = build_default_components(meta)
+        assert result["kb"] == " [128]"
+
+    def test_kb_with_neither(self):
+        """kb should be empty when both missing."""
+        meta = {
+            "artist": "DJ Test",
+            "title": "Song"
+        }
+        result = build_default_components(meta)
+        assert result["kb"] == ""
 
 
 class TestDefaultTemplate:

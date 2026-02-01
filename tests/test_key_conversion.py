@@ -3,7 +3,7 @@ Tests for key conversion module (RED phase - tests written first).
 """
 
 import pytest
-from dj_mp3_renamer.core.key_conversion import normalize_key_raw, to_camelot, PITCH_CLASS
+from crate.core.key_conversion import normalize_key_raw, to_camelot, PITCH_CLASS
 
 
 class TestNormalizeKeyRaw:

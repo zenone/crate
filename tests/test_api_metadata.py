@@ -12,7 +12,7 @@ Tests verify:
 import pytest
 from pathlib import Path
 from unittest.mock import patch, Mock
-from dj_mp3_renamer.api import RenamerAPI
+from crate.api import RenamerAPI
 
 
 # Test Fixtures
@@ -54,7 +54,7 @@ class TestBasicAnalysis:
 
     def test_analyze_valid_file(self, api_instance, sample_mp3):
         """Should analyze valid MP3 file."""
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result = api_instance.analyze_file(sample_mp3)
@@ -66,7 +66,7 @@ class TestBasicAnalysis:
 
     def test_analyze_returns_metadata_fields(self, api_instance, sample_mp3):
         """Should return standard metadata fields."""
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result = api_instance.analyze_file(sample_mp3)
@@ -79,7 +79,7 @@ class TestBasicAnalysis:
 
     def test_analyze_includes_bpm_key(self, api_instance, sample_mp3):
         """Should include BPM and key if present."""
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result = api_instance.analyze_file(sample_mp3)
@@ -97,7 +97,7 @@ class TestBasicAnalysis:
         file1.write_bytes(b"FAKE MP3 DATA")
         file2.write_bytes(b"FAKE MP3 DATA")
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             def side_effect(path, logger):
                 if "file1" in str(path):
                     return mock_metadata(artist="Artist 1", title="Title 1"), None
@@ -159,7 +159,7 @@ class TestMetadataEnhancement:
         mp3_file = tmp_path / "no_bpm.mp3"
         mp3_file.write_bytes(b"FAKE MP3 DATA")
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             # Return metadata without BPM/key
             meta = mock_metadata(artist="Artist", title="Title", bpm="", key="")
             mock_read.return_value = (meta, None)
@@ -173,7 +173,7 @@ class TestMetadataEnhancement:
 
     def test_analyze_preserves_existing_metadata(self, api_instance, sample_mp3):
         """Should preserve existing metadata during analysis."""
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result = api_instance.analyze_file(sample_mp3)
@@ -197,7 +197,7 @@ class TestConfigIntegration:
         mp3_file = tmp_path / "test.mp3"
         mp3_file.write_bytes(b"FAKE MP3 DATA")
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(artist="Artist", title="Title"), None)
 
             result = api.analyze_file(mp3_file)
@@ -210,7 +210,7 @@ class TestConfigIntegration:
         api1 = RenamerAPI(workers=1)
         api2 = RenamerAPI(workers=4)
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result1 = api1.analyze_file(sample_mp3)
@@ -227,7 +227,7 @@ class TestReturnFormat:
 
     def test_analyze_returns_dict(self, api_instance, sample_mp3):
         """Should return dictionary."""
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result = api_instance.analyze_file(sample_mp3)
@@ -236,7 +236,7 @@ class TestReturnFormat:
 
     def test_analyze_returns_string_values(self, api_instance, sample_mp3):
         """Should return string values for all fields."""
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result = api_instance.analyze_file(sample_mp3)
@@ -248,7 +248,7 @@ class TestReturnFormat:
 
     def test_analyze_consistent_field_names(self, api_instance, sample_mp3):
         """Should use consistent field names."""
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result = api_instance.analyze_file(sample_mp3)
@@ -265,7 +265,7 @@ class TestPathHandling:
 
     def test_analyze_accepts_path_object(self, api_instance, sample_mp3):
         """Should accept Path object."""
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result = api_instance.analyze_file(sample_mp3)
@@ -274,7 +274,7 @@ class TestPathHandling:
 
     def test_analyze_accepts_string_path(self, api_instance, sample_mp3):
         """Should accept string path."""
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result = api_instance.analyze_file(Path(str(sample_mp3)))
@@ -283,7 +283,7 @@ class TestPathHandling:
 
     def test_analyze_absolute_path(self, api_instance, sample_mp3):
         """Should work with absolute paths."""
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             abs_path = sample_mp3.resolve()
@@ -301,7 +301,7 @@ class TestEdgeCases:
         mp3_file = tmp_path / "minimal.mp3"
         mp3_file.write_bytes(b"FAKE MP3 DATA")
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(artist="", title=""), None)
 
             result = api_instance.analyze_file(mp3_file)
@@ -315,7 +315,7 @@ class TestEdgeCases:
         mp3_file = tmp_path / "unicode.mp3"
         mp3_file.write_bytes(b"FAKE MP3 DATA")
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 mock_metadata(artist="Björk", title="Café del Mar"),
                 None
@@ -332,7 +332,7 @@ class TestEdgeCases:
         mp3_file = tmp_path / "track [mix] (2024).mp3"
         mp3_file.write_bytes(b"FAKE MP3 DATA")
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(artist="Artist", title="Title"), None)
 
             result = api_instance.analyze_file(mp3_file)
@@ -349,7 +349,7 @@ class TestIntegration:
         mp3_file = tmp_path / "test.mp3"
         mp3_file.write_bytes(b"FAKE MP3 DATA")
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(artist="Artist", title="Title"), None)
 
             # Analyze first
@@ -366,7 +366,7 @@ class TestIntegration:
         """Should not modify the file."""
         mtime_before = sample_mp3.stat().st_mtime
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata") as mock_read:
+        with patch("crate.api.renamer.read_mp3_metadata") as mock_read:
             mock_read.return_value = (mock_metadata(), None)
 
             result = api_instance.analyze_file(sample_mp3)

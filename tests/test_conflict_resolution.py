@@ -3,7 +3,7 @@ Tests for metadata conflict resolution.
 """
 
 import pytest
-from dj_mp3_renamer.core.conflict_resolution import (
+from crate.core.conflict_resolution import (
     compare_bpm_values,
     compare_key_values,
     resolve_metadata_conflict,

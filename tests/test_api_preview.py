@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 from unittest.mock import patch, Mock
 
-from dj_mp3_renamer.api import RenamerAPI, RenameRequest
-from dj_mp3_renamer.api.models import FilePreview
+from crate.api import RenamerAPI, RenameRequest
+from crate.api.models import FilePreview
 
 
 # Test Fixtures
@@ -40,8 +40,8 @@ class TestPreviewBasics:
 
     def test_preview_returns_list(self, api_instance, test_files):
         """Should return list of FilePreview objects."""
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Test", "title": "Test", "bpm": "128", "key": "Am"},
                 None
@@ -56,8 +56,8 @@ class TestPreviewBasics:
 
     def test_preview_shows_old_to_new_names(self, api_instance, test_files):
         """Should show old → new filenames."""
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am"},
                 None
@@ -79,8 +79,8 @@ class TestPreviewBasics:
         file = tmp_path / "test.mp3"
         file.write_bytes(b"FAKE MP3")
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am"},
                 None
@@ -117,8 +117,8 @@ class TestPreviewStatuses:
 
     def test_preview_status_will_rename(self, api_instance, test_files):
         """Should show 'will_rename' status for files that will be renamed."""
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am"},
                 None
@@ -133,8 +133,8 @@ class TestPreviewStatuses:
 
     def test_preview_status_will_skip(self, api_instance, tmp_path):
         """Should show 'will_skip' status for files already correctly named."""
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am", "camelot": "8A"},
                 None
@@ -154,8 +154,8 @@ class TestPreviewStatuses:
 
     def test_preview_status_error(self, api_instance, test_files):
         """Should show 'error' status for files with errors."""
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             # Simulate error reading metadata
             mock_read.return_value = (None, "Metadata read error")
 
@@ -179,8 +179,8 @@ class TestPreviewPerformance:
         for i in range(50):
             (tmp_path / f"test_{i:03d}.mp3").write_bytes(b"FAKE MP3")
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am"},
                 None
@@ -201,8 +201,8 @@ class TestPreviewPerformance:
         # Get original file states
         original_mtimes = {f: f.stat().st_mtime for f in test_files.iterdir()}
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am"},
                 None
@@ -226,8 +226,8 @@ class TestPreviewCollisionDetection:
         (tmp_path / "file1.mp3").write_bytes(b"FAKE MP3")
         (tmp_path / "file2.mp3").write_bytes(b"FAKE MP3")
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             # Both files have same metadata (would create same name)
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am"},
@@ -258,8 +258,8 @@ class TestPreviewRecursive:
         subdir.mkdir()
         (subdir / "sub.mp3").write_bytes(b"FAKE MP3")
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am"},
                 None
@@ -281,8 +281,8 @@ class TestFilePreviewModel:
 
     def test_file_preview_to_dict(self, api_instance, test_files):
         """Should convert FilePreview to JSON-serializable dict."""
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am"},
                 None
@@ -309,8 +309,8 @@ class TestFilePreviewModel:
 
     def test_file_preview_metadata_included(self, api_instance, test_files):
         """Should include metadata in preview."""
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "TestArtist", "title": "TestTitle", "bpm": "130", "key": "Cm"},
                 None
@@ -331,8 +331,8 @@ class TestPreviewTemplates:
 
     def test_preview_with_custom_template(self, api_instance, test_files):
         """Should respect custom template."""
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am", "camelot": "8A"},
                 None
@@ -353,8 +353,8 @@ class TestPreviewTemplates:
 
     def test_preview_with_default_template(self, api_instance, test_files):
         """Should use default template if none specified."""
-        with patch("dj_mp3_renamer.core.io.MutagenFile", create=True), \
-             patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.MutagenFile", create=True), \
+             patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Artist", "title": "Title", "bpm": "128", "key": "Am", "camelot": "8A"},
                 None

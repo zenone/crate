@@ -11,7 +11,7 @@ Tests verify:
 """
 
 import pytest
-from dj_mp3_renamer.api import RenamerAPI
+from crate.api import RenamerAPI
 
 
 # Test Fixtures

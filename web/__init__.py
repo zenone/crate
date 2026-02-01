@@ -1,5 +1,5 @@
 """
-Web UI module for DJ MP3 Renamer.
+Web UI module for Crate.
 
 This module provides a modern web interface that wraps the existing API.
 """

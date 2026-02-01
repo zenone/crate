@@ -1,7 +1,7 @@
-# dj_mp3_renamer.py
+# crate.py
 #!/usr/bin/env python3
 """
-dj_mp3_renamer.py
+crate.py
 
 Rename MP3 files into DJ-friendly filenames using embedded metadata (ID3 tags).
 
@@ -10,13 +10,13 @@ Default output style (when data exists):
 
 Examples:
   # Dry-run a folder recursively
-  python3 dj_mp3_renamer.py ~/Music/Incoming --dry-run -v --recursive
+  python3 crate.py ~/Music/Incoming --dry-run -v --recursive
 
   # Actually rename, using 8 workers
-  python3 dj_mp3_renamer.py ~/Music/Incoming --workers 8 --recursive
+  python3 crate.py ~/Music/Incoming --workers 8 --recursive
 
   # Custom template (tokens below)
-  python3 dj_mp3_renamer.py ~/Music/Incoming --template "{artist} - {title} ({label}) [{camelot} {bpm}]" --recursive
+  python3 crate.py ~/Music/Incoming --template "{artist} - {title} ({label}) [{camelot} {bpm}]" --recursive
 
 Requirements:
   pip3 install mutagen tqdm
@@ -55,7 +55,7 @@ except Exception:  # pragma: no cover
 # ----------------------------- Logging -------------------------------- #
 
 def configure_logging(log_path: Optional[Path], verbosity: int) -> logging.Logger:
-    logger = logging.getLogger("dj_mp3_renamer")
+    logger = logging.getLogger("crate")
     logger.setLevel(logging.DEBUG)
 
     # Avoid duplicate handlers if run in an interactive session

@@ -3,7 +3,7 @@ Tests for metadata parsing module (RED phase - tests written first).
 """
 
 import pytest
-from dj_mp3_renamer.core.metadata_parsing import (
+from crate.core.metadata_parsing import (
     extract_year,
     extract_track_number,
     normalize_bpm,

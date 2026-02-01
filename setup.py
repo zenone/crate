@@ -1,5 +1,5 @@
 """
-Setup configuration for dj_mp3_renamer package.
+Setup configuration for crate package.
 """
 
 from setuptools import setup, find_packages
@@ -10,14 +10,14 @@ readme_file = Path(__file__).parent / "README.md"
 long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists() else ""
 
 setup(
-    name="dj-mp3-renamer",
+    name="crate",
     version="2.0.0",
-    description="Rename MP3 files using metadata into DJ-friendly filenames",
+    description="Your music library, organized. Rename MP3 files using metadata into DJ-friendly filenames.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Your Name",
     author_email="your.email@example.com",
-    url="https://github.com/yourusername/dj-mp3-renamer",
+    url="https://github.com/yourusername/crate",
     packages=find_packages(exclude=["tests", "tests.*"]),
     python_requires=">=3.8",
     install_requires=[
@@ -46,8 +46,8 @@ setup(
     },
     entry_points={
         "console_scripts": [
-            "dj-mp3-renamer=dj_mp3_renamer.cli.main:main",
-            "dj-mp3-renamer-tui=dj_mp3_renamer.tui:run_tui",
+            "crate=crate.cli.main:main",
+            "crate-tui=crate.tui:run_tui",
         ],
     },
     classifiers=[

@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
-from dj_mp3_renamer.core.io import (
+from crate.core.io import (
     read_mp3_metadata,
     find_mp3s,
     ReservationBook,
@@ -21,7 +21,7 @@ class TestReadMp3Metadata:
     def test_mutagen_not_available(self):
         """Should return error if mutagen not installed."""
         logger = logging.getLogger("test")
-        with patch("dj_mp3_renamer.core.io.MutagenFile", None):
+        with patch("crate.core.io.MutagenFile", None):
             meta, error = read_mp3_metadata(Path("/fake/path.mp3"), logger)
             assert meta is None
             assert "mutagen" in error.lower()
@@ -32,7 +32,7 @@ class TestReadMp3Metadata:
         mock_audio = Mock()
         mock_audio.tags = None
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", return_value=mock_audio):
+        with patch("crate.core.io.MutagenFile", return_value=mock_audio):
             meta, error = read_mp3_metadata(Path("/fake/path.mp3"), logger)
             assert meta is None
             assert error is not None
@@ -51,7 +51,7 @@ class TestReadMp3Metadata:
         mock_audio = Mock()
         mock_audio.tags = mock_tags
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", return_value=mock_audio):
+        with patch("crate.core.io.MutagenFile", return_value=mock_audio):
             meta, error = read_mp3_metadata(Path("/fake/path.mp3"), logger)
 
             assert error is None
@@ -73,7 +73,7 @@ class TestReadMp3Metadata:
         mock_audio = Mock()
         mock_audio.tags = mock_tags
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", return_value=mock_audio):
+        with patch("crate.core.io.MutagenFile", return_value=mock_audio):
             meta, error = read_mp3_metadata(Path("/fake/path.mp3"), logger)
 
             assert error is None
@@ -93,7 +93,7 @@ class TestReadMp3Metadata:
         mock_audio = Mock()
         mock_audio.tags = mock_tags
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", return_value=mock_audio):
+        with patch("crate.core.io.MutagenFile", return_value=mock_audio):
             meta, error = read_mp3_metadata(Path("/fake/path.mp3"), logger)
 
             assert error is None
@@ -104,7 +104,7 @@ class TestReadMp3Metadata:
         """Should handle exceptions gracefully."""
         logger = logging.getLogger("test")
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", side_effect=Exception("Boom")):
+        with patch("crate.core.io.MutagenFile", side_effect=Exception("Boom")):
             meta, error = read_mp3_metadata(Path("/fake/path.mp3"), logger)
 
             assert meta is None
@@ -115,7 +115,7 @@ class TestReadMp3Metadata:
         """Should handle when mutagen returns None."""
         logger = logging.getLogger("test")
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", return_value=None):
+        with patch("crate.core.io.MutagenFile", return_value=None):
             meta, error = read_mp3_metadata(Path("/fake/path.mp3"), logger)
 
             assert meta is None
@@ -159,7 +159,7 @@ class TestReadMp3Metadata:
         mock_audio = Mock()
         mock_audio.tags = mock_tags
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", return_value=mock_audio):
+        with patch("crate.core.io.MutagenFile", return_value=mock_audio):
             meta, error = read_mp3_metadata(test_file, logger)
 
             assert error is None
@@ -184,7 +184,7 @@ class TestReadMp3Metadata:
         mock_audio = Mock()
         mock_audio.tags = mock_tags
 
-        with patch("dj_mp3_renamer.core.io.MutagenFile", return_value=mock_audio):
+        with patch("crate.core.io.MutagenFile", return_value=mock_audio):
             meta, error = read_mp3_metadata(test_file, logger)
 
             assert error is None

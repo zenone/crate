@@ -16,7 +16,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from dj_mp3_renamer.core.config import load_config, clear_config_cache
+from crate.core.config import load_config, clear_config_cache
 
 
 def benchmark_without_cache(iterations=1000):

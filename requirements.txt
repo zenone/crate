@@ -1,7 +1,19 @@
+# Core dependencies (always required)
 mutagen>=1.46.0
 tqdm>=4.65.0
 
-# Audio analysis and detection
-pyacoustid>=1.3.0
+# Audio analysis - Tier 1: Essentia (recommended, 2x faster, more accurate)
+# Task #88: Migrated from librosa to Essentia with fallback
+essentia>=2.1b6.dev1389
+numpy>=1.25
+
+# Audio analysis - Tier 2: librosa (fallback, better compatibility)
 librosa>=0.10.0
 soundfile>=0.12.0
+
+# Audio analysis - Database lookup
+pyacoustid>=1.3.0
+
+# Web interface
+fastapi>=0.104.0
+uvicorn>=0.24.0

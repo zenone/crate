@@ -1,5 +1,5 @@
 /**
- * UI Helper Functions for DJ MP3 Renamer
+ * UI Helper Functions for Crate
  * Provides toast notifications, loading states, and other UI utilities
  */
 
@@ -67,6 +67,74 @@ class UI {
      */
     warning(message, duration) {
         return this.toast(message, 'warning', duration);
+    }
+
+    /**
+     * Show undo toast with countdown timer
+     * @param {string} message - Success message
+     * @param {function} undoCallback - Function to call when undo is clicked
+     * @param {number} expiresInSeconds - Seconds until undo expires (default 30)
+     */
+    showUndoToast(message, undoCallback, expiresInSeconds = 30) {
+        if (!this.toastContainer) {
+            this.init();
+        }
+
+        const toast = document.createElement('div');
+        toast.className = 'toast success toast-undo';
+        toast.innerHTML = `
+            <div class="toast-content">
+                <div class="toast-message">${message}</div>
+                <button class="toast-undo-btn">
+                    ↶ Undo
+                </button>
+                <div class="toast-timer">
+                    <span class="toast-timer-text">Undo available for <span class="toast-timer-seconds">${expiresInSeconds}</span>s</span>
+                    <div class="toast-timer-bar">
+                        <div class="toast-timer-fill"></div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Get elements
+        const undoBtn = toast.querySelector('.toast-undo-btn');
+        const timerText = toast.querySelector('.toast-timer-seconds');
+        const timerFill = toast.querySelector('.toast-timer-fill');
+
+        // Undo button handler
+        undoBtn.onclick = () => {
+            undoCallback();
+            toast.remove();
+            clearInterval(timerInterval);
+            clearTimeout(autoHideTimer);
+        };
+
+        // Add to DOM
+        this.toastContainer.appendChild(toast);
+
+        // Countdown timer
+        let secondsRemaining = expiresInSeconds;
+
+        const timerInterval = setInterval(() => {
+            secondsRemaining--;
+            timerText.textContent = secondsRemaining;
+
+            const progress = (expiresInSeconds - secondsRemaining) / expiresInSeconds * 100;
+            timerFill.style.width = `${progress}%`;
+
+            if (secondsRemaining <= 0) {
+                clearInterval(timerInterval);
+            }
+        }, 1000);
+
+        // Auto-hide after expiry
+        const autoHideTimer = setTimeout(() => {
+            toast.classList.add('toast-fade-out');
+            setTimeout(() => toast.remove(), 300);
+        }, expiresInSeconds * 1000);
+
+        return toast;
     }
 
     /**
@@ -167,6 +235,12 @@ class DirectoryBrowser {
         this.currentPath = null;
         this.selectedPath = null;
         this.onSelect = null; // Callback when directory selected
+        this.sortMode = 'name-asc'; // Default sort mode
+        this.currentDirectories = []; // Cache current directories for re-sorting
+        this.currentFiles = []; // Cache current files for re-sorting
+        this.currentParentPath = null;
+        this.selectedFiles = new Set(); // Track selected file paths
+        this.showFiles = true; // Show MP3 files with checkboxes
 
         this.initElements();
         this.setupEventListeners();
@@ -187,6 +261,7 @@ class DirectoryBrowser {
         this.pathDisplay = document.getElementById('browser-path-display');
         this.selectBtn = document.getElementById('browser-select-btn');
         this.cancelBtn = document.getElementById('browser-cancel-btn');
+        this.sortSelect = document.getElementById('browser-sort-select');
     }
 
     /**
@@ -203,6 +278,12 @@ class DirectoryBrowser {
 
         // Home button
         this.homeBtn.addEventListener('click', () => this.navigateToHome());
+
+        // Sort dropdown
+        this.sortSelect.addEventListener('change', (e) => {
+            this.sortMode = e.target.value;
+            this.applySortAndRender();
+        });
 
         // Keyboard shortcuts
         this.modal.addEventListener('keydown', (e) => {
@@ -241,8 +322,11 @@ class DirectoryBrowser {
             this.ui.hide(this.browserEmpty);
             this.browserList.innerHTML = '';
 
-            // Fetch directory contents
-            const result = await this.api.browseDirectory(path);
+            // Clear file selection when navigating to new directory
+            this.selectedFiles.clear();
+
+            // Fetch directory contents (with files if showFiles is true)
+            const result = await this.api.browseDirectory(path, this.showFiles);
 
             this.currentPath = result.current_path;
             this.selectedPath = result.current_path; // Auto-select current directory
@@ -254,11 +338,11 @@ class DirectoryBrowser {
             // Hide loading
             this.ui.hide(this.browserLoading);
 
-            // Render directories
-            if (result.directories.length === 0 && !result.parent_path) {
+            // Render directories and files
+            if (result.directories.length === 0 && result.files.length === 0 && !result.parent_path) {
                 this.ui.show(this.browserEmpty);
             } else {
-                this.renderDirectories(result.directories, result.parent_path);
+                this.renderDirectories(result.directories, result.files || [], result.parent_path);
             }
 
         } catch (error) {
@@ -302,9 +386,69 @@ class DirectoryBrowser {
     }
 
     /**
+     * Apply current sort and re-render
+     */
+    applySortAndRender() {
+        const sortedDirs = this.sortDirectories(this.currentDirectories);
+        const sortedFiles = this.sortFiles(this.currentFiles);
+        this.renderDirectoriesInternal(sortedDirs, sortedFiles, this.currentParentPath);
+    }
+
+    /**
+     * Sort directories based on current sort mode
+     */
+    sortDirectories(directories) {
+        const sorted = [...directories]; // Create copy
+
+        switch (this.sortMode) {
+            case 'name-asc':
+                sorted.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+                break;
+            case 'name-desc':
+                sorted.sort((a, b) => b.name.toLowerCase().localeCompare(a.name.toLowerCase()));
+                break;
+        }
+
+        return sorted;
+    }
+
+    /**
+     * Sort files based on current sort mode
+     */
+    sortFiles(files) {
+        const sorted = [...files]; // Create copy
+
+        switch (this.sortMode) {
+            case 'name-asc':
+                sorted.sort((a, b) => a.name.toLowerCase().localeCompare(b.name.toLowerCase()));
+                break;
+            case 'name-desc':
+                sorted.sort((a, b) => b.name.toLowerCase().localeCompare(a.name.toLowerCase()));
+                break;
+        }
+
+        return sorted;
+    }
+
+    /**
      * Render directory list
      */
-    renderDirectories(directories, parentPath) {
+    renderDirectories(directories, files, parentPath) {
+        // Cache for sorting
+        this.currentDirectories = directories;
+        this.currentFiles = files;
+        this.currentParentPath = parentPath;
+
+        // Sort and render
+        const sortedDirs = this.sortDirectories(directories);
+        const sortedFiles = this.sortFiles(files);
+        this.renderDirectoriesInternal(sortedDirs, sortedFiles, parentPath);
+    }
+
+    /**
+     * Internal rendering method
+     */
+    renderDirectoriesInternal(directories, files, parentPath) {
         this.browserList.innerHTML = '';
 
         // Add parent directory option if exists
@@ -323,6 +467,17 @@ class DirectoryBrowser {
             const item = this.createDirectoryItem(dir.name, dir.path, '📁', false);
             this.browserList.appendChild(item);
         });
+
+        // Add MP3 files (if showFiles is enabled)
+        if (this.showFiles && files.length > 0) {
+            files.forEach(file => {
+                const item = this.createFileItem(file.name, file.path, file.size);
+                this.browserList.appendChild(item);
+            });
+        }
+
+        // Update button text based on selection (should show "Select Folder" initially)
+        this.updateSelectButtonText();
     }
 
     /**
@@ -345,25 +500,73 @@ class DirectoryBrowser {
         item.appendChild(iconSpan);
         item.appendChild(nameSpan);
 
-        // Single click to select
+        // Single click to navigate into directory
         item.addEventListener('click', () => {
-            // Remove previous selection
-            this.browserList.querySelectorAll('.browser-item').forEach(el => {
-                el.classList.remove('selected');
-            });
-
-            // Select this item
-            item.classList.add('selected');
-            this.selectedPath = path;
-            this.pathDisplay.value = path;
-        });
-
-        // Double click to navigate
-        item.addEventListener('dblclick', () => {
             this.navigate(path);
         });
 
         return item;
+    }
+
+    /**
+     * Create a file item element with checkbox
+     */
+    createFileItem(name, path, size) {
+        const item = document.createElement('div');
+        item.className = 'browser-item file-item';
+        item.dataset.path = path;
+
+        // Checkbox
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'file-checkbox';
+        checkbox.checked = this.selectedFiles.has(path);
+        checkbox.addEventListener('change', (e) => {
+            e.stopPropagation(); // Prevent item click
+            if (checkbox.checked) {
+                this.selectedFiles.add(path);
+            } else {
+                this.selectedFiles.delete(path);
+            }
+            this.updateSelectButtonText(); // Update button based on selection
+        });
+
+        // Icon
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'browser-item-icon';
+        iconSpan.textContent = '🎵';
+
+        // Name
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'browser-item-name';
+        nameSpan.textContent = name;
+
+        // Size
+        const sizeSpan = document.createElement('span');
+        sizeSpan.className = 'browser-item-size';
+        sizeSpan.textContent = this.formatFileSize(size);
+
+        item.appendChild(checkbox);
+        item.appendChild(iconSpan);
+        item.appendChild(nameSpan);
+        item.appendChild(sizeSpan);
+
+        // Click to toggle checkbox
+        item.addEventListener('click', () => {
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
+        });
+
+        return item;
+    }
+
+    /**
+     * Format file size for display
+     */
+    formatFileSize(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     }
 
     /**
@@ -374,11 +577,37 @@ class DirectoryBrowser {
     }
 
     /**
-     * Select current directory and close
+     * Update select button text based on file selection
+     */
+    updateSelectButtonText() {
+        if (!this.selectBtn) return;
+
+        const count = this.selectedFiles.size;
+
+        if (count > 0) {
+            this.selectBtn.textContent = `Select Files (${count})`;
+            this.selectBtn.classList.add('has-selection');
+        } else {
+            this.selectBtn.textContent = 'Select Folder';
+            this.selectBtn.classList.remove('has-selection');
+        }
+    }
+
+    /**
+     * Select current directory or selected files and close
      */
     selectCurrent() {
-        if (this.selectedPath && this.onSelect) {
-            this.onSelect(this.selectedPath);
+        if (this.selectedFiles.size > 0) {
+            // User has selected specific files - return file paths
+            const filePaths = Array.from(this.selectedFiles);
+            if (this.onSelect) {
+                this.onSelect(this.selectedPath, filePaths); // Pass both folder and files
+            }
+        } else {
+            // No files selected - return folder path (load all files)
+            if (this.selectedPath && this.onSelect) {
+                this.onSelect(this.selectedPath, null); // null = all files
+            }
         }
         this.close();
     }

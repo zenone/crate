@@ -3,18 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="DJ MP3 Renamer - Batch rename music files with metadata-based templates">
-    <title>DJ MP3 Renamer</title>
-    <link rel="stylesheet" href="/static/css/styles.css">
+    <meta name="description" content="Crate - Batch rename music files with metadata-based templates">
+    <title>Crate</title>
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260201-01">
 </head>
 <body>
     <div class="app-container">
         <!-- Header -->
         <header class="app-header">
-            <h1>🎵 DJ MP3 Renamer</h1>
-            <p class="subtitle">Batch rename your music files with metadata-based templates</p>
-            <div class="header-status">
-                <span id="api-status-badge" class="status-badge loading">Connecting...</span>
+            <div class="header-top">
+                <div class="header-title-section">
+                    <h1>🎵 Crate</h1>
+                    <p class="subtitle">Batch rename your music files with metadata-based templates</p>
+                </div>
+                <div class="header-actions">
+                    <span id="api-status-badge" class="status-badge loading">Connecting...</span>
+                    <button id="settings-btn" class="btn-icon" title="Settings" aria-label="Open Settings">
+                        ⚙️
+                    </button>
+                </div>
             </div>
         </header>
 
@@ -24,8 +31,8 @@
             <section class="file-browser-section">
                 <div class="section-header">
                     <h2>📁 Select Music Directory</h2>
-                    <button id="refresh-btn" class="btn btn-secondary" title="Refresh file list">
-                        <span>🔄</span>
+                    <button id="refresh-btn" class="btn btn-secondary" title="Refresh file list" aria-label="Refresh file list">
+                        <span aria-hidden="true">🔄</span>
                     </button>
                 </div>
 
@@ -37,7 +44,7 @@
                         placeholder="/path/to/your/music/folder"
                         aria-label="Directory path"
                     >
-                    <button id="browse-btn" class="btn btn-primary">Browse</button>
+                    <button id="browse-btn" class="btn btn-primary" title="Browse for music directory">Browse</button>
                 </div>
 
                 <div id="path-breadcrumb" class="breadcrumb hidden"></div>
@@ -50,6 +57,97 @@
                     <div class="file-stats">
                         <span id="file-count" class="stat-badge">0 files</span>
                         <span id="mp3-count" class="stat-badge">0 MP3s</span>
+                        <span id="filtered-count" class="stat-badge hidden">0 shown</span>
+                        <div class="search-control">
+                            <label for="file-search-input" class="visually-hidden">Search files</label>
+                            <div class="search-input-wrapper">
+                                <span class="search-icon" aria-hidden="true">🔍</span>
+                                <input
+                                    type="text"
+                                    id="file-search-input"
+                                    class="search-input"
+                                    placeholder="Search files, artist, title..."
+                                    aria-label="Search files by name, artist, or title"
+                                    aria-describedby="search-hint"
+                                >
+                                <button id="search-clear-btn" class="search-clear-btn hidden" aria-label="Clear search" title="Clear search">
+                                    <span aria-hidden="true">✕</span>
+                                </button>
+                            </div>
+                            <small id="search-hint" class="visually-hidden">Search filters files by filename, artist, or title</small>
+                        </div>
+                        <div class="sort-control">
+                            <label for="file-sort-select">Sort by:</label>
+                            <select id="file-sort-select" class="sort-select">
+                                <option value="name-asc">Name (A-Z)</option>
+                                <option value="name-desc">Name (Z-A)</option>
+                                <option value="modified-desc">Date Modified (Newest)</option>
+                                <option value="modified-asc">Date Modified (Oldest)</option>
+                                <option value="size-desc">Size (Largest)</option>
+                                <option value="size-asc">Size (Smallest)</option>
+                                <option value="bpm-asc">BPM (Low to High)</option>
+                                <option value="bpm-desc">BPM (High to Low)</option>
+                                <option value="track-asc">Track Number</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Metadata Loading Progress (at top, below header) -->
+                <div id="metadata-progress" class="metadata-progress hidden" role="status" aria-live="polite">
+                    <div class="metadata-progress-content">
+                        <div class="metadata-progress-header">
+                            <div class="spinner-small"></div>
+                            <span id="metadata-progress-text">Loading metadata: 0/0 files (0%) - calculating...</span>
+                            <button id="metadata-cancel-btn" class="cancel-btn" aria-label="Cancel metadata loading">✕ Cancel</button>
+                        </div>
+                        <div class="metadata-progress-bar-container" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Metadata loading progress">
+                            <div id="metadata-progress-bar" class="metadata-progress-bar" style="width: 0%"></div>
+                        </div>
+                        <div id="metadata-current-file" class="metadata-current-file">
+                            Processing: <span id="metadata-current-file-name">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Smart Suggestion Banner -->
+                <div id="smart-suggestion-banner" class="smart-suggestion-banner hidden" role="alert" aria-live="polite">
+                    <div class="suggestion-icon" aria-hidden="true">💡</div>
+                    <div class="suggestion-content">
+                        <div class="suggestion-header">
+                            <span class="suggestion-label" id="suggestion-label">Smart Suggestion</span>
+                            <span class="suggestion-confidence" id="suggestion-confidence"></span>
+                        </div>
+                        <div class="suggestion-description" id="suggestion-description"></div>
+                        <div class="suggestion-template-preview">
+                            <span class="template-label">Recommended:</span>
+                            <code class="template-code" id="suggestion-template"></code>
+                        </div>
+                    </div>
+                    <div class="suggestion-actions">
+                        <button id="suggestion-use-btn" class="btn btn-primary btn-sm">Use This</button>
+                        <button id="suggestion-ignore-btn" class="btn btn-secondary btn-sm">Ignore</button>
+                        <button id="suggestion-dismiss-btn" class="btn-icon" aria-label="Dismiss suggestion" title="Dismiss">✕</button>
+                    </div>
+                </div>
+
+                <!-- Task #111: Per-Album Smart Detection Banner -->
+                <div id="per-album-banner" class="smart-banner smart-banner-per-album" style="display: none;" role="region" aria-label="Per-album smart detection">
+                    <!-- Content will be dynamically generated by showPerAlbumBanner() -->
+                </div>
+
+                <!-- Floating Rename Action Bar -->
+                <div id="floating-action-bar" class="floating-action-bar hidden" role="region" aria-live="polite">
+                    <div class="floating-action-content">
+                        <span id="floating-selection-count" class="selection-count">0 files selected</span>
+                        <div class="floating-action-buttons">
+                            <button id="floating-preview-btn" class="btn btn-primary" title="Preview rename changes">
+                                👁️ Preview Rename
+                            </button>
+                            <button id="floating-rename-btn" class="btn btn-primary btn-accent" title="Rename selected files">
+                                ✅ <span id="floating-rename-text">Rename Now</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -58,42 +156,135 @@
                         <thead>
                             <tr>
                                 <th class="col-checkbox">
-                                    <input type="checkbox" id="select-all" aria-label="Select all files">
+                                    <input type="checkbox" id="select-all" aria-label="Select all files" title="Select all files (Ctrl+A)">
                                 </th>
-                                <th class="col-name">Filename</th>
-                                <th class="col-artist">Artist</th>
-                                <th class="col-title">Title</th>
-                                <th class="col-bpm">BPM</th>
-                                <th class="col-key">Key</th>
+                                <th class="col-current sortable" data-sort="name" role="button" aria-sort="none" tabindex="0">
+                                    Current Filename <span class="sort-indicator" aria-hidden="true"></span>
+                                </th>
+                                <th class="col-preview">
+                                    Preview (New Name)
+                                </th>
+                                <th class="col-artist sortable" data-sort="artist" role="button" aria-sort="none" tabindex="0">
+                                    Artist <span class="sort-indicator" aria-hidden="true"></span>
+                                </th>
+                                <th class="col-title sortable" data-sort="title" role="button" aria-sort="none" tabindex="0">
+                                    Title <span class="sort-indicator" aria-hidden="true"></span>
+                                </th>
+                                <th class="col-album sortable" data-sort="album" role="button" aria-sort="none" tabindex="0">
+                                    Album <span class="sort-indicator" aria-hidden="true"></span>
+                                </th>
+                                <th class="col-year sortable" data-sort="year" role="button" aria-sort="none" tabindex="0">
+                                    Year <span class="sort-indicator" aria-hidden="true"></span>
+                                </th>
+                                <th class="col-genre sortable" data-sort="genre" role="button" aria-sort="none" tabindex="0">
+                                    Genre <span class="sort-indicator" aria-hidden="true"></span>
+                                </th>
+                                <th class="col-duration sortable" data-sort="duration" role="button" aria-sort="none" tabindex="0">
+                                    Duration <span class="sort-indicator" aria-hidden="true"></span>
+                                </th>
+                                <th class="col-bpm sortable" data-sort="bpm" role="button" aria-sort="none" tabindex="0">
+                                    BPM <span class="sort-indicator" aria-hidden="true"></span>
+                                </th>
+                                <th class="col-key sortable" data-sort="key" role="button" aria-sort="none" tabindex="0">
+                                    Key <span class="sort-indicator" aria-hidden="true"></span>
+                                </th>
+                                <th class="col-source">Source</th>
                                 <th class="col-actions">Actions</th>
                             </tr>
                         </thead>
                         <tbody id="file-list-body">
                             <!-- Files will be inserted here -->
                         </tbody>
+                        <tbody id="file-list-skeleton" class="file-list-skeleton hidden">
+                            <!-- Skeleton rows during loading -->
+                            <tr class="skeleton-row">
+                                <td class="col-checkbox"><div class="skeleton-box skeleton-checkbox"></div></td>
+                                <td class="col-current"><div class="skeleton-box skeleton-text skeleton-filename"></div></td>
+                                <td class="col-preview"><div class="skeleton-box skeleton-text skeleton-preview"></div></td>
+                                <td class="col-artist"><div class="skeleton-box skeleton-text skeleton-artist"></div></td>
+                                <td class="col-title"><div class="skeleton-box skeleton-text skeleton-title"></div></td>
+                                <td class="col-bpm"><div class="skeleton-box skeleton-text skeleton-bpm"></div></td>
+                                <td class="col-key"><div class="skeleton-box skeleton-text skeleton-key"></div></td>
+                                <td class="col-source"><div class="skeleton-box skeleton-text skeleton-source"></div></td>
+                                <td class="col-actions"><div class="skeleton-box skeleton-button"></div></td>
+                            </tr>
+                            <tr class="skeleton-row">
+                                <td class="col-checkbox"><div class="skeleton-box skeleton-checkbox"></div></td>
+                                <td class="col-current"><div class="skeleton-box skeleton-text skeleton-filename"></div></td>
+                                <td class="col-preview"><div class="skeleton-box skeleton-text skeleton-preview"></div></td>
+                                <td class="col-artist"><div class="skeleton-box skeleton-text skeleton-artist"></div></td>
+                                <td class="col-title"><div class="skeleton-box skeleton-text skeleton-title"></div></td>
+                                <td class="col-bpm"><div class="skeleton-box skeleton-text skeleton-bpm"></div></td>
+                                <td class="col-key"><div class="skeleton-box skeleton-text skeleton-key"></div></td>
+                                <td class="col-source"><div class="skeleton-box skeleton-text skeleton-source"></div></td>
+                                <td class="col-actions"><div class="skeleton-box skeleton-button"></div></td>
+                            </tr>
+                            <tr class="skeleton-row">
+                                <td class="col-checkbox"><div class="skeleton-box skeleton-checkbox"></div></td>
+                                <td class="col-current"><div class="skeleton-box skeleton-text skeleton-filename"></div></td>
+                                <td class="col-preview"><div class="skeleton-box skeleton-text skeleton-preview"></div></td>
+                                <td class="col-artist"><div class="skeleton-box skeleton-text skeleton-artist"></div></td>
+                                <td class="col-title"><div class="skeleton-box skeleton-text skeleton-title"></div></td>
+                                <td class="col-bpm"><div class="skeleton-box skeleton-text skeleton-bpm"></div></td>
+                                <td class="col-key"><div class="skeleton-box skeleton-text skeleton-key"></div></td>
+                                <td class="col-source"><div class="skeleton-box skeleton-text skeleton-source"></div></td>
+                                <td class="col-actions"><div class="skeleton-box skeleton-button"></div></td>
+                            </tr>
+                            <tr class="skeleton-row">
+                                <td class="col-checkbox"><div class="skeleton-box skeleton-checkbox"></div></td>
+                                <td class="col-current"><div class="skeleton-box skeleton-text skeleton-filename"></div></td>
+                                <td class="col-preview"><div class="skeleton-box skeleton-text skeleton-preview"></div></td>
+                                <td class="col-artist"><div class="skeleton-box skeleton-text skeleton-artist"></div></td>
+                                <td class="col-title"><div class="skeleton-box skeleton-text skeleton-title"></div></td>
+                                <td class="col-bpm"><div class="skeleton-box skeleton-text skeleton-bpm"></div></td>
+                                <td class="col-key"><div class="skeleton-box skeleton-text skeleton-key"></div></td>
+                                <td class="col-source"><div class="skeleton-box skeleton-text skeleton-source"></div></td>
+                                <td class="col-actions"><div class="skeleton-box skeleton-button"></div></td>
+                            </tr>
+                            <tr class="skeleton-row">
+                                <td class="col-checkbox"><div class="skeleton-box skeleton-checkbox"></div></td>
+                                <td class="col-current"><div class="skeleton-box skeleton-text skeleton-filename"></div></td>
+                                <td class="col-preview"><div class="skeleton-box skeleton-text skeleton-preview"></div></td>
+                                <td class="col-artist"><div class="skeleton-box skeleton-text skeleton-artist"></div></td>
+                                <td class="col-title"><div class="skeleton-box skeleton-text skeleton-title"></div></td>
+                                <td class="col-bpm"><div class="skeleton-box skeleton-text skeleton-bpm"></div></td>
+                                <td class="col-key"><div class="skeleton-box skeleton-text skeleton-key"></div></td>
+                                <td class="col-source"><div class="skeleton-box skeleton-text skeleton-source"></div></td>
+                                <td class="col-actions"><div class="skeleton-box skeleton-button"></div></td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
 
-                <div id="loading-files" class="loading-indicator hidden">
-                    <div class="spinner"></div>
+                <div id="loading-files" class="loading-indicator hidden" role="status" aria-live="polite" aria-label="Loading files">
+                    <div class="spinner" aria-hidden="true"></div>
                     <p>Loading files...</p>
                 </div>
 
-                <div id="no-files-message" class="empty-state hidden">
-                    <p>📂 No MP3 files found in this directory</p>
-                    <p class="empty-state-hint">Try selecting a different folder</p>
+                <div id="no-files-message" class="empty-state hidden" role="status" aria-live="polite">
+                    <div class="empty-state-icon">🎵</div>
+                    <h3 class="empty-state-title">No MP3 Files Found</h3>
+                    <p class="empty-state-description">
+                        This directory doesn't contain any MP3 files.
+                    </p>
+                    <p class="empty-state-hint">
+                        Try selecting a different folder with music files.
+                    </p>
+                    <button id="empty-browse-again-btn" class="btn btn-primary">
+                        📁 Choose Different Folder
+                    </button>
                 </div>
             </section>
 
             <!-- Actions Section -->
             <section id="actions-section" class="actions-section hidden">
-                <button id="preview-btn" class="btn btn-primary btn-large" disabled>
+                <button id="preview-btn" class="btn btn-primary btn-large" disabled title="Preview rename changes (Ctrl+P)">
                     👁️ Preview Rename
                 </button>
-                <button id="rename-now-btn" class="btn btn-primary btn-large" disabled>
+                <button id="rename-now-btn" class="btn btn-primary btn-large" disabled title="Show rename confirmation dialog">
                     ✅ Rename Now
                 </button>
-                <button id="settings-btn" class="btn btn-secondary btn-large">
+                <button id="settings-btn-bottom" class="btn btn-secondary btn-large" title="Configure application settings">
                     ⚙️ Settings
                 </button>
             </section>
@@ -101,7 +292,7 @@
 
         <!-- Footer -->
         <footer class="app-footer">
-            <p>DJ MP3 Renamer v1.0.0 | Checkpoint 2: File Browser</p>
+            <p>Crate v2.0.0</p>
             <p class="footer-links">
                 <a href="/docs" target="_blank">API Docs</a> •
                 <a href="/api/health" target="_blank">Health Check</a>
@@ -110,7 +301,7 @@
     </div>
 
     <!-- Toast Notifications Container -->
-    <div id="toast-container" class="toast-container"></div>
+    <div id="toast-container" class="toast-container" aria-live="polite" aria-atomic="false"></div>
 
     <!-- Preview Rename Modal -->
     <div id="preview-modal" class="modal hidden" role="dialog" aria-labelledby="preview-modal-title" aria-modal="true">
@@ -151,15 +342,26 @@
 
                 <!-- Preview List -->
                 <div class="preview-list-container">
-                    <div id="preview-loading" class="loading-indicator hidden">
-                        <div class="spinner"></div>
+                    <div id="preview-loading" class="loading-indicator hidden" role="status" aria-live="polite" aria-label="Loading preview">
+                        <div class="spinner" aria-hidden="true"></div>
                         <p>Loading preview...</p>
+                        <button id="preview-cancel-btn" class="btn-secondary" style="margin-top: 10px;">Cancel</button>
                     </div>
 
                     <div id="preview-list" class="preview-list"></div>
 
                     <div id="preview-empty" class="empty-state hidden">
-                        <p>📂 No files to rename</p>
+                        <div class="empty-state-icon">ℹ️</div>
+                        <h3 class="empty-state-title">All Files Keep Current Names</h3>
+                        <p class="empty-state-description">
+                            All selected files already match the template pattern.
+                        </p>
+                        <p class="empty-state-hint">
+                            Try adjusting your template or selecting different files.
+                        </p>
+                        <button id="preview-empty-close-btn" class="btn btn-secondary">
+                            Close Preview
+                        </button>
                     </div>
                 </div>
             </div>
@@ -281,8 +483,9 @@
                                 name="acoustid_api_key"
                                 class="form-control"
                                 placeholder="Enter your AcoustID API key"
+                                aria-describedby="acoustid-help"
                             >
-                            <small class="form-help">
+                            <small id="acoustid-help" class="form-help">
                                 Get a free API key at <a href="https://acoustid.org/api-key" target="_blank">acoustid.org/api-key</a>
                             </small>
                         </div>
@@ -301,10 +504,11 @@
                                     type="checkbox"
                                     id="enable-musicbrainz"
                                     name="enable_musicbrainz"
+                                    aria-describedby="enable-musicbrainz-help"
                                 >
                                 <span>Enable MusicBrainz Lookup</span>
                             </label>
-                            <small class="form-help">
+                            <small id="enable-musicbrainz-help" class="form-help">
                                 Use AcoustID/MusicBrainz to identify tracks by audio fingerprint
                             </small>
                         </div>
@@ -315,10 +519,11 @@
                                     type="checkbox"
                                     id="auto-detect-bpm"
                                     name="auto_detect_bpm"
+                                    aria-describedby="auto-detect-bpm-help"
                                 >
                                 <span>Auto-detect BPM</span>
                             </label>
-                            <small class="form-help">
+                            <small id="auto-detect-bpm-help" class="form-help">
                                 Use AI audio analysis (librosa) to detect BPM if missing
                             </small>
                         </div>
@@ -329,10 +534,11 @@
                                     type="checkbox"
                                     id="auto-detect-key"
                                     name="auto_detect_key"
+                                    aria-describedby="auto-detect-key-help"
                                 >
                                 <span>Auto-detect Key</span>
                             </label>
-                            <small class="form-help">
+                            <small id="auto-detect-key-help" class="form-help">
                                 Use AI audio analysis (librosa) to detect musical key if missing
                             </small>
                         </div>
@@ -343,10 +549,11 @@
                                     type="checkbox"
                                     id="use-mb-for-all-fields"
                                     name="use_mb_for_all_fields"
+                                    aria-describedby="use-mb-for-all-fields-help"
                                 >
                                 <span>Use MusicBrainz for Artist/Title/Album</span>
                             </label>
-                            <small class="form-help">
+                            <small id="use-mb-for-all-fields-help" class="form-help">
                                 Allow MusicBrainz to correct artist, title, album, and year fields
                             </small>
                         </div>
@@ -357,10 +564,11 @@
                                     type="checkbox"
                                     id="verify-mode"
                                     name="verify_mode"
+                                    aria-describedby="verify-mode-help"
                                 >
                                 <span>Verify Mode (Re-analyze All)</span>
                             </label>
-                            <small class="form-help">
+                            <small id="verify-mode-help" class="form-help">
                                 Re-analyze files even if they already have metadata (validation mode)
                             </small>
                         </div>
@@ -370,24 +578,186 @@
                     <div class="settings-section">
                         <h3 class="settings-section-title">📝 Filename Template</h3>
                         <div class="settings-description">
-                            Customize the filename format using template variables.
+                            Customize the filename format using template variables. Click variable buttons below to insert them.
                         </div>
 
+                        <!-- Preset Templates -->
+                        <div class="form-group">
+                            <label for="template-preset">
+                                Quick Presets (DJ & Album Formats)
+                            </label>
+                            <select id="template-preset" class="form-control">
+                                <option value="">-- Select a preset --</option>
+                                <optgroup label="DJ / Single Track Formats">
+                                    <option value="{artist} - {title} [{camelot} {bpm}]">Electronic/House: Artist - Title [Key BPM]</option>
+                                    <option value="{artist} - {title} ({mix}) [{camelot} {bpm}]">With Mix Version: Artist - Title (Mix) [Key BPM]</option>
+                                    <option value="{bpm} {camelot} - {artist} - {title}">BPM First: BPM Key - Artist - Title</option>
+                                    <option value="{artist} - {title} [{bpm}]">BPM Only: Artist - Title [BPM]</option>
+                                    <option value="{artist} - {title} [{key}]">Key Only: Artist - Title [Key]</option>
+                                    <option value="{artist} - {title}">Minimal: Artist - Title</option>
+                                    <option value="{artist} - {title} ({year}) [{camelot} {bpm}]">Full Metadata: Artist - Title (Year) [Key BPM]</option>
+                                </optgroup>
+                                <optgroup label="DJ / Specialized Formats">
+                                    <option value="{artist} - {title} [{label}] ({key} {bpm}bpm)">Electronic with Label: Artist - Title [Label] (Key BPM)</option>
+                                    <option value="{artist} - {title} [{catalog}]">Techno/Minimal: Artist - Title [Catalog]</option>
+                                    <option value="{artist} - {title} [{genre}] [{camelot} {bpm}]">Multi-Genre: Artist - Title [Genre] [Key BPM]</option>
+                                    <option value="{artist} - {title} - {mix} ({year})">Radio/Broadcast: Artist - Title - Mix (Year)</option>
+                                    <option value="{label} {catalog} - {artist} - {title}">Vinyl/Label Focus: Label Catalog - Artist - Title</option>
+                                </optgroup>
+                                <optgroup label="Album / Collection Formats">
+                                    <option value="{track} - {artist} - {title}">Simple Album: Track - Artist - Title</option>
+                                    <option value="{track} {title}">Minimal Album: Track Title</option>
+                                    <option value="{artist} - {album} - {track} - {title}">Full Album: Artist - Album - Track - Title</option>
+                                    <option value="{track} - {title} [{bpm}]">Album with BPM: Track - Title [BPM]</option>
+                                    <option value="{album} - {track} - {artist} - {title}">Album First: Album - Track - Artist - Title</option>
+                                </optgroup>
+                            </select>
+                            <small class="form-help">
+                                Select a preset to quickly apply industry-standard DJ or album filename formats
+                            </small>
+                        </div>
+
+                        <!-- Template Input -->
                         <div class="form-group">
                             <label for="default-template">
-                                Default Template
+                                Custom Template
                             </label>
-                            <input
-                                type="text"
+                            <textarea
                                 id="default-template"
                                 name="default_template"
-                                class="form-control"
+                                class="form-control template-input"
+                                rows="3"
                                 placeholder="{artist} - {title} [{camelot} {bpm}]"
-                            >
-                            <small class="form-help">
-                                Available variables: {artist}, {title}, {album}, {year}, {bpm}, {key}, {camelot}, {label}, {track}, {mix}
-                            </small>
+                                aria-describedby="template-help"
+                            ></textarea>
                             <div id="template-preview" class="template-preview"></div>
+                        </div>
+
+                        <!-- Variable Buttons -->
+                        <div class="form-group">
+                            <label>Available Variables (Click to Insert)</label>
+                            <div class="template-variables">
+                                <div class="variable-group">
+                                    <div class="variable-group-label">Track Info</div>
+                                    <button type="button" class="variable-btn" data-variable="{artist}">🎤 Artist</button>
+                                    <button type="button" class="variable-btn" data-variable="{title}">🎵 Title</button>
+                                    <button type="button" class="variable-btn" data-variable="{album}">💿 Album</button>
+                                    <button type="button" class="variable-btn" data-variable="{mix}">🔀 Mix</button>
+                                    <button type="button" class="variable-btn" data-variable="{mix_paren}">🔀 Mix (paren)</button>
+                                    <button type="button" class="variable-btn" data-variable="{year}">📅 Year</button>
+                                    <button type="button" class="variable-btn" data-variable="{track}">🔢 Track #</button>
+                                </div>
+                                <div class="variable-group">
+                                    <div class="variable-group-label">DJ Metadata</div>
+                                    <button type="button" class="variable-btn" data-variable="{bpm}">⚡ BPM</button>
+                                    <button type="button" class="variable-btn" data-variable="{key}">🎹 Key</button>
+                                    <button type="button" class="variable-btn" data-variable="{camelot}">🐫 Camelot</button>
+                                    <button type="button" class="variable-btn" data-variable="{kb}">🎯 Key+BPM</button>
+                                    <button type="button" class="variable-btn" data-variable="{genre}">🎸 Genre</button>
+                                </div>
+                                <div class="variable-group">
+                                    <div class="variable-group-label">Label Info</div>
+                                    <button type="button" class="variable-btn" data-variable="{label}">🏷️ Label</button>
+                                    <button type="button" class="variable-btn" data-variable="{catalog}">📇 Catalog #</button>
+                                </div>
+                            </div>
+                            <small id="template-help" class="form-help">
+                                Click any button to insert that variable at cursor position. Combine with text like " - ", " [] ", " () " to create your format.
+                            </small>
+                        </div>
+
+                        <!-- Variable Reference Guide -->
+                        <div class="form-group">
+                            <details class="variable-reference">
+                                <summary class="variable-reference-toggle">📖 Complete Variable Reference</summary>
+                                <div class="variable-reference-content">
+                                    <table class="variable-reference-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Variable</th>
+                                                <th>Description</th>
+                                                <th>Example</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><code>{artist}</code></td>
+                                                <td>Track artist name</td>
+                                                <td>Deadmau5</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{title}</code></td>
+                                                <td>Track title</td>
+                                                <td>Strobe</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{album}</code></td>
+                                                <td>Album name</td>
+                                                <td>For Lack Of A Better Name</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{mix}</code></td>
+                                                <td>Mix/remix version</td>
+                                                <td>Original Mix, Club Mix</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{mix_paren}</code></td>
+                                                <td>Mix in parentheses (auto-formatted)</td>
+                                                <td> (Original Mix), (Club Mix)</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{year}</code></td>
+                                                <td>Release year</td>
+                                                <td>2009</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{track}</code></td>
+                                                <td>Track number</td>
+                                                <td>01, 02</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{bpm}</code></td>
+                                                <td>Beats per minute (tempo)</td>
+                                                <td>128</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{key}</code></td>
+                                                <td>Musical key (notation)</td>
+                                                <td>A minor, C# major</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{camelot}</code></td>
+                                                <td>Camelot wheel notation</td>
+                                                <td>8A, 12B</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{kb}</code></td>
+                                                <td>Key + BPM combo in brackets (auto-formatted)</td>
+                                                <td> [8A 128], [12B 140]</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{genre}</code></td>
+                                                <td>Music genre</td>
+                                                <td>House, Techno</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{label}</code></td>
+                                                <td>Record label</td>
+                                                <td>Defected Records</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{catalog}</code></td>
+                                                <td>Catalog number</td>
+                                                <td>DFTD001</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                    <div class="variable-reference-note">
+                                        <strong>💡 Tip:</strong> Not all variables will be available for every track.
+                                        Missing metadata will be detected from ID3 tags, MusicBrainz, or AI audio analysis.
+                                    </div>
+                                </div>
+                            </details>
                         </div>
                     </div>
 
@@ -399,13 +769,85 @@
                             <label class="checkbox-label">
                                 <input
                                     type="checkbox"
+                                    id="enable-smart-detection"
+                                    name="enable_smart_detection"
+                                    aria-describedby="enable-smart-detection-help"
+                                >
+                                <span>Enable Smart Track Detection (Beta)</span>
+                            </label>
+                            <small id="enable-smart-detection-help" class="form-help">
+                                Automatically suggests album vs single track templates based on metadata.
+                                You can always override suggestions. Off by default.
+                            </small>
+                        </div>
+
+                        <!-- Task #108: Per-Album Smart Detection -->
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="enable-per-album-detection"
+                                    name="enable_per_album_detection"
+                                    aria-describedby="enable-per-album-detection-help"
+                                >
+                                <span>Enable Per-Album Detection (Experimental)</span>
+                            </label>
+                            <small id="enable-per-album-detection-help" class="form-help">
+                                When loading directories with multiple albums, show individual templates
+                                per album for precise control. Requires Smart Track Detection enabled. Off by default.
+                            </small>
+                        </div>
+
+                        <!-- Task #84: Remember Last Directory -->
+                        <div class="setting-item">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="remember-last-directory"
+                                    name="remember_last_directory"
+                                    checked
+                                    aria-describedby="remember-last-directory-help"
+                                >
+                                <span>Remember Last Directory</span>
+                            </label>
+                            <small id="remember-last-directory-help" class="form-help">
+                                Automatically return to your last browsed directory on startup.
+                                If the directory no longer exists, the closest parent folder will be used.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
                                     id="recursive-default"
                                     name="recursive_default"
+                                    aria-describedby="recursive-default-help"
                                 >
                                 <span>Scan Subdirectories by Default</span>
                             </label>
-                            <small class="form-help">
+                            <small id="recursive-default-help" class="form-help">
                                 Include subdirectories when loading a directory
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="track-number-padding">
+                                Track Number Padding
+                                <span class="label-hint">(for album organization)</span>
+                            </label>
+                            <select
+                                id="track-number-padding"
+                                name="track_number_padding"
+                                class="form-control"
+                                aria-describedby="track-number-padding-help"
+                            >
+                                <option value="0">No padding (1, 2, 3...)</option>
+                                <option value="2" selected>2 digits (01, 02, 03...)</option>
+                                <option value="3">3 digits (001, 002, 003...)</option>
+                            </select>
+                            <small id="track-number-padding-help" class="form-help">
+                                Zero-pad track numbers in the {track} variable for proper album sorting
                             </small>
                         </div>
                     </div>
@@ -426,6 +868,77 @@
         </div>
     </div>
 
+    <!-- First Run Welcome Dialog -->
+    <div id="first-run-modal" class="modal hidden" role="dialog" aria-labelledby="first-run-title" aria-modal="true">
+        <div class="modal-overlay" aria-hidden="true"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="first-run-title">👋 Welcome to Crate!</h2>
+            </div>
+
+            <div class="modal-body">
+                <div class="welcome-message">
+                    <p>Get started by configuring your API keys for enhanced metadata detection.</p>
+                    <p class="welcome-note"><strong>Note:</strong> All keys are optional. The app works great without them using ID3 tags and basic analysis!</p>
+                </div>
+
+                <form id="first-run-form">
+                    <div class="form-group">
+                        <label for="first-run-acoustid-key">
+                            AcoustID API Key
+                            <span class="label-optional">(Optional)</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="first-run-acoustid-key"
+                            name="acoustid_api_key"
+                            class="form-control"
+                            placeholder="Enter your AcoustID API key"
+                            aria-describedby="first-run-acoustid-help"
+                        >
+                        <small id="first-run-acoustid-help" class="form-help">
+                            🎵 Enables MusicBrainz audio fingerprinting for accurate metadata lookup.<br>
+                            Get a free key at <a href="https://acoustid.org/api-key" target="_blank">acoustid.org/api-key</a>
+                        </small>
+                    </div>
+
+                    <div class="first-run-features">
+                        <div class="feature-section">
+                            <h4>✅ Works without API keys:</h4>
+                            <ul class="feature-list">
+                                <li>🏷️ <strong>ID3 tag reading</strong> - Embedded metadata</li>
+                                <li>⚡ <strong>BPM detection</strong> - Audio analysis</li>
+                                <li>🎹 <strong>Key detection</strong> - Camelot wheel notation</li>
+                                <li>📝 <strong>Batch renaming</strong> - Unlimited files</li>
+                                <li>📋 <strong>Templates</strong> - Custom organization patterns</li>
+                            </ul>
+                        </div>
+
+                        <div class="feature-section feature-section-premium">
+                            <h4>🚀 What API keys unlock:</h4>
+                            <ul class="feature-list feature-list-premium">
+                                <li>🎵 <strong>MusicBrainz lookup</strong> - 40+ million tracks</li>
+                                <li>✨ <strong>Auto-correction</strong> - Fix mislabeled files</li>
+                                <li>🏢 <strong>Label & catalog</strong> - Professional metadata</li>
+                                <li>🔍 <strong>Fingerprinting</strong> - Identify unknown tracks</li>
+                                <li>🎯 <strong>High confidence</strong> - Trusted music database</li>
+                            </ul>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button id="first-run-save-btn" class="btn btn-primary">
+                    💾 Save & Continue
+                </button>
+                <button id="first-run-skip-btn" class="btn btn-secondary">
+                    ⏭️ Skip for Now
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Directory Browser Modal -->
     <div id="directory-browser-modal" class="modal hidden" role="dialog" aria-labelledby="modal-title" aria-modal="true">
         <div class="modal-overlay" aria-hidden="true"></div>
@@ -438,9 +951,18 @@
             <div class="modal-body">
                 <!-- Breadcrumb Navigation -->
                 <div class="browser-breadcrumb">
-                    <button class="breadcrumb-home" title="Go to home directory">🏠</button>
+                    <button class="breadcrumb-home" title="Go to home directory" aria-label="Go to home directory"><span aria-hidden="true">🏠</span></button>
                     <span class="breadcrumb-separator">/</span>
                     <div id="breadcrumb-parts" class="breadcrumb-parts"></div>
+                </div>
+
+                <!-- Sort Controls -->
+                <div class="browser-controls">
+                    <label for="browser-sort-select" class="browser-sort-label">Sort by:</label>
+                    <select id="browser-sort-select" class="browser-sort-select">
+                        <option value="name-asc">Name (A-Z)</option>
+                        <option value="name-desc">Name (Z-A)</option>
+                    </select>
                 </div>
 
                 <!-- Directory List -->
@@ -477,9 +999,12 @@
         </div>
     </div>
 
+    <!-- Toast Notification Container (Task #130) -->
+    <div id="toast-container" class="toast-container"></div>
+
     <!-- Scripts -->
-    <script src="/static/js/api.js"></script>
-    <script src="/static/js/ui.js"></script>
-    <script src="/static/js/app.js"></script>
+    <script src="/static/js/api.js?v=20260201-03"></script>
+    <script src="/static/js/ui.js?v=20260201-03"></script>
+    <script src="/static/js/app.js?v=20260201-03"></script>
 </body>
 </html>

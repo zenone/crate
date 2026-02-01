@@ -1,5 +1,5 @@
 /**
- * API Client for DJ MP3 Renamer
+ * API Client for Crate
  * Handles all communication with the FastAPI backend
  */
 
@@ -42,14 +42,15 @@ class RenamerAPI {
     }
 
     /**
-     * Browse directory for selection (shows folders only)
+     * Browse directory for selection
      * @param {string} path - Directory path (null for home)
-     * @returns {Promise<Object>} { current_path, parent_path, directories, path_parts }
+     * @param {boolean} includeFiles - Include MP3 files in results
+     * @returns {Promise<Object>} { current_path, parent_path, directories, files, path_parts }
      */
-    async browseDirectory(path = null) {
+    async browseDirectory(path = null, includeFiles = false) {
         return this._fetch('/api/directory/browse', {
             method: 'POST',
-            body: JSON.stringify({ path, include_parent: true })
+            body: JSON.stringify({ path, include_parent: true, include_files: includeFiles })
         });
     }
 
@@ -71,11 +72,18 @@ class RenamerAPI {
      * @param {string} path - File path
      * @returns {Promise<Object>} { path, name, metadata }
      */
-    async getFileMetadata(path) {
-        return this._fetch('/api/file/metadata', {
+    async getFileMetadata(path, signal = null) {
+        const options = {
             method: 'POST',
             body: JSON.stringify({ path })
-        });
+        };
+
+        // Task #126: Add abort signal support if provided
+        if (signal) {
+            options.signal = signal;
+        }
+
+        return this._fetch('/api/file/metadata', options);
     }
 
     /**
@@ -99,8 +107,8 @@ class RenamerAPI {
      * @param {boolean} enhanceMetadata - Enable MusicBrainz/AI metadata
      * @returns {Promise<Object>} { path, previews, total, stats }
      */
-    async previewRename(path, recursive = false, template = null, filePaths = null, enhanceMetadata = false) {
-        return this._fetch('/api/rename/preview', {
+    async previewRename(path, recursive = false, template = null, filePaths = null, enhanceMetadata = false, signal = null) {
+        const options = {
             method: 'POST',
             body: JSON.stringify({
                 path,
@@ -109,7 +117,14 @@ class RenamerAPI {
                 file_paths: filePaths,
                 enhance_metadata: enhanceMetadata
             })
-        });
+        };
+
+        // Task #89: Add signal for cancellation support
+        if (signal) {
+            options.signal = signal;
+        }
+
+        return this._fetch('/api/rename/preview', options);
     }
 
     /**
@@ -169,6 +184,37 @@ class RenamerAPI {
         return this._fetch('/api/config/update', {
             method: 'POST',
             body: JSON.stringify({ updates })
+        });
+    }
+
+    /**
+     * Get initial directory to load on startup (Task #84)
+     * @returns {Promise<Object>} { path, source, original_path }
+     */
+    async getInitialDirectory() {
+        return this._fetch('/api/directory/initial');
+    }
+
+    /**
+     * Undo a rename operation
+     * @param {string} sessionId - Undo session ID from completed operation
+     * @returns {Promise<Object>} { success, reverted_count, error_count, errors, message }
+     */
+    async undoRename(sessionId) {
+        return this._fetch(`/api/rename/undo?session_id=${sessionId}`, {
+            method: 'POST'
+        });
+    }
+
+    /**
+     * Analyze file context for smart suggestions
+     * @param {Array} files - Array of file objects with metadata
+     * @returns {Promise<Object>} Context analysis with suggestions
+     */
+    async analyzeContext(files) {
+        return this._fetch('/api/analyze-context', {
+            method: 'POST',
+            body: JSON.stringify({ files })
         });
     }
 

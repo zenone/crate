@@ -3,7 +3,7 @@ Tests for metadata validation functions.
 """
 
 import pytest
-from dj_mp3_renamer.core.validation import (
+from crate.core.validation import (
     is_valid_bpm,
     is_valid_key,
     validate_and_clean_bpm,

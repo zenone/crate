@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 from unittest.mock import patch
 
-from dj_mp3_renamer.api import RenamerAPI
+from crate.api import RenamerAPI
 
 
 # Test Fixtures
@@ -33,10 +33,10 @@ def mock_config_path(tmp_path, monkeypatch):
     def mock_get_config_path():
         return config_file
 
-    monkeypatch.setattr("dj_mp3_renamer.core.config.get_config_path", mock_get_config_path)
+    monkeypatch.setattr("crate.core.config.get_config_path", mock_get_config_path)
 
     # Clear cache before each test
-    from dj_mp3_renamer.core.config import clear_config_cache
+    from crate.core.config import clear_config_cache
     clear_config_cache()
 
     return config_file
@@ -90,7 +90,7 @@ class TestUpdateConfig:
         assert success is True
 
         # Verify persisted (create new instance)
-        from dj_mp3_renamer.core.config import clear_config_cache
+        from crate.core.config import clear_config_cache
         clear_config_cache()
 
         new_api = RenamerAPI()
@@ -170,7 +170,7 @@ class TestSetConfigValue:
         api_instance.set_config_value("test_key", "test_value")
 
         # Verify persisted (create new instance)
-        from dj_mp3_renamer.core.config import clear_config_cache
+        from crate.core.config import clear_config_cache
         clear_config_cache()
 
         new_api = RenamerAPI()
@@ -246,7 +246,7 @@ class TestConfigIntegration:
         api1.update_config({"shared_key": "shared_value"})
 
         # Create new instance
-        from dj_mp3_renamer.core.config import clear_config_cache
+        from crate.core.config import clear_config_cache
         clear_config_cache()
 
         api2 = RenamerAPI()

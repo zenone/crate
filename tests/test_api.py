@@ -8,8 +8,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from dj_mp3_renamer.api.models import RenameRequest, RenameResult, RenameStatus
-from dj_mp3_renamer.api.renamer import RenamerAPI
+from crate.api.models import RenameRequest, RenameResult, RenameStatus
+from crate.api.renamer import RenamerAPI
 
 
 class TestRenamerAPI:
@@ -33,7 +33,7 @@ class TestRenamerAPI:
             "mix": "",
         }
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata", return_value=(mock_meta, None)):
+        with patch("crate.api.renamer.read_mp3_metadata", return_value=(mock_meta, None)):
             request = RenameRequest(path=src, dry_run=True)
             status = api.rename_files(request)
 
@@ -59,7 +59,7 @@ class TestRenamerAPI:
             "mix": "",
         }
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata", return_value=(mock_meta, None)):
+        with patch("crate.api.renamer.read_mp3_metadata", return_value=(mock_meta, None)):
             request = RenameRequest(path=tmp_path, dry_run=True)
             status = api.rename_files(request)
 
@@ -73,7 +73,7 @@ class TestRenamerAPI:
         api = RenamerAPI()
 
         # Simulate error in metadata reading (treated as "skipped")
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata", return_value=(None, "Test error")):
+        with patch("crate.api.renamer.read_mp3_metadata", return_value=(None, "Test error")):
             request = RenameRequest(path=src, dry_run=True)
             status = api.rename_files(request)
 
@@ -104,7 +104,7 @@ class TestRenamerAPI:
             "mix": "",
         }
 
-        with patch("dj_mp3_renamer.api.renamer.read_mp3_metadata", return_value=(mock_meta, None)):
+        with patch("crate.api.renamer.read_mp3_metadata", return_value=(mock_meta, None)):
             request = RenameRequest(path=src, dry_run=True, template="{artist} - {bpm}")
             status = api.rename_files(request)
 

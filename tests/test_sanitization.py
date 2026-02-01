@@ -3,7 +3,7 @@ Tests for sanitization module (RED phase - tests written first).
 """
 
 import pytest
-from dj_mp3_renamer.core.sanitization import safe_filename, squash_spaces
+from crate.core.sanitization import safe_filename, squash_spaces
 
 
 class TestSafeFilename:

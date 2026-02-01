@@ -15,8 +15,8 @@ from pathlib import Path
 import pytest
 from unittest.mock import patch
 
-from dj_mp3_renamer.api import RenamerAPI, RenameRequest
-from dj_mp3_renamer.api.renamer import OperationCancelled
+from crate.api import RenamerAPI, RenameRequest
+from crate.api.renamer import OperationCancelled
 
 
 # Test Fixtures
@@ -72,7 +72,7 @@ class TestAsyncCompletion:
 
     def test_async_operation_completes(self, api_instance, test_files):
         """Should complete async operation successfully."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Test Artist", "title": "Test Title", "bpm": "128", "key": "Am"},
                 None
@@ -97,7 +97,7 @@ class TestAsyncCompletion:
 
     def test_async_operation_tracks_progress(self, api_instance, test_files):
         """Should track progress during operation."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             # Add small delay to make progress visible
             def slow_read(*args):
                 time.sleep(0.05)
@@ -167,7 +167,7 @@ class TestAsyncCancellation:
         for i in range(50):
             (tmp_path / f"test_{i:03d}.mp3").write_bytes(b"FAKE MP3")
 
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             # Add delay to make operation slower (but not too slow for test suite)
             def slow_read(*args):
                 time.sleep(0.03)
@@ -206,7 +206,7 @@ class TestAsyncCancellation:
 
     def test_cancel_completed_operation_returns_false(self, api_instance, test_files):
         """Should return False for already completed operation."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Test", "title": "Test", "bpm": "128", "key": "Am"},
                 None
@@ -228,7 +228,7 @@ class TestAsyncCleanup:
 
     def test_clear_operation_removes_from_tracking(self, api_instance, test_files):
         """Should remove operation from tracking."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Test", "title": "Test", "bpm": "128", "key": "Am"},
                 None
@@ -269,7 +269,7 @@ class TestConcurrentAsyncOperations:
             (dir1 / f"test_{i}.mp3").write_bytes(b"FAKE MP3")
             (dir2 / f"test_{i}.mp3").write_bytes(b"FAKE MP3")
 
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Test", "title": "Test", "bpm": "128", "key": "Am"},
                 None
@@ -303,7 +303,7 @@ class TestOperationStatusModel:
 
     def test_operation_status_to_dict(self, api_instance, test_files):
         """Should convert OperationStatus to JSON-serializable dict."""
-        with patch("dj_mp3_renamer.core.io.read_mp3_metadata") as mock_read:
+        with patch("crate.core.io.read_mp3_metadata") as mock_read:
             mock_read.return_value = (
                 {"artist": "Test", "title": "Test", "bpm": "128", "key": "Am"},
                 None
