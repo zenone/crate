@@ -123,9 +123,16 @@ if ps -p $SERVER_PID > /dev/null 2>&1; then
 
     # Auto-open browser
     URL="http://127.0.0.1:$PORT"
+    echo ""
+    echo "🚀 Opening browser at: $URL"
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        echo "🚀 Opening browser..."
-        open "$URL" 2>/dev/null || true
+        # macOS - open in default browser
+        open "$URL" 2>&1 || echo "   (Could not auto-open - please open manually)"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux
+        xdg-open "$URL" 2>&1 || echo "   (Could not auto-open - please open manually)"
+    else
+        echo "   (Auto-open not supported - please open manually)"
     fi
 
     echo ""
