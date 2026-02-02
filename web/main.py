@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 class DirectoryRequest(BaseModel):
     path: str
     recursive: bool = False  # Include subdirectories
+    write_metadata: bool = False  # Write BPM/Key to disk (default: read-only)
 
 
 class FileInfo(BaseModel):
@@ -405,7 +406,12 @@ async def list_directory(request: DirectoryRequest):
 # File metadata endpoint
 @app.post("/api/file/metadata")
 async def get_file_metadata(request: DirectoryRequest):
-    """Get metadata for a specific MP3 file."""
+    """
+    Get metadata for a specific MP3 file.
+
+    By default, this is a read-only operation (write_metadata=False).
+    Set write_metadata=True to save enhanced BPM/Key back to disk.
+    """
     try:
         file_path = Path(request.path).expanduser().resolve()
 
@@ -415,8 +421,8 @@ async def get_file_metadata(request: DirectoryRequest):
         if not file_path.is_file():
             raise HTTPException(status_code=400, detail=f"Path is not a file: {request.path}")
 
-        # Use the API to analyze the file
-        metadata = renamer_api.analyze_file(file_path)
+        # Use the API to analyze the file (read-only by default)
+        metadata = renamer_api.analyze_file(file_path, write_tags=request.write_metadata)
 
         if metadata is None:
             raise HTTPException(status_code=400, detail="Could not read file metadata")

@@ -1004,7 +1004,7 @@ class RenamerAPI:
 
     # Metadata Enhancement Support
 
-    def analyze_file(self, file_path: Path) -> Optional[dict]:
+    def analyze_file(self, file_path: Path, write_tags: bool = False) -> Optional[dict]:
         """
         Analyze single file metadata.
 
@@ -1017,13 +1017,17 @@ class RenamerAPI:
 
         Args:
             file_path: Path to MP3 file
+            write_tags: If True, write enhanced BPM/Key to disk (default: False for read-only)
 
         Returns:
             Enhanced metadata dict or None if error
 
         Examples:
             >>> api = RenamerAPI()
+            >>> # Read-only analysis (no disk writes)
             >>> metadata = api.analyze_file(Path("/music/track.mp3"))
+            >>> # Analysis with disk writes
+            >>> metadata = api.analyze_file(Path("/music/track.mp3"), write_tags=True)
             >>> if metadata:
             >>>     print(f"BPM: {metadata['bpm']} (from {metadata['bpm_source']})")
             >>>     print(f"Key: {metadata['key']} (from {metadata['key_source']})")
@@ -1032,6 +1036,8 @@ class RenamerAPI:
             - Respects config settings (enable_musicbrainz, auto_detect_*)
             - May take several seconds for full analysis
             - Returns None if file cannot be read
+            - By default, metadata loading is read-only (write_tags=False)
+            - Enhanced BPM/Key will be written during rename operation
         """
         # Read existing metadata
         meta, err = read_mp3_metadata(file_path, self.logger)
@@ -1041,7 +1047,7 @@ class RenamerAPI:
 
         # Enhance with MusicBrainz + AI analysis
         try:
-            enhanced = self._enhance_metadata(file_path, meta)
+            enhanced = self._enhance_metadata(file_path, meta, write_tags=write_tags)
             return enhanced
         except Exception as e:
             self.logger.error(f"Failed to enhance metadata for {file_path}: {e}", exc_info=True)
