@@ -957,15 +957,18 @@ class App {
                     console.log('[CANCEL] Metadata loading stopped after', this.metadataLoadState.loaded, 'files');
 
                     // Clean up remaining files that haven't been processed
+                    let cleanedCount = 0;
                     for (let i = fileIndex; i < this.currentFiles.length; i++) {
                         const remainingFile = this.currentFiles[i];
                         if (remainingFile._previewCell) {
                             const loadingSpan = remainingFile._previewCell.querySelector('.preview-loading');
                             if (loadingSpan) {
                                 remainingFile._previewCell.innerHTML = '<span class="preview-pending" style="color: var(--text-secondary);">—</span>';
+                                cleanedCount++;
                             }
                         }
                     }
+                    console.log('[CANCEL] Cleared', cleanedCount, 'preview cells');
                     break;
                 }
 
@@ -988,15 +991,19 @@ class App {
         } finally {
             // Clean up preview cells that are still showing "(loading...)"
             // This happens when metadata loading is cancelled before completing all files
+            console.log('[CLEANUP] Running finally block cleanup');
+            let finallyCleaned = 0;
             for (const file of this.currentFiles) {
                 if (file._previewCell) {
                     const loadingSpan = file._previewCell.querySelector('.preview-loading');
                     if (loadingSpan) {
                         // Clear the loading state - show em dash like large directories
                         file._previewCell.innerHTML = '<span class="preview-pending" style="color: var(--text-secondary);">—</span>';
+                        finallyCleaned++;
                     }
                 }
             }
+            console.log('[CLEANUP] Finally block cleared', finallyCleaned, 'preview cells');
 
             // Clean up abort controller and hide progress
             this.metadataAbortController = null;
