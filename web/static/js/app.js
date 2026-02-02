@@ -952,7 +952,7 @@ class App {
             // Task #126: This allows cancel to work properly by checking abort signal between each load
             for (const file of this.currentFiles) {
                 // Check if cancelled before loading next file's metadata
-                if (this.metadataAbortController.signal.aborted) {
+                if (this.metadataAbortController && this.metadataAbortController.signal.aborted) {
                     console.log('[CANCEL] Metadata loading stopped after', this.metadataLoadState.loaded, 'files');
                     break;
                 }
@@ -1274,7 +1274,7 @@ class App {
     async loadFileMetadata(path, cells) {
         try {
             // Task #126: Check if cancelled before making API call
-            if (this.metadataAbortController?.signal.aborted) {
+            if (this.metadataAbortController && this.metadataAbortController.signal.aborted) {
                 throw new DOMException('Metadata loading cancelled', 'AbortError');
             }
 
@@ -1286,7 +1286,7 @@ class App {
             // Task #126: Pass abort signal to API call if available
             const result = await this.api.getFileMetadata(
                 path,
-                this.metadataAbortController?.signal
+                this.metadataAbortController ? this.metadataAbortController.signal : undefined
             );
             const meta = result.metadata;
 
