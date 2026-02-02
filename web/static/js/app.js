@@ -973,6 +973,18 @@ class App {
                 this.ui.error('Error loading metadata: ' + error.message);
             }
         } finally {
+            // Clean up preview cells that are still showing "(loading...)"
+            // This happens when metadata loading is cancelled before completing all files
+            for (const file of this.currentFiles) {
+                if (file._previewCell) {
+                    const loadingSpan = file._previewCell.querySelector('.preview-loading');
+                    if (loadingSpan) {
+                        // Clear the loading state - show em dash like large directories
+                        file._previewCell.innerHTML = '<span class="preview-pending" style="color: var(--text-secondary);">—</span>';
+                    }
+                }
+            }
+
             // Clean up abort controller and hide progress
             this.metadataAbortController = null;
             this.hideMetadataProgress();
