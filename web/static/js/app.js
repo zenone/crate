@@ -950,15 +950,28 @@ class App {
 
             // Step 2: Load metadata sequentially with cancellation support
             // Task #126: This allows cancel to work properly by checking abort signal between each load
+            let fileIndex = 0;
             for (const file of this.currentFiles) {
                 // Check if cancelled before loading next file's metadata
                 if (this.metadataAbortController && this.metadataAbortController.signal.aborted) {
                     console.log('[CANCEL] Metadata loading stopped after', this.metadataLoadState.loaded, 'files');
+
+                    // Clean up remaining files that haven't been processed
+                    for (let i = fileIndex; i < this.currentFiles.length; i++) {
+                        const remainingFile = this.currentFiles[i];
+                        if (remainingFile._previewCell) {
+                            const loadingSpan = remainingFile._previewCell.querySelector('.preview-loading');
+                            if (loadingSpan) {
+                                remainingFile._previewCell.innerHTML = '<span class="preview-pending" style="color: var(--text-secondary);">—</span>';
+                            }
+                        }
+                    }
                     break;
                 }
 
                 // Load metadata for this file
                 await this.loadFileMetadata(file.path, file._metadataCells);
+                fileIndex++;
             }
 
             // All metadata loaded successfully
