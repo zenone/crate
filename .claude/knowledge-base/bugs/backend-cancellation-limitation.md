@@ -1,9 +1,35 @@
-# Backend Cancellation Limitation
+# Backend Cancellation Implementation
 
 **Date**: 2026-02-01
-**Status**: KNOWN LIMITATION - Requires Architecture Change
+**Status**: ✅ IMPLEMENTED - Cancellation between checkpoints
 
-## Issue
+**Update**: Backend now supports cancellation! Uses threading.Event to check cancellation between expensive operations.
+
+## How It Works Now (v20260201-12)
+
+**Implementation**: Thread-based cancellation with checkpoints
+
+1. **Frontend**: Clicks Cancel → aborts AbortController → closes HTTP connections
+2. **Backend Endpoint**: Detects disconnect via `await request.is_disconnected()`
+3. **Cancellation Signal**: Sets `threading.Event()` to signal background thread
+4. **Backend Analysis**: Checks event between operations:
+   - ✅ Before MusicBrainz lookup (~2s operation)
+   - ✅ Before audio analysis (~8s operation)
+5. **Graceful Stop**: Raises `OperationCancelled` exception at next checkpoint
+
+**Worst Case Latency**:
+- Cancelled during MusicBrainz: ~2s wasted
+- Cancelled during audio analysis: ~8s wasted
+- **No longer processes all files** - stops at next checkpoint!
+
+**Files Modified**:
+- `crate/api/renamer.py`: Added `cancel_event` parameter, cancellation checks
+- `web/main.py`: Added `asyncio.to_thread()` with periodic disconnect checks
+- `web/static/js/app.js`: Preview cell cleanup (already working)
+
+---
+
+## Original Issue (Pre-Fix)
 
 Cancel button stops frontend from sending NEW requests, but backend continues processing requests that are already in-flight.
 

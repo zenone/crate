@@ -15,9 +15,12 @@ from datetime import datetime, timedelta
 import logging
 import os
 import uuid
+import asyncio
+import threading
 
 # Import the RenamerAPI
 from crate.api import RenamerAPI, RenameRequest
+from crate.api.renamer import OperationCancelled
 from crate.core.io import find_mp3s
 from crate.core.config import is_first_run, mark_first_run_complete, load_config
 from crate.core.context_detection import analyze_context, get_default_suggestion, analyze_per_album_context
@@ -412,8 +415,8 @@ async def get_file_metadata(http_request: Request, request: DirectoryRequest):
     By default, this is a read-only operation (write_metadata=False).
     Set write_metadata=True to save enhanced BPM/Key back to disk.
 
-    Limitation: Due to synchronous backend code, in-flight requests will complete
-    even if client disconnects. Future improvement: refactor to async.
+    Supports cancellation: If client disconnects, processing will be cancelled
+    at the next checkpoint (before MusicBrainz lookup or audio analysis).
     """
     try:
         # Check if client already disconnected (fast fail)
@@ -429,10 +432,39 @@ async def get_file_metadata(http_request: Request, request: DirectoryRequest):
         if not file_path.is_file():
             raise HTTPException(status_code=400, detail=f"Path is not a file: {request.path}")
 
-        # Use the API to analyze the file (read-only by default)
-        # Note: This call is synchronous and will block until complete
-        # Cancel detection happens BEFORE this call, not during
-        metadata = renamer_api.analyze_file(file_path, write_tags=request.write_metadata)
+        # Create cancellation event for this request
+        cancel_event = threading.Event()
+
+        # Run analysis in thread pool with cancellation support
+        async def analyze_with_cancel_check():
+            # Start analysis in background thread
+            task = asyncio.create_task(
+                asyncio.to_thread(
+                    renamer_api.analyze_file,
+                    file_path,
+                    request.write_metadata,
+                    cancel_event
+                )
+            )
+
+            # Periodically check if client disconnected
+            while not task.done():
+                if await http_request.is_disconnected():
+                    logger.info(f"[CANCEL] Client disconnected during processing: {file_path.name}")
+                    cancel_event.set()  # Signal cancellation to backend
+                    # Wait a bit for graceful cancellation
+                    try:
+                        await asyncio.wait_for(task, timeout=0.5)
+                    except asyncio.TimeoutError:
+                        pass  # Backend will stop at next checkpoint
+                    raise HTTPException(status_code=499, detail="Client disconnected")
+
+                # Check every 100ms
+                await asyncio.sleep(0.1)
+
+            return await task
+
+        metadata = await analyze_with_cancel_check()
 
         if metadata is None:
             raise HTTPException(status_code=400, detail="Could not read file metadata")
@@ -443,6 +475,9 @@ async def get_file_metadata(http_request: Request, request: DirectoryRequest):
             "metadata": metadata
         }
 
+    except OperationCancelled:
+        logger.info(f"[CANCEL] Analysis cancelled: {request.path}")
+        raise HTTPException(status_code=499, detail="Analysis cancelled")
     except HTTPException:
         raise
     except Exception as e:

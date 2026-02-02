@@ -119,6 +119,96 @@
 
 ---
 
+### [2026-02-01] Cancel Button - Setting Controller to Null
+
+**Context**: Implementing cancel functionality for metadata loading (Task #126-127)
+
+**Problem**: Cancel button was clicked, frontend cleanup ran, but the renderFileList loop never stopped. All 63 files continued being processed despite cancel signal.
+
+**Root Cause**:
+```javascript
+// In cancelMetadataLoading():
+this.metadataAbortController.abort();      // Sets signal.aborted = true
+this.metadataAbortController = null;       // ← BUG!
+
+// In renderFileList() loop:
+if (this.metadataAbortController && this.metadataAbortController.signal.aborted) {
+    // ↑ This check FAILS because controller is now null!
+    break;  // Never executes
+}
+```
+
+The cancel handler set the controller to `null` immediately after aborting it, so the loop's check for `signal.aborted` always evaluated to false (null check failed first).
+
+**Solution**:
+1. Call `.abort()` to set signal.aborted = true
+2. Do NOT set to null in cancel handler
+3. Let the loop check signal.aborted and break
+4. Let finally block set controller to null after loop finishes
+
+```javascript
+// FIXED: cancelMetadataLoading()
+this.metadataAbortController.abort();  // Signal cancellation
+// Don't set to null here!
+this.hideMetadataProgress();
+
+// Controller will be set to null in renderFileList's finally block
+```
+
+**Prevention**:
+- AbortController should remain alive until checked by the code that's using it
+- Only clean up (set to null) AFTER all checks are complete
+- Consider the lifecycle: create → abort → check → cleanup
+- Never clean up shared state until all consumers are done with it
+
+**Related Files**:
+- `web/static/js/app.js:1542-1591` (cancel handlers)
+- `web/static/js/app.js:951-1011` (renderFileList loop)
+
+**Tags**: #frontend #cancellation #async #timing #lifecycle
+
+---
+
+### [2026-02-01] Backend Cancellation with Threading.Event
+
+**Context**: Backend continued processing all files after frontend cancelled requests
+
+**Problem**: Even with frontend cancel working, backend processed all 63 files. Each HTTP request is independent, so cancellation didn't persist across requests.
+
+**Root Cause**:
+- Each `/api/file/metadata` request got its own `cancel_event`
+- Frontend cancelled request #2, but request #3 started fresh with no cancellation
+- Backend synchronous code (MusicBrainz ~2s, audio analysis ~8s) blocks event loop
+- Can't check `await request.is_disconnected()` while sync code runs
+
+**Solution**:
+1. Added `cancel_event: threading.Event` parameter to `analyze_file()` and `_enhance_metadata()`
+2. Check `cancel_event.is_set()` before each expensive operation:
+   - Before MusicBrainz lookup (~2s)
+   - Before audio analysis (~8s)
+3. Use `asyncio.to_thread()` to run sync code in background
+4. Periodically check `await request.is_disconnected()` every 100ms
+5. Set cancel_event when disconnect detected
+6. Raise `OperationCancelled` at next checkpoint
+
+**Result**: Only 1 file completes after cancel (the one in-flight), not all 63!
+
+**Prevention**:
+- For long-running sync operations, add cancellation checkpoints between operations
+- Use threading.Event for thread-safe cancellation signaling
+- Run sync code in thread pool via asyncio.to_thread() to allow async checks
+- Check cancellation BEFORE expensive operations, not during
+- Accept that current operation may complete (~2-8s delay), but prevent ALL subsequent operations
+
+**Related Files**:
+- `crate/api/renamer.py:1007-1062` (analyze_file with cancel_event)
+- `crate/api/renamer.py:245-300` (_enhance_metadata with cancellation checks)
+- `web/main.py:408-475` (endpoint with periodic disconnect checks)
+
+**Tags**: #backend #cancellation #async #threading #sync-async-bridge
+
+---
+
 ## Category Index
 
 ### Security
@@ -146,9 +236,9 @@
 
 ## Statistics
 
-- **Total Lessons**: 5
+- **Total Lessons**: 7
 - **Last Updated**: 2026-02-01
-- **Most Common Tags**: #testing, #git, #documentation
+- **Most Common Tags**: #testing, #git, #documentation, #frontend, #backend, #cancellation
 
 ---
 

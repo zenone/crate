@@ -1539,12 +1539,29 @@ class App {
             loaded = this.previewLoadState.loaded;
             total = this.previewLoadState.total;
 
-            // Abort preview operation
+            // Abort preview operation - DO NOT set to null yet!
+            // The loop needs to check signal.aborted
             this.previewAbortController.abort();
-            this.previewAbortController = null;
             this.hidePreviewProgress();
 
             console.log(`[CANCEL] Preview generation cancelled: ${loaded}/${total} files`);
+
+            // Clean up preview cells that are still showing "(loading...)"
+            let cleanedCount = 0;
+            if (this.currentFiles) {
+                for (const file of this.currentFiles) {
+                    if (file._previewCell) {
+                        const loadingSpan = file._previewCell.querySelector('.preview-loading');
+                        if (loadingSpan) {
+                            file._previewCell.innerHTML = '<span class="preview-pending" style="color: var(--text-secondary);">—</span>';
+                            cleanedCount++;
+                        }
+                    }
+                }
+            }
+            console.log(`[CANCEL] Cleaned ${cleanedCount} preview cells`);
+
+            // Note: Controller will be set to null in the respective loop's finally block
         }
         // Otherwise check if metadata operation is running
         else if (this.metadataAbortController && this.metadataLoadState) {
@@ -1552,12 +1569,29 @@ class App {
             loaded = this.metadataLoadState.loaded;
             total = this.metadataLoadState.total;
 
-            // Abort metadata operation
+            // Abort metadata operation - DO NOT set to null yet!
+            // The renderFileList loop needs to check signal.aborted
             this.metadataAbortController.abort();
-            this.metadataAbortController = null;
             this.hideMetadataProgress();
 
             console.log(`[CANCEL] Metadata loading cancelled: ${loaded}/${total} files`);
+
+            // Clean up preview cells that are still showing "(loading...)"
+            let cleanedCount = 0;
+            if (this.currentFiles) {
+                for (const file of this.currentFiles) {
+                    if (file._previewCell) {
+                        const loadingSpan = file._previewCell.querySelector('.preview-loading');
+                        if (loadingSpan) {
+                            file._previewCell.innerHTML = '<span class="preview-pending" style="color: var(--text-secondary);">—</span>';
+                            cleanedCount++;
+                        }
+                    }
+                }
+            }
+            console.log(`[CANCEL] Cleaned ${cleanedCount} preview cells`);
+
+            // Note: Controller will be set to null in renderFileList's finally block
         }
 
         // Show notification with loaded count

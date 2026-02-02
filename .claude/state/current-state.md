@@ -1,8 +1,8 @@
 # Current State - Crate Batch Renamer
 
 **Last Updated**: 2026-02-01
-**Session**: Documentation Migration Complete
-**Status**: ✅ Ready for User Testing
+**Session**: Cancel Button Fixed + Ready for Next Features
+**Status**: ✅ Core Features Complete, Ready for UX Polish
 
 ---
 
@@ -145,7 +145,11 @@ crate/
 ## Known Issues & Limitations
 
 ### Fixed ✅
-- ✅ Cancel button (v24 - sequential metadata loading)
+- ✅ Cancel button (v20260201-13 - frontend loop + backend checkpoints)
+  - Frontend: Fixed controller lifecycle (don't set to null until loop finishes)
+  - Backend: Added threading.Event with cancellation checks between operations
+  - Result: Only 1 file completes after cancel, not all 63
+- ✅ Sequential metadata loading (v24)
 - ✅ Preview loading (v23 - auto-preview for <200 files)
 - ✅ Metadata saving during preview (v22 - read-only)
 - ✅ Connection status monitoring (v21)
