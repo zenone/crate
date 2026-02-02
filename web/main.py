@@ -4,7 +4,7 @@ FastAPI web application for Crate.
 Provides REST API endpoints and serves static frontend files.
 """
 
-from fastapi import FastAPI, HTTPException, Body
+from fastapi import FastAPI, HTTPException, Body, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse, StreamingResponse
 from pathlib import Path
@@ -405,14 +405,21 @@ async def list_directory(request: DirectoryRequest):
 
 # File metadata endpoint
 @app.post("/api/file/metadata")
-async def get_file_metadata(request: DirectoryRequest):
+async def get_file_metadata(http_request: Request, request: DirectoryRequest):
     """
     Get metadata for a specific MP3 file.
 
     By default, this is a read-only operation (write_metadata=False).
     Set write_metadata=True to save enhanced BPM/Key back to disk.
+
+    Supports cancellation: If client disconnects, processing stops immediately.
     """
     try:
+        # Check if client already disconnected (fast fail)
+        if await http_request.is_disconnected():
+            logger.info(f"Client disconnected before processing: {request.path}")
+            raise HTTPException(status_code=499, detail="Client disconnected")
+
         file_path = Path(request.path).expanduser().resolve()
 
         if not file_path.exists():
@@ -421,8 +428,30 @@ async def get_file_metadata(request: DirectoryRequest):
         if not file_path.is_file():
             raise HTTPException(status_code=400, detail=f"Path is not a file: {request.path}")
 
+        # Create a cancellation checker that works from sync code
+        # We'll use a simple approach: capture the event loop and check disconnect
+        import asyncio
+        loop = asyncio.get_event_loop()
+
+        def check_cancelled():
+            """Check if client has disconnected. Callable from sync code."""
+            try:
+                # Run the async check in the current event loop
+                future = asyncio.run_coroutine_threadsafe(
+                    http_request.is_disconnected(),
+                    loop
+                )
+                return future.result(timeout=0.1)  # Quick check
+            except:
+                return False  # If check fails, continue processing
+
         # Use the API to analyze the file (read-only by default)
-        metadata = renamer_api.analyze_file(file_path, write_tags=request.write_metadata)
+        # Pass check_cancelled for disconnect detection during expensive operations
+        metadata = renamer_api.analyze_file(
+            file_path,
+            write_tags=request.write_metadata,
+            check_cancelled=check_cancelled
+        )
 
         if metadata is None:
             raise HTTPException(status_code=400, detail="Could not read file metadata")

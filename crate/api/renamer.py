@@ -242,7 +242,7 @@ class RenamerAPI:
             self.logger.debug("Trace", exc_info=True)
             return RenameResult(src=src, dst=None, status="error", message=str(exc), metadata=None)
 
-    def _enhance_metadata(self, src: Path, meta: dict, write_tags: bool = True) -> dict:
+    def _enhance_metadata(self, src: Path, meta: dict, write_tags: bool = True, check_cancelled=None) -> dict:
         """
         Enhance metadata using MusicBrainz and AI audio analysis with conflict resolution.
 
@@ -251,9 +251,13 @@ class RenamerAPI:
             meta: Metadata from ID3 tags
             write_tags: If True, write enhanced metadata back to ID3 tags (default: True)
                        Set to False for preview operations (read-only)
+            check_cancelled: Optional callable that returns True if operation should be cancelled
 
         Returns:
             Enhanced metadata dictionary
+
+        Raises:
+            OperationCancelled: If operation is cancelled by client
         """
         verify_mode = self.config.get("verify_mode", False)
         enable_mb = self.config.get("enable_musicbrainz", False)
@@ -270,6 +274,11 @@ class RenamerAPI:
 
         # Step 1: MusicBrainz lookup (if enabled)
         if enable_mb and (needs_bpm or needs_key or (use_mb_for_all and (needs_artist or needs_title))):
+            # Check if operation cancelled before expensive MusicBrainz lookup (~2s)
+            if check_cancelled and check_cancelled():
+                self.logger.info(f"[CANCEL] Skipping MusicBrainz lookup: {src.name}")
+                raise OperationCancelled("Client disconnected")
+
             try:
                 self.logger.info(f"Looking up MusicBrainz data for: {src.name}")
                 mb_data, mb_source = lookup_acoustid(src, self.logger, self.config.get("acoustid_api_key"))
@@ -277,6 +286,8 @@ class RenamerAPI:
                 if mb_data and mb_source == "Database":
                     mb_confidence = mb_data.get("confidence", 0.0)
                     self.logger.info(f"  MusicBrainz match found (confidence: {mb_confidence:.2f})")
+            except OperationCancelled:
+                raise  # Re-raise cancellation
             except Exception as mb_err:
                 self.logger.warning(f"MusicBrainz lookup failed: {mb_err}")
 
@@ -285,6 +296,11 @@ class RenamerAPI:
         ai_key = None
 
         if needs_bpm or needs_key:
+            # Check if operation cancelled before expensive audio analysis (~8s)
+            if check_cancelled and check_cancelled():
+                self.logger.info(f"[CANCEL] Skipping audio analysis: {src.name}")
+                raise OperationCancelled("Client disconnected")
+
             try:
                 self.logger.info(f"Analyzing audio for: {src.name}")
                 ai_bpm, bpm_src, ai_key, key_src = auto_detect_metadata(
@@ -295,6 +311,8 @@ class RenamerAPI:
                     enable_musicbrainz=False,  # Already did MB lookup above
                     acoustid_api_key=self.config.get("acoustid_api_key")
                 )
+            except OperationCancelled:
+                raise  # Re-raise cancellation
             except Exception as ai_err:
                 self.logger.error(f"AI audio analysis failed: {ai_err}", exc_info=True)
 
@@ -1004,7 +1022,7 @@ class RenamerAPI:
 
     # Metadata Enhancement Support
 
-    def analyze_file(self, file_path: Path, write_tags: bool = False) -> Optional[dict]:
+    def analyze_file(self, file_path: Path, write_tags: bool = False, check_cancelled=None) -> Optional[dict]:
         """
         Analyze single file metadata.
 
@@ -1018,6 +1036,7 @@ class RenamerAPI:
         Args:
             file_path: Path to MP3 file
             write_tags: If True, write enhanced BPM/Key to disk (default: False for read-only)
+            check_cancelled: Optional callable that returns True if operation should be cancelled
 
         Returns:
             Enhanced metadata dict or None if error
@@ -1038,6 +1057,7 @@ class RenamerAPI:
             - Returns None if file cannot be read
             - By default, metadata loading is read-only (write_tags=False)
             - Enhanced BPM/Key will be written during rename operation
+            - Supports cancellation via check_cancelled callable
         """
         # Read existing metadata
         meta, err = read_mp3_metadata(file_path, self.logger)
@@ -1047,8 +1067,11 @@ class RenamerAPI:
 
         # Enhance with MusicBrainz + AI analysis
         try:
-            enhanced = self._enhance_metadata(file_path, meta, write_tags=write_tags)
+            enhanced = self._enhance_metadata(file_path, meta, write_tags=write_tags, check_cancelled=check_cancelled)
             return enhanced
+        except OperationCancelled as e:
+            self.logger.info(f"[CANCEL] Operation cancelled for {file_path}: {e}")
+            return None
         except Exception as e:
             self.logger.error(f"Failed to enhance metadata for {file_path}: {e}", exc_info=True)
             return None
