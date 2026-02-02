@@ -158,6 +158,9 @@
                                 <th class="col-checkbox">
                                     <input type="checkbox" id="select-all" aria-label="Select all files" title="Select all files (Ctrl+A)">
                                 </th>
+                                <th class="col-artwork" title="Album Cover Art">
+                                    Art
+                                </th>
                                 <th class="col-current sortable" data-sort="name" role="button" aria-sort="none" tabindex="0">
                                     Current Filename <span class="sort-indicator" aria-hidden="true"></span>
                                 </th>
@@ -795,6 +798,81 @@
                             <small id="enable-per-album-detection-help" class="form-help">
                                 When loading directories with multiple albums, show individual templates
                                 per album for precise control. Requires Smart Track Detection enabled. Off by default.
+                            </small>
+                        </div>
+
+                        <!-- Task #1: Auto-Apply Feature Flags -->
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="enable-auto-apply"
+                                    name="enable_auto_apply"
+                                    checked
+                                    aria-describedby="enable-auto-apply-help"
+                                >
+                                <span>Enable Auto-Apply for High Confidence</span>
+                            </label>
+                            <small id="enable-auto-apply-help" class="form-help">
+                                Automatically apply template when confidence is high (≥threshold).
+                                If disabled, you'll always review suggestions manually.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="enable-auto-select-albums"
+                                    name="enable_auto_select_albums"
+                                    checked
+                                    aria-describedby="enable-auto-select-albums-help"
+                                >
+                                <span>Auto-Select High Confidence Albums</span>
+                            </label>
+                            <small id="enable-auto-select-albums-help" class="form-help">
+                                In per-album mode, automatically check albums with high confidence.
+                                You can still uncheck before applying.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    id="enable-toast-notifications"
+                                    name="enable_toast_notifications"
+                                    checked
+                                    aria-describedby="enable-toast-notifications-help"
+                                >
+                                <span>Enable Toast Notifications</span>
+                            </label>
+                            <small id="enable-toast-notifications-help" class="form-help">
+                                Show non-intrusive notifications for actions (rename complete, undo available, etc.).
+                                If disabled, you'll only see status updates in the main UI.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="confidence-threshold" class="form-label">
+                                Confidence Threshold for Auto-Apply
+                            </label>
+                            <div class="range-input-group">
+                                <input
+                                    type="range"
+                                    id="confidence-threshold"
+                                    name="confidence_threshold"
+                                    min="0.7"
+                                    max="0.95"
+                                    step="0.05"
+                                    value="0.9"
+                                    aria-describedby="confidence-threshold-help"
+                                >
+                                <span id="confidence-threshold-value" class="range-value">0.90</span>
+                            </div>
+                            <small id="confidence-threshold-help" class="form-help">
+                                Minimum confidence (0.7-0.95) required for auto-apply. Higher = more conservative.
+                                Recommended: 0.90 for balanced accuracy.
                             </small>
                         </div>
 

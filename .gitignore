@@ -50,3 +50,7 @@ certs/
 *.key
 *.crt
 *.csr
+
+# Runtime files
+*.pid
+.crate_web.pid

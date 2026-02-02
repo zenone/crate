@@ -209,6 +209,64 @@ this.hideMetadataProgress();
 
 ---
 
+### [2026-02-02] Bash Process Forking Issue
+
+**Context**: Starting Task #2 (Virtual Scrolling) implementation - needed to find table rendering code
+
+**Problem**: All bash commands failing with "fork: Resource temporarily unavailable". System had too many bash processes spawned, preventing any shell commands from running.
+
+**Root Cause**:
+- `/Users/szenone/.bash_profile` sources multiple dotfiles in a loop (lines 7-9)
+- `/Users/szenone/.bash_prompt` uses complex git commands for PS1 prompt (line 57)
+- `rbenv init - bash` in `.bash_profile` (line 56) may spawn additional processes
+- Each command execution triggered profile loading → more forks → resource exhaustion
+- Cleanup script failed because `/bin/sh` is not `/bin/bash` - `killall` didn't exist in minimal sh
+
+**Attempted Solutions (Unsuccessful)**:
+1. `pkill -9 bash` - Failed (fork error)
+2. Created `/tmp/cleanup_processes.sh` with `/bin/sh` shebang and `killall -9 bash` - Failed (killall not available in sh)
+3. Attempted alternative cleanup methods - All blocked by fork limit
+
+**Solution**:
+- User rebooted computer to clear all bash processes
+- System-level issue requiring OS-level resolution
+
+**Prevention**:
+- Audit bash profile scripts for loops that source files
+- Use `exec` to replace shell processes instead of spawning children
+- Minimize git commands in PS1 prompts (use cached values)
+- For rbenv/pyenv/nvm, consider lazy loading instead of init on every shell
+- Monitor process counts: `ps aux | grep bash | wc -l`
+- If building prompts with git info, cache results or use async updates
+
+**Better Bash Profile Pattern**:
+```bash
+# DON'T: Source files in loop (creates N bash processes)
+for file in ~/.bash_{exports,aliases,functions}; do
+    [ -r "$file" ] && source "$file"
+done
+
+# DO: Source files individually (controlled process spawning)
+[ -r ~/.bash_exports ] && source ~/.bash_exports
+[ -r ~/.bash_aliases ] && source ~/.bash_aliases
+[ -r ~/.bash_functions ] && source ~/.bash_functions
+```
+
+**Related Files**:
+- `/Users/szenone/.bash_profile` (lines 7-9: loop sourcing, line 56: rbenv init)
+- `/Users/szenone/.bash_prompt` (line 57: git commands in PS1)
+- `/tmp/cleanup_processes.sh` (attempted fix)
+
+**Impact on Project**:
+- Blocked Task #2 implementation mid-start
+- Could not use Bash tool for any commands (git, grep, etc.)
+- Had to rely on Read/Grep tools only
+- Server stopped, requiring restart after reboot
+
+**Tags**: #system #bash #processes #fork #profile #blocker
+
+---
+
 ## Category Index
 
 ### Security
@@ -232,13 +290,22 @@ this.hideMetadataProgress();
 ### UI/UX
 - [Link to UI/UX-related lessons as they're added]
 
+### System/Operations
+- [2026-02-02] Bash Process Forking Issue (see above)
+
+### Frontend
+- [2026-02-01] Cancel Button - Setting Controller to Null (see above)
+
+### Backend
+- [2026-02-01] Backend Cancellation with Threading.Event (see above)
+
 ---
 
 ## Statistics
 
-- **Total Lessons**: 7
-- **Last Updated**: 2026-02-01
-- **Most Common Tags**: #testing, #git, #documentation, #frontend, #backend, #cancellation
+- **Total Lessons**: 8
+- **Last Updated**: 2026-02-02
+- **Most Common Tags**: #cancellation, #bash, #testing, #git, #documentation, #frontend, #backend
 
 ---
 

@@ -73,23 +73,51 @@ class UI {
      * Show undo toast with countdown timer
      * @param {string} message - Success message
      * @param {function} undoCallback - Function to call when undo is clicked
-     * @param {number} expiresInSeconds - Seconds until undo expires (default 30)
+     * @param {string} expiresAt - ISO timestamp when undo expires (from backend)
      */
-    showUndoToast(message, undoCallback, expiresInSeconds = 30) {
+    showUndoToast(message, undoCallback, expiresAt) {
         if (!this.toastContainer) {
             this.init();
         }
 
+        // Calculate remaining time from ISO timestamp
+        const expiresTime = new Date(expiresAt);
+        const now = new Date();
+        let secondsRemaining = Math.floor((expiresTime - now) / 1000);
+
+        // If already expired, show warning and don't create toast
+        if (secondsRemaining <= 0) {
+            this.warning('Undo window expired');
+            return null;
+        }
+
+        const totalSeconds = secondsRemaining;
+
+        // Helper function to format seconds as "9m 47s" or "47s"
+        const formatTime = (seconds) => {
+            if (seconds <= 60) {
+                return `${seconds}s`;
+            }
+            const minutes = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${minutes}m ${secs}s`;
+        };
+
+        // Detect platform for keyboard shortcut display
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const shortcutKey = isMac ? '⌘Z' : 'Ctrl+Z';
+
         const toast = document.createElement('div');
         toast.className = 'toast success toast-undo';
         toast.innerHTML = `
+            <button class="toast-close-btn" aria-label="Dismiss">×</button>
             <div class="toast-content">
                 <div class="toast-message">${message}</div>
                 <button class="toast-undo-btn">
-                    ↶ Undo
+                    <span class="undo-icon">↶</span> Undo <span class="undo-shortcut">${shortcutKey}</span>
                 </button>
                 <div class="toast-timer">
-                    <span class="toast-timer-text">Undo available for <span class="toast-timer-seconds">${expiresInSeconds}</span>s</span>
+                    <span class="toast-timer-text">Undo available for <span class="toast-timer-seconds">${formatTime(secondsRemaining)}</span></span>
                     <div class="toast-timer-bar">
                         <div class="toast-timer-fill"></div>
                     </div>
@@ -98,41 +126,51 @@ class UI {
         `;
 
         // Get elements
+        const closeBtn = toast.querySelector('.toast-close-btn');
         const undoBtn = toast.querySelector('.toast-undo-btn');
         const timerText = toast.querySelector('.toast-timer-seconds');
         const timerFill = toast.querySelector('.toast-timer-fill');
 
-        // Undo button handler
-        undoBtn.onclick = () => {
-            undoCallback();
-            toast.remove();
+        // Close button handler (dismiss without undo)
+        closeBtn.onclick = () => {
             clearInterval(timerInterval);
             clearTimeout(autoHideTimer);
+            toast.classList.add('toast-fade-out');
+            setTimeout(() => toast.remove(), 300);
+        };
+
+        // Undo button handler
+        undoBtn.onclick = async () => {
+            await undoCallback();
+            clearInterval(timerInterval);
+            clearTimeout(autoHideTimer);
+            toast.remove();
         };
 
         // Add to DOM
         this.toastContainer.appendChild(toast);
 
         // Countdown timer
-        let secondsRemaining = expiresInSeconds;
-
         const timerInterval = setInterval(() => {
             secondsRemaining--;
-            timerText.textContent = secondsRemaining;
+            timerText.textContent = formatTime(secondsRemaining);
 
-            const progress = (expiresInSeconds - secondsRemaining) / expiresInSeconds * 100;
+            const progress = ((totalSeconds - secondsRemaining) / totalSeconds) * 100;
             timerFill.style.width = `${progress}%`;
 
             if (secondsRemaining <= 0) {
                 clearInterval(timerInterval);
+                toast.classList.add('toast-fade-out');
+                setTimeout(() => toast.remove(), 300);
             }
         }, 1000);
 
-        // Auto-hide after expiry
+        // Auto-hide when expired
         const autoHideTimer = setTimeout(() => {
+            clearInterval(timerInterval);
             toast.classList.add('toast-fade-out');
             setTimeout(() => toast.remove(), 300);
-        }, expiresInSeconds * 1000);
+        }, secondsRemaining * 1000);
 
         return toast;
     }

@@ -16,7 +16,29 @@
       "Bash(git remote set-url:*)",
       "Bash(ssh-add:*)",
       "Bash(ssh:*)",
-      "Bash(pbcopy:*)"
+      "Bash(pbcopy:*)",
+      "Bash(curl:*)",
+      "Bash(python3 -m json.tool:*)",
+      "Bash(lsof:*)",
+      "Bash(kill:*)",
+      "Bash(./stop_crate_web.sh:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python3 -m pytest:*)",
+      "Bash(source:*)",
+      "Bash(pytest:*)",
+      "Bash(grep:*)",
+      "Bash(pkill:*)",
+      "Bash(/tmp/cleanup_processes.sh)",
+      "Bash(./start_crate_web.sh:*)",
+      "Bash(python3:*)",
+      "Bash(command -v:*)",
+      "Bash(brew install:*)",
+      "Bash(brew link:*)",
+      "Bash(mkcert -install:*)",
+      "Bash(node:*)",
+      "Bash(awk:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)"
     ]
   }
 }

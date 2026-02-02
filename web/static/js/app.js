@@ -3,7 +3,7 @@
  * Handles file browsing, metadata display, and user interactions
  */
 
-console.log('Loading app.js - Version 20260131-21 - FEATURE: Per-album smart detection (Task #111)');
+console.log('Loading app.js - Version 20260202-02 - FEATURE: 10-minute undo with smart time display & keyboard hints');
 
 class App {
     constructor() {
@@ -14,6 +14,7 @@ class App {
         this.currentFiles = [];
         this.selectedFiles = new Set();
         this.lastRenameSessionId = null; // For undo functionality
+        this.lastRenameExpiresAt = null; // Expiration timestamp for undo session
 
         // Metadata loading progress tracking
         this.metadataLoadState = {
@@ -53,6 +54,13 @@ class App {
 
         // Metadata loading cancellation (Task #126)
         this.metadataAbortController = null;
+
+        // Task #2: Virtual scrolling state
+        this.isVirtualScrollEnabled = false;
+        this.virtualScroll = null;
+        this.virtualScrollHandler = null;
+        this.virtualScrollSpacer = null;
+        this.virtualScrollPending = false;
 
         // Task #111: Per-album smart detection state
         this.perAlbumState = {
@@ -321,8 +329,19 @@ class App {
             // Ctrl/Cmd+Z - Undo last rename
             if (modifier && e.key === 'z') {
                 e.preventDefault();
-                if (this.lastRenameSessionId) {
-                    this.undoRename(this.lastRenameSessionId);
+                if (this.lastRenameSessionId && this.lastRenameExpiresAt) {
+                    // Check if session expired
+                    const expiresTime = new Date(this.lastRenameExpiresAt);
+                    const now = new Date();
+                    if (now < expiresTime) {
+                        this.undoRename(this.lastRenameSessionId);
+                    } else {
+                        this.ui.warning('Undo window expired (10 minutes)');
+                        this.lastRenameSessionId = null;
+                        this.lastRenameExpiresAt = null;
+                    }
+                } else if (!this.lastRenameSessionId) {
+                    this.ui.info('No recent rename to undo');
                 }
                 return;
             }
@@ -828,6 +847,19 @@ class App {
         // Task #111: Clear per-album state immediately when loading new directory
         this.clearPerAlbumState();
 
+        // Task #2: Clean up virtual scroll state from previous directory
+        if (this.virtualScrollHandler) {
+            const container = document.querySelector('.file-list-container');
+            if (container) {
+                container.removeEventListener('scroll', this.virtualScrollHandler);
+            }
+            this.virtualScrollHandler = null;
+        }
+        this.isVirtualScrollEnabled = false;
+        this.virtualScroll = null;
+        this.virtualScrollSpacer = null;
+        this.virtualScrollPending = false;
+
         try {
             // Show loading state with skeleton
             this.ui.show('file-list-section');
@@ -924,6 +956,16 @@ class App {
         const tbody = document.getElementById('file-list-body');
         tbody.innerHTML = '';
 
+        // Task #2: Initialize virtual scrolling state
+        this.virtualScroll = {
+            rowHeight: 40,           // Estimated row height in pixels
+            buffer: 20,              // Rows to render before/after visible area
+            visibleStart: 0,         // First visible row index
+            visibleEnd: 0,           // Last visible row index
+            scrollTop: 0,            // Current scroll position
+            containerHeight: 0       // Container height in pixels
+        };
+
         // Initialize metadata loading progress
         this.metadataLoadState = {
             total: this.currentFiles.length,
@@ -942,10 +984,30 @@ class App {
         }
 
         try {
-            // Step 1: Create all rows (fast - just DOM creation)
-            for (const file of this.currentFiles) {
-                const row = await this.createFileRow(file);
-                tbody.appendChild(row);
+            // Task #2: For large file lists (1000+), use virtual scrolling
+            const VIRTUAL_SCROLL_THRESHOLD = 1000;
+
+            if (this.currentFiles.length >= VIRTUAL_SCROLL_THRESHOLD) {
+                console.log(`[VIRTUAL SCROLL] Enabled for ${this.currentFiles.length} files`);
+
+                // Enable virtual scrolling mode
+                this.isVirtualScrollEnabled = true;
+
+                // Set up virtual scroll container
+                this.setupVirtualScrollContainer();
+
+                // Render only visible rows initially
+                await this.renderVisibleRows();
+
+            } else {
+                // Traditional rendering for small file lists
+                this.isVirtualScrollEnabled = false;
+
+                // Step 1: Create all rows (fast - just DOM creation)
+                for (const file of this.currentFiles) {
+                    const row = await this.createFileRow(file);
+                    tbody.appendChild(row);
+                }
             }
 
             // Step 2: Load metadata sequentially with cancellation support
@@ -972,8 +1034,21 @@ class App {
                     break;
                 }
 
+                // Task #2: For virtual scroll, initially load only visible rows
+                // Other rows will load on-demand as user scrolls
+                if (this.isVirtualScrollEnabled) {
+                    if (fileIndex < this.virtualScroll.visibleStart ||
+                        fileIndex > this.virtualScroll.visibleEnd + this.virtualScroll.buffer) {
+                        // Mark file as not loaded
+                        file._metadataLoaded = false;
+                        fileIndex++;
+                        continue;
+                    }
+                }
+
                 // Load metadata for this file
                 await this.loadFileMetadata(file.path, file._metadataCells);
+                file._metadataLoaded = true;
                 fileIndex++;
             }
 
@@ -1046,6 +1121,151 @@ class App {
     }
 
     /**
+     * Task #2: Set up virtual scrolling container
+     */
+    setupVirtualScrollContainer() {
+        const container = document.querySelector('.file-list-container');
+        const tbody = document.getElementById('file-list-body');
+
+        // Get container height
+        this.virtualScroll.containerHeight = container.clientHeight;
+
+        // Calculate initial visible range
+        this.calculateVisibleRange(0);
+
+        // Add scroll listener if not already added
+        if (!this.virtualScrollHandler) {
+            this.virtualScrollHandler = this.onVirtualScroll.bind(this);
+            container.addEventListener('scroll', this.virtualScrollHandler);
+        }
+    }
+
+    /**
+     * Task #2: Calculate which rows should be visible based on scroll position
+     */
+    calculateVisibleRange(scrollTop) {
+        const { rowHeight, buffer, containerHeight } = this.virtualScroll;
+
+        // Calculate visible range
+        const visibleStart = Math.max(0, Math.floor(scrollTop / rowHeight) - buffer);
+        const visibleCount = Math.ceil(containerHeight / rowHeight);
+        const visibleEnd = Math.min(
+            this.currentFiles.length - 1,
+            Math.floor(scrollTop / rowHeight) + visibleCount + buffer
+        );
+
+        this.virtualScroll.visibleStart = visibleStart;
+        this.virtualScroll.visibleEnd = visibleEnd;
+        this.virtualScroll.scrollTop = scrollTop;
+    }
+
+    /**
+     * Task #2: Render only visible rows with spacers for scroll height
+     */
+    async renderVisibleRows() {
+        const tbody = document.getElementById('file-list-body');
+        const { visibleStart, visibleEnd, rowHeight } = this.virtualScroll;
+
+        // Clear tbody
+        tbody.innerHTML = '';
+
+        // Create top spacer to push visible rows down
+        if (visibleStart > 0) {
+            const topSpacer = document.createElement('tr');
+            topSpacer.className = 'virtual-scroll-spacer';
+            const topSpacerCell = document.createElement('td');
+            topSpacerCell.colSpan = 100;  // Span all columns
+            topSpacerCell.style.height = `${visibleStart * rowHeight}px`;
+            topSpacerCell.style.padding = '0';
+            topSpacerCell.style.border = 'none';
+            topSpacer.appendChild(topSpacerCell);
+            tbody.appendChild(topSpacer);
+        }
+
+        // Render visible rows
+        const filesToLoadMetadata = [];
+        for (let i = visibleStart; i <= visibleEnd; i++) {
+            const file = this.currentFiles[i];
+            const row = await this.createFileRow(file);
+
+            // Restore checkbox state
+            const checkbox = row.querySelector('input[type="checkbox"]');
+            if (checkbox && this.selectedFiles.has(file.path)) {
+                checkbox.checked = true;
+            }
+
+            tbody.appendChild(row);
+
+            // Track files that need metadata loading
+            if (file._metadataLoaded === false && file._metadataCells) {
+                filesToLoadMetadata.push(file);
+            }
+        }
+
+        // Create bottom spacer to maintain total scroll height
+        const remainingRows = this.currentFiles.length - (visibleEnd + 1);
+        if (remainingRows > 0) {
+            const bottomSpacer = document.createElement('tr');
+            bottomSpacer.className = 'virtual-scroll-spacer';
+            const bottomSpacerCell = document.createElement('td');
+            bottomSpacerCell.colSpan = 100;  // Span all columns
+            bottomSpacerCell.style.height = `${remainingRows * rowHeight}px`;
+            bottomSpacerCell.style.padding = '0';
+            bottomSpacerCell.style.border = 'none';
+            bottomSpacer.appendChild(bottomSpacerCell);
+            tbody.appendChild(bottomSpacer);
+        }
+
+        console.log(`[VIRTUAL SCROLL] Rendered rows ${visibleStart}-${visibleEnd} of ${this.currentFiles.length}`);
+
+        // Load metadata for newly visible rows
+        if (filesToLoadMetadata.length > 0) {
+            console.log(`[VIRTUAL SCROLL] Loading metadata for ${filesToLoadMetadata.length} newly visible files`);
+            // Load in background without blocking rendering
+            this.loadMetadataForFiles(filesToLoadMetadata);
+        }
+    }
+
+    /**
+     * Task #2: Load metadata for specific files (used during scrolling)
+     */
+    async loadMetadataForFiles(files) {
+        for (const file of files) {
+            try {
+                if (file._metadataCells) {
+                    await this.loadFileMetadata(file.path, file._metadataCells);
+                    file._metadataLoaded = true;
+                }
+            } catch (error) {
+                console.error(`[VIRTUAL SCROLL] Failed to load metadata for ${file.path}:`, error);
+            }
+        }
+    }
+
+    /**
+     * Task #2: Handle scroll events for virtual scrolling
+     */
+    onVirtualScroll(event) {
+        const scrollTop = event.target.scrollTop;
+        const oldVisibleStart = this.virtualScroll.visibleStart;
+
+        // Calculate new visible range
+        this.calculateVisibleRange(scrollTop);
+
+        // Only re-render if visible range changed significantly (moved by 5+ rows)
+        if (Math.abs(this.virtualScroll.visibleStart - oldVisibleStart) >= 5) {
+            // Use requestAnimationFrame for smooth rendering
+            if (!this.virtualScrollPending) {
+                this.virtualScrollPending = true;
+                requestAnimationFrame(async () => {
+                    await this.renderVisibleRows();
+                    this.virtualScrollPending = false;
+                });
+            }
+        }
+    }
+
+    /**
      * Sort and re-render files based on current sort state
      */
     async sortAndRenderFiles() {
@@ -1054,13 +1274,19 @@ class App {
         // Sort files
         this.sortFiles();
 
-        // Re-render table
-        const tbody = document.getElementById('file-list-body');
-        tbody.innerHTML = '';
+        // Task #2: Use virtual scrolling for large lists
+        if (this.isVirtualScrollEnabled) {
+            // Re-render only visible rows
+            await this.renderVisibleRows();
+        } else {
+            // Traditional rendering for small lists
+            const tbody = document.getElementById('file-list-body');
+            tbody.innerHTML = '';
 
-        for (const file of this.currentFiles) {
-            const row = await this.createFileRow(file);
-            tbody.appendChild(row);
+            for (const file of this.currentFiles) {
+                const row = await this.createFileRow(file);
+                tbody.appendChild(row);
+            }
         }
 
         this.updateSortIndicators();
@@ -1178,6 +1404,15 @@ class App {
         });
         checkboxCell.appendChild(checkbox);
         row.appendChild(checkboxCell);
+
+        // Task #4: Album Artwork
+        const artworkCell = document.createElement('td');
+        artworkCell.className = 'col-artwork';
+        artworkCell.innerHTML = '<span class="artwork-placeholder">—</span>';
+        row.appendChild(artworkCell);
+
+        // Store reference for later artwork loading
+        file._artworkCell = artworkCell;
 
         // Current Filename (show relative path for subdirectories)
         const currentCell = document.createElement('td');
@@ -1379,6 +1614,9 @@ class App {
             // Update source column with metadata sources
             this.updateSourceCell(cells.sourceCell, meta);
 
+            // Task #4: Load album artwork after metadata is loaded
+            this.loadAlbumArtwork(path);
+
         } catch (error) {
             console.error(`Failed to load metadata for ${path}:`, error);
             cells.artistCell.textContent = '?';
@@ -1441,6 +1679,47 @@ class App {
 
         sourceCell.innerHTML = '';
         sourceCell.appendChild(container);
+    }
+
+    /**
+     * Task #4: Load album artwork for a file
+     */
+    async loadAlbumArtwork(path) {
+        const file = this.currentFiles.find(f => f.path === path);
+        if (!file || !file._artworkCell) return;
+
+        try {
+            // Build URL with encoded path
+            const url = `/api/file/album-art?file_path=${encodeURIComponent(path)}`;
+
+            // Fetch album art
+            const response = await fetch(url);
+
+            if (response.ok) {
+                // Create image element
+                const blob = await response.blob();
+                const imageUrl = URL.createObjectURL(blob);
+
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.className = 'album-art-thumbnail';
+                img.alt = 'Album artwork';
+                img.title = 'Album artwork';
+
+                // Replace placeholder with image
+                file._artworkCell.innerHTML = '';
+                file._artworkCell.appendChild(img);
+            } else if (response.status === 404) {
+                // No artwork found - show placeholder
+                file._artworkCell.innerHTML = '<span class="artwork-missing">—</span>';
+            } else {
+                // Error loading artwork
+                file._artworkCell.innerHTML = '<span class="artwork-error" title="Failed to load artwork">✗</span>';
+            }
+        } catch (error) {
+            console.error(`Failed to load album art for ${path}:`, error);
+            file._artworkCell.innerHTML = '<span class="artwork-error" title="Failed to load artwork">✗</span>';
+        }
     }
 
     /**
@@ -2028,19 +2307,39 @@ class App {
      * Toggle select all files (only visible/filtered files)
      */
     toggleSelectAll(checked) {
-        const checkboxes = document.querySelectorAll('input[type="checkbox"][data-path]');
-        checkboxes.forEach(cb => {
-            // Only select/deselect visible rows (respects search filter)
-            const row = cb.closest('tr');
-            if (row && !row.classList.contains('hidden')) {
-                cb.checked = checked;
-                if (checked) {
-                    this.selectedFiles.add(cb.dataset.path);
-                } else {
-                    this.selectedFiles.delete(cb.dataset.path);
-                }
+        // Task #2: For virtual scroll, select ALL files in currentFiles, not just visible DOM elements
+        if (this.isVirtualScrollEnabled) {
+            if (checked) {
+                // Select all files
+                this.currentFiles.forEach(file => {
+                    this.selectedFiles.add(file.path);
+                });
+            } else {
+                // Deselect all files
+                this.selectedFiles.clear();
             }
-        });
+
+            // Update visible checkboxes to reflect state
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][data-path]');
+            checkboxes.forEach(cb => {
+                cb.checked = checked;
+            });
+        } else {
+            // Traditional mode: toggle visible checkboxes
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][data-path]');
+            checkboxes.forEach(cb => {
+                // Only select/deselect visible rows (respects search filter)
+                const row = cb.closest('tr');
+                if (row && !row.classList.contains('hidden')) {
+                    cb.checked = checked;
+                    if (checked) {
+                        this.selectedFiles.add(cb.dataset.path);
+                    } else {
+                        this.selectedFiles.delete(cb.dataset.path);
+                    }
+                }
+            });
+        }
         this.updatePreviewButton();
     }
 
@@ -2500,9 +2799,10 @@ class App {
         document.getElementById('progress-message').textContent =
             `✅ Complete! Renamed ${results.renamed} of ${results.total} files`;
 
-        // Store undo session ID if available
+        // Store undo session ID and expiration if available
         if (status.undo_session_id) {
             this.lastRenameSessionId = status.undo_session_id;
+            this.lastRenameExpiresAt = status.undo_expires_at;
         }
 
         // Show done button, hide cancel
@@ -2521,11 +2821,11 @@ class App {
             }
 
             // Show undo toast if files were renamed
-            if (results.renamed > 0 && this.lastRenameSessionId) {
+            if (results.renamed > 0 && this.lastRenameSessionId && this.lastRenameExpiresAt) {
                 this.ui.showUndoToast(
                     `✅ Successfully renamed ${results.renamed} file${results.renamed !== 1 ? 's' : ''}`,
                     () => this.undoRename(this.lastRenameSessionId),
-                    30  // 30 seconds
+                    this.lastRenameExpiresAt  // ISO timestamp from backend
                 );
             } else {
                 // No renamed files, just show regular success
@@ -2542,6 +2842,8 @@ class App {
      */
     async undoRename(sessionId) {
         try {
+            this.ui.info('Reverting rename...');
+
             const result = await this.api.undoRename(sessionId);
 
             if (result.success) {
@@ -2554,12 +2856,21 @@ class App {
                 // Reload directory to show reverted files
                 await this.loadDirectory();
 
-                // Clear last session ID
+                // Clear session tracking
                 this.lastRenameSessionId = null;
+                this.lastRenameExpiresAt = null;
             }
         } catch (error) {
-            const enhancedMsg = this.enhanceErrorMessage('Failed to undo rename', error);
-            this.ui.error(enhancedMsg);
+            // Check for expiration errors
+            const errorMsg = error.message || '';
+            if (errorMsg.includes('expired') || errorMsg.includes('not found') || errorMsg.includes('404')) {
+                this.ui.error('Undo window expired (10 minutes)');
+                this.lastRenameSessionId = null;
+                this.lastRenameExpiresAt = null;
+            } else {
+                const enhancedMsg = this.enhanceErrorMessage('Failed to undo rename', error);
+                this.ui.error(enhancedMsg);
+            }
             console.error('Undo error:', error);
         }
     }
@@ -2724,12 +3035,18 @@ class App {
                 console.log('Using template from settings for rename:', template);
             }
 
-            // Start rename operation with template
-            const result = await this.api.executeRename(this.currentPath, filePaths, template);
-            const operationId = result.operation_id;
+            // Task #3: Try streaming first, fallback to polling if not supported
+            const useStreaming = typeof EventSource !== 'undefined';
 
-            // Poll for progress
-            await this.pollOperationProgress(operationId);
+            if (useStreaming) {
+                console.log('[STREAMING] Using EventSource for real-time progress');
+                await this.executeRenameWithStreaming(filePaths, template);
+            } else {
+                console.log('[POLLING] EventSource not supported, using polling fallback');
+                const result = await this.api.executeRename(this.currentPath, filePaths, template);
+                const operationId = result.operation_id;
+                await this.pollOperationProgress(operationId);
+            }
 
         } catch (error) {
             const enhancedMsg = this.enhanceErrorMessage('Failed to start rename operation', error);
@@ -2737,6 +3054,217 @@ class App {
             console.error('Execute error:', error);
             this.closeProgressOverlay();
         }
+    }
+
+    /**
+     * Task #3: Execute rename with Server-Sent Events streaming
+     */
+    async executeRenameWithStreaming(filePaths, template) {
+        return new Promise((resolve, reject) => {
+            // Build streaming endpoint URL
+            const requestBody = {
+                path: this.currentPath,
+                file_paths: filePaths,
+                template: template,
+                dry_run: false
+            };
+
+            // Use fetch with EventSource-compatible response
+            fetch('/api/rename/execute-stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody)
+            }).then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+
+                const processEvents = async () => {
+                    try {
+                        while (true) {
+                            const { done, value } = await reader.read();
+
+                            if (done) {
+                                console.log('[STREAMING] Stream closed by server');
+                                break;
+                            }
+
+                            // Decode chunk and add to buffer
+                            buffer += decoder.decode(value, { stream: true });
+
+                            // Process complete events (separated by double newlines)
+                            const events = buffer.split('\n\n');
+                            buffer = events.pop(); // Keep incomplete event in buffer
+
+                            for (const eventStr of events) {
+                                if (!eventStr.trim()) continue;
+
+                                // Parse SSE format
+                                const lines = eventStr.split('\n');
+                                let eventData = null;
+
+                                for (const line of lines) {
+                                    if (line.startsWith('data: ')) {
+                                        try {
+                                            eventData = JSON.parse(line.slice(6));
+                                        } catch (e) {
+                                            console.error('[STREAMING] Failed to parse event:', line);
+                                        }
+                                    }
+                                }
+
+                                if (eventData) {
+                                    this.handleStreamEvent(eventData);
+
+                                    // Resolve on complete
+                                    if (eventData.type === 'complete') {
+                                        resolve(eventData);
+                                        return;
+                                    }
+
+                                    // Reject on error
+                                    if (eventData.type === 'error') {
+                                        reject(new Error(eventData.message || 'Rename failed'));
+                                        return;
+                                    }
+                                }
+                            }
+                        }
+                    } catch (error) {
+                        console.error('[STREAMING] Stream read error:', error);
+                        reject(error);
+                    }
+                };
+
+                processEvents();
+
+            }).catch(error => {
+                console.error('[STREAMING] Fetch error:', error);
+                this.ui.error('Failed to connect to streaming endpoint');
+                reject(error);
+            });
+        });
+    }
+
+    /**
+     * Task #3: Handle individual SSE stream events
+     */
+    handleStreamEvent(event) {
+        console.log('[STREAMING] Event:', event.type, event);
+
+        switch (event.type) {
+            case 'start':
+                console.log(`[STREAMING] Started - ${event.total} files`);
+                break;
+
+            case 'progress':
+                // Update progress UI
+                const percent = event.total > 0
+                    ? Math.round((event.progress / event.total) * 100)
+                    : 0;
+
+                document.getElementById('progress-percent').textContent = `${percent}%`;
+                document.getElementById('progress-current').textContent = event.progress;
+                document.getElementById('progress-bar').style.width = `${percent}%`;
+                document.getElementById('progress-message').textContent =
+                    event.current_file ? `Processing: ${event.current_file}` : '';
+
+                // Add result to output if available
+                if (event.result) {
+                    this.addResultToOutput(event.result);
+                }
+                break;
+
+            case 'complete':
+                console.log('[STREAMING] Complete:', event);
+                this.onStreamingComplete(event);
+                break;
+
+            case 'error':
+                console.error('[STREAMING] Error:', event.message);
+                this.ui.error(event.message || 'Rename operation failed');
+                this.closeProgressOverlay();
+                break;
+        }
+    }
+
+    /**
+     * Task #3: Add individual result to progress output
+     */
+    addResultToOutput(result) {
+        const output = document.getElementById('progress-output');
+        const line = document.createElement('div');
+        line.className = 'progress-output-line';
+
+        if (result.status === 'renamed') {
+            line.classList.add('success');
+            const oldName = result.src.split('/').pop();
+            const newName = result.dst.split('/').pop();
+            line.textContent = `✓ ${oldName} → ${newName}`;
+        } else if (result.status === 'skipped') {
+            line.classList.add('skip');
+            const name = result.src.split('/').pop();
+            line.textContent = `⏭ ${name}: ${result.message}`;
+        } else {
+            line.classList.add('error');
+            const name = result.src.split('/').pop();
+            line.textContent = `✗ ${name}: ${result.message}`;
+        }
+
+        output.appendChild(line);
+        // Auto-scroll to bottom
+        output.scrollTop = output.scrollHeight;
+    }
+
+    /**
+     * Task #3: Handle streaming operation complete
+     */
+    onStreamingComplete(event) {
+        // Update progress message
+        document.getElementById('progress-message').textContent =
+            `✅ Complete! Renamed ${event.renamed || 0} of ${event.total || 0} files`;
+
+        // Store undo session if available
+        if (event.undo_session_id) {
+            this.lastRenameSessionId = event.undo_session_id;
+            this.lastRenameExpiresAt = event.undo_expires_at;
+        }
+
+        // Show done button, hide cancel
+        document.getElementById('progress-cancel-btn').classList.add('hidden');
+        const doneBtn = document.getElementById('progress-done-btn');
+        doneBtn.classList.remove('hidden');
+        doneBtn.onclick = () => {
+            this.closeProgressOverlay();
+
+            // Task #98: Hide Smart Track Detection banner after successful rename
+            if (event.renamed > 0) {
+                this.hideSmartSuggestion();
+                this.smartBannerDismissedForCurrentLoad = true;
+            }
+
+            // Show undo toast if files were renamed and toast notifications enabled
+            if (event.renamed > 0 && this.lastRenameSessionId && this.lastRenameExpiresAt) {
+                this.api.getConfig().then(config => {
+                    const toastEnabled = config.enable_toast_notifications !== false;
+                    if (toastEnabled) {
+                        this.ui.showUndoToast(
+                            `✅ Successfully renamed ${event.renamed} file${event.renamed !== 1 ? 's' : ''}`,
+                            () => this.undoRename(this.lastRenameSessionId),
+                            this.lastRenameExpiresAt
+                        );
+                    }
+                });
+            } else if (event.renamed === 0) {
+                this.ui.success(`Operation completed: ${event.renamed} renamed, ${event.skipped || 0} skipped`);
+            }
+
+            this.loadDirectory(); // Refresh file list
+        };
     }
 
     /**
@@ -2782,6 +3310,17 @@ class App {
             document.getElementById('enable-per-album-detection').checked = config.enable_per_album_detection || false; // Task #108
             document.getElementById('remember-last-directory').checked = config.remember_last_directory !== false; // Task #84
 
+            // Task #1: Feature flags for auto-apply behavior
+            document.getElementById('enable-auto-apply').checked = config.enable_auto_apply !== false;
+            document.getElementById('enable-auto-select-albums').checked = config.enable_auto_select_albums !== false;
+            document.getElementById('enable-toast-notifications').checked = config.enable_toast_notifications !== false;
+
+            const thresholdSlider = document.getElementById('confidence-threshold');
+            const thresholdValue = document.getElementById('confidence-threshold-value');
+            const threshold = config.confidence_threshold !== undefined ? config.confidence_threshold : 0.9;
+            thresholdSlider.value = threshold;
+            thresholdValue.textContent = threshold.toFixed(2);
+
             // Update template preview
             this.updateTemplatePreview();
 
@@ -2818,6 +3357,13 @@ class App {
         // Template preview on input
         const templateInput = document.getElementById('default-template');
         templateInput.oninput = () => this.updateTemplatePreview();
+
+        // Task #1: Confidence threshold slider
+        const thresholdSlider = document.getElementById('confidence-threshold');
+        const thresholdValue = document.getElementById('confidence-threshold-value');
+        thresholdSlider.oninput = (e) => {
+            thresholdValue.textContent = parseFloat(e.target.value).toFixed(2);
+        };
 
         // Template preset selection
         const presetSelect = document.getElementById('template-preset');
@@ -3026,6 +3572,11 @@ class App {
                 enable_smart_detection: document.getElementById('enable-smart-detection').checked,
                 enable_per_album_detection: document.getElementById('enable-per-album-detection').checked, // Task #108
                 remember_last_directory: document.getElementById('remember-last-directory').checked, // Task #84
+                // Task #1: Feature flags for auto-apply behavior
+                enable_auto_apply: document.getElementById('enable-auto-apply').checked,
+                enable_auto_select_albums: document.getElementById('enable-auto-select-albums').checked,
+                enable_toast_notifications: document.getElementById('enable-toast-notifications').checked,
+                confidence_threshold: parseFloat(document.getElementById('confidence-threshold').value),
             };
 
             // Validate template
@@ -3194,20 +3745,26 @@ class App {
         const defaultSuggestion = contextAnalysis.default_suggestion;
         if (!defaultSuggestion) return;
 
-        // Task #128: Convert float confidence to string using correct thresholds
+        // Task #1: Get feature flags from config
+        const config = await this.api.getConfig();
+        const autoApplyEnabled = config.enable_auto_apply !== false;
+        const toastEnabled = config.enable_toast_notifications !== false;
+        const threshold = config.confidence_threshold !== undefined ? config.confidence_threshold : 0.9;
+
+        // Task #128: Convert float confidence to string using configurable threshold
         const confidenceFloat = defaultSuggestion.confidence;
         let confidenceLevel = 'low';
-        if (confidenceFloat >= 0.9) {
+        if (confidenceFloat >= threshold) {
             confidenceLevel = 'high';
         } else if (confidenceFloat >= 0.7) {
             confidenceLevel = 'medium';
         }
 
-        console.log(`[AUTO-APPLY] Confidence: ${confidenceFloat} (${confidenceLevel})`);
+        console.log(`[AUTO-APPLY] Confidence: ${confidenceFloat} (${confidenceLevel}), Threshold: ${threshold}, Enabled: ${autoApplyEnabled}`);
 
-        // Task #128: Auto-apply if high confidence (>= 0.9)
-        if (confidenceLevel === 'high') {
-            console.log('[AUTO-APPLY] High confidence - auto-applying template');
+        // Task #1 & #128: Auto-apply if high confidence AND feature flag enabled
+        if (confidenceLevel === 'high' && autoApplyEnabled) {
+            console.log('[AUTO-APPLY] High confidence + flag enabled - auto-applying template');
 
             // Store previous template for undo
             const previousTemplate = this.temporaryTemplate;
@@ -3218,39 +3775,41 @@ class App {
             // Auto-select all files
             this.toggleSelectAll(true);
 
-            // Show toast notification with undo option
-            this.showToast({
-                type: 'success',
-                title: 'Smart suggestion applied',
-                message: `Template: ${defaultSuggestion.template}`,
-                actions: [
-                    {
-                        label: 'Undo',
-                        callback: async () => {
-                            console.log('[AUTO-APPLY] Undo clicked - reverting template');
-                            if (previousTemplate) {
-                                this.temporaryTemplate = previousTemplate;
-                            } else {
-                                this.temporaryTemplate = null;
-                            }
-                            await this.loadAllPreviews();
-                            this.ui.info('Template reverted');
+            // Task #1: Show toast notification only if enabled
+            if (toastEnabled) {
+                this.showToast({
+                    type: 'success',
+                    title: 'Smart suggestion applied',
+                    message: `Template: ${defaultSuggestion.template}`,
+                    actions: [
+                        {
+                            label: 'Undo',
+                            callback: async () => {
+                                console.log('[AUTO-APPLY] Undo clicked - reverting template');
+                                if (previousTemplate) {
+                                    this.temporaryTemplate = previousTemplate;
+                                } else {
+                                    this.temporaryTemplate = null;
+                                }
+                                await this.loadAllPreviews();
+                                this.ui.info('Template reverted');
+                            },
+                            primary: false
                         },
-                        primary: false
-                    },
-                    {
-                        label: 'Dismiss',
-                        callback: () => {
-                            // Just dismiss
-                        },
-                        primary: false
-                    }
+                        {
+                            label: 'Dismiss',
+                            callback: () => {
+                                // Just dismiss
+                            },
+                            primary: false
+                        }
                 ],
                 duration: 8000 // 8 seconds for undo
             });
 
             return; // Don't show banner for high confidence
-        }
+        }  // Close if (toastEnabled)
+        }  // Close if (confidenceLevel === 'high' && autoApplyEnabled)
 
         // Task #128: For medium/low confidence, show banner as usual
         console.log('[AUTO-APPLY] Medium/low confidence - showing banner for user review');
@@ -3297,7 +3856,7 @@ class App {
             this.smartBannerDismissedForCurrentLoad = true;
             console.log('[Task #105] Banner dismissed for current load. Will reappear on refresh or directory change.');
         };
-    }
+    }  // Close showSmartSuggestion method
 
     /**
      * Hide smart suggestion banner
@@ -3459,39 +4018,46 @@ class App {
     /**
      * Show per-album banner with album selection UI
      */
-    showPerAlbumBanner(data) {
+    async showPerAlbumBanner(data) {
         console.log('[PER_ALBUM] Showing banner with', data.albums.length, 'albums');
 
-        // Task #129: Auto-select high-confidence albums
+        // Task #1: Get feature flags from config
+        const config = await this.api.getConfig();
+        const autoSelectEnabled = config.enable_auto_select_albums !== false;
+        const toastEnabled = config.enable_toast_notifications !== false;
+
+        // Task #129 & #1: Auto-select high-confidence albums if feature flag enabled
         // Auto-select albums where:
         // - type === 'ALBUM' (complete album with track numbers)
-        // - confidence === 'high' (>= 0.9)
+        // - confidence === 'high' (>= threshold)
         // This reduces friction for batch operations (100+ albums)
         this.perAlbumState = {
             enabled: true,
             directory: this.currentPath,
             albums: data.albums.map(album => ({
                 ...album,
-                selected: album.detection.type === 'ALBUM' && album.detection.confidence === 'high',
+                selected: autoSelectEnabled && album.detection.type === 'ALBUM' && album.detection.confidence === 'high',
                 expanded: false
             })),
             locked: false,
             timestamp: Date.now()
         };
 
-        // Task #129: Count auto-selected albums and show toast
+        // Task #129: Count auto-selected albums and show toast if enabled
         const autoSelectedCount = this.perAlbumState.albums.filter(a => a.selected).length;
         const totalAlbums = this.perAlbumState.albums.length;
 
         if (autoSelectedCount > 0) {
-            console.log(`[PER_ALBUM] Auto-selected ${autoSelectedCount}/${totalAlbums} high-confidence albums`);
+            console.log(`[PER_ALBUM] Auto-selected ${autoSelectedCount}/${totalAlbums} high-confidence albums (enabled: ${autoSelectEnabled})`);
 
-            this.showToast({
-                type: 'info',
-                title: `${autoSelectedCount} album${autoSelectedCount === 1 ? '' : 's'} auto-selected`,
-                message: `High confidence track numbering detected. Review and click "Apply to Selected".`,
-                duration: 6000
-            });
+            if (toastEnabled) {
+                this.showToast({
+                    type: 'info',
+                    title: `${autoSelectedCount} album${autoSelectedCount === 1 ? '' : 's'} auto-selected`,
+                    message: `High confidence track numbering detected. Review and click "Apply to Selected".`,
+                    duration: 6000
+                });
+            }
         }
 
         // Build HTML

@@ -33,6 +33,11 @@ DEFAULT_CONFIG = {
     "remember_last_directory": True,  # Task #84: Enable/disable feature (default: enabled)
     "parallel_audio_workers": 0,  # Task #123: Parallel audio analysis workers (0 = auto-detect, 1 = sequential)
     "audio_analysis_timeout": 30,  # Task #123: Timeout per file in seconds (prevent hangs)
+    # Task #1: Feature flags for auto-apply behavior
+    "enable_auto_apply": True,  # Auto-apply template for high confidence (≥threshold)
+    "enable_auto_select_albums": True,  # Auto-select albums in per-album mode
+    "enable_toast_notifications": True,  # Show toast notifications for actions
+    "confidence_threshold": 0.9,  # Confidence threshold for auto-apply (0.7-0.95)
 }
 
 

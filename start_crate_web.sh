@@ -62,53 +62,56 @@ cleanup() {
 # Trap Ctrl+C (SIGINT) and SIGTERM
 trap cleanup SIGINT SIGTERM
 
-# Function to install mkcert
+# Function to install mkcert (auto-installs without prompting)
 install_mkcert() {
-    echo -e "${YELLOW}⚠️  mkcert not found - HTTPS requires mkcert for trusted certificates.${NC}"
+    echo -e "${YELLOW}⚠️  mkcert not found - installing automatically...${NC}"
     echo ""
-    echo -n "Would you like to install mkcert now? (recommended) [Y/n]: "
-    read -r response
 
-    if [[ "$response" =~ ^([yY][eE][sS]|[yY]|"")$ ]]; then
-        # Detect OS and install
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS
-            if command -v brew &> /dev/null; then
-                echo -e "${BLUE}📦 Installing mkcert via Homebrew...${NC}"
-                brew install mkcert
+    # Detect OS and install
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS
+        if command -v brew &> /dev/null; then
+            echo -e "${BLUE}📦 Installing mkcert via Homebrew...${NC}"
+            if brew install mkcert; then
+                # Check if mkcert needs linking
+                if ! command -v mkcert &> /dev/null; then
+                    echo -e "${BLUE}🔗 Linking mkcert...${NC}"
+                    brew link mkcert
+                fi
+                echo -e "${GREEN}✓ mkcert installed successfully!${NC}"
+                return 0
             else
-                echo -e "${RED}✗ Homebrew not found. Please install mkcert manually:${NC}"
-                echo "  Visit: https://github.com/FiloSottile/mkcert#installation"
-                return 1
-            fi
-        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-            # Linux
-            if command -v apt-get &> /dev/null; then
-                echo -e "${BLUE}📦 Installing mkcert via apt...${NC}"
-                sudo apt-get update && sudo apt-get install -y mkcert
-            elif command -v dnf &> /dev/null; then
-                echo -e "${BLUE}📦 Installing mkcert via dnf...${NC}"
-                sudo dnf install -y mkcert
-            elif command -v pacman &> /dev/null; then
-                echo -e "${BLUE}📦 Installing mkcert via pacman...${NC}"
-                sudo pacman -S mkcert
-            else
-                echo -e "${RED}✗ Package manager not found. Install mkcert manually:${NC}"
-                echo "  Visit: https://github.com/FiloSottile/mkcert#installation"
+                echo -e "${RED}✗ Failed to install mkcert via Homebrew${NC}"
                 return 1
             fi
         else
-            # Windows or other
-            echo -e "${RED}✗ Unsupported OS. Please install mkcert manually:${NC}"
-            echo "  Windows: choco install mkcert  OR  scoop install mkcert"
+            echo -e "${RED}✗ Homebrew not found. Please install mkcert manually:${NC}"
             echo "  Visit: https://github.com/FiloSottile/mkcert#installation"
             return 1
         fi
-
+    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+        # Linux
+        if command -v apt-get &> /dev/null; then
+            echo -e "${BLUE}📦 Installing mkcert via apt...${NC}"
+            sudo apt-get update && sudo apt-get install -y mkcert
+        elif command -v dnf &> /dev/null; then
+            echo -e "${BLUE}📦 Installing mkcert via dnf...${NC}"
+            sudo dnf install -y mkcert
+        elif command -v pacman &> /dev/null; then
+            echo -e "${BLUE}📦 Installing mkcert via pacman...${NC}"
+            sudo pacman -S mkcert
+        else
+            echo -e "${RED}✗ Package manager not found. Install mkcert manually:${NC}"
+            echo "  Visit: https://github.com/FiloSottile/mkcert#installation"
+            return 1
+        fi
         echo -e "${GREEN}✓ mkcert installed successfully!${NC}"
         return 0
     else
-        echo -e "${YELLOW}ℹ️  Skipping mkcert installation. Falling back to HTTP.${NC}"
+        # Windows or other
+        echo -e "${RED}✗ Unsupported OS. Please install mkcert manually:${NC}"
+        echo "  Windows: choco install mkcert  OR  scoop install mkcert"
+        echo "  Visit: https://github.com/FiloSottile/mkcert#installation"
         return 1
     fi
 }

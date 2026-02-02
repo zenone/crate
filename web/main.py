@@ -485,6 +485,47 @@ async def get_file_metadata(http_request: Request, request: DirectoryRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# Task #4: Album art endpoint
+@app.get("/api/file/album-art")
+async def get_album_art(file_path: str):
+    """
+    Extract and return album artwork from MP3 file.
+
+    Task #4: Album cover art display
+
+    Args:
+        file_path: Path to MP3 file
+
+    Returns:
+        Image response with album artwork, or 404 if not found
+    """
+    from fastapi.responses import Response
+    from pathlib import Path as PathlibPath
+    from crate.core.io import extract_album_art
+
+    try:
+        path = PathlibPath(file_path)
+
+        # Extract album art
+        image_data, mime_type, error = extract_album_art(path, logger)
+
+        if error:
+            raise HTTPException(status_code=500, detail=error)
+
+        if image_data is None:
+            # No artwork found (not an error)
+            raise HTTPException(status_code=404, detail="No album artwork found")
+
+        # Return image with appropriate content type
+        return Response(content=image_data, media_type=mime_type or "image/jpeg")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error extracting album art: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # Context analysis endpoint
 @app.post("/api/analyze-context", response_model=AnalyzeContextResponse)
 async def analyze_file_context(request: AnalyzeContextRequest):

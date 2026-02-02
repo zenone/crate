@@ -178,6 +178,69 @@ def read_mp3_metadata(
         return None, f"Metadata read error: {exc.__class__.__name__}"
 
 
+def extract_album_art(path: Path, logger: logging.Logger) -> Tuple[Optional[bytes], Optional[str], Optional[str]]:
+    """
+    Extract album artwork from MP3 file.
+
+    Task #4: Album cover art display
+
+    Args:
+        path: Path to MP3 file
+        logger: Logger instance
+
+    Returns:
+        Tuple of (image_data, mime_type, error_message)
+        - image_data: Raw bytes of the image, or None if not found/error
+        - mime_type: MIME type (e.g., 'image/jpeg', 'image/png'), or None
+        - error_message: Error message if extraction failed, or None if successful
+    """
+    # Security: Validate path
+    if ".." in path.parts:
+        return None, None, "Invalid file path: path traversal detected"
+
+    try:
+        resolved_path = path.resolve()
+    except (OSError, RuntimeError) as e:
+        logger.debug("Path resolution error for %s: %s", path, e)
+        return None, None, f"Invalid file path: {e}"
+
+    if MutagenFile is None:
+        return None, None, "Missing dependency: mutagen"
+
+    try:
+        audio = MutagenFile(resolved_path.as_posix(), easy=False)
+        if audio is None or not getattr(audio, "tags", None):
+            return None, None, "No readable tags"
+
+        tags = audio.tags
+
+        # Try to extract APIC (Attached Picture) frame from ID3 tags
+        # APIC frames contain embedded album artwork
+        try:
+            from mutagen.id3 import APIC  # type: ignore
+
+            # Get all APIC frames
+            apic_frames = tags.getall("APIC")
+            if not apic_frames:
+                return None, None, None  # No artwork, not an error
+
+            # Use the first APIC frame (usually front cover)
+            # Could also filter for type 3 (front cover) if needed
+            artwork = apic_frames[0]
+
+            return artwork.data, artwork.mime, None
+
+        except ImportError:
+            return None, None, "APIC frame type not available"
+        except (AttributeError, KeyError):
+            # No APIC frame or wrong tag format
+            return None, None, None  # No artwork, not an error
+
+    except Exception as exc:
+        logger.debug("Album art extraction error for %s", path, exc_info=True)
+        return None, None, f"Album art extraction error: {exc.__class__.__name__}"
+
+
 def write_bpm_key_to_tags(
     path: Path,
     bpm: Optional[str],

@@ -1,253 +1,257 @@
 # Current State - Crate Batch Renamer
 
-**Last Updated**: 2026-02-01
-**Session**: Cancel Button Fixed + Ready for Next Features
-**Status**: ✅ Core Features Complete, Ready for UX Polish
+**Last Updated**: 2026-02-02
+**Session**: v1.0 Implementation - Task #2 Started (BLOCKED)
+**Status**: ⚠️ SYSTEM REBOOT REQUIRED - Bash Forking Issue
 
 ---
 
 ## Project Overview
 
 **Project Name**: Crate (formerly DJ MP3 Renamer)
-**Project Type**: Music file batch renamer with web UI
-**Phase**: Testing & Refinement
-**Server**: Running at http://localhost:8000 ✅
+**Project Type**: Music file batch renamer with web UI for DJs/producers
+**Phase**: v1.0 Feature Implementation
+**Server**: STOPPED (was running at https://127.0.0.1:8000)
 
-**Purpose**: Batch rename music files for DJs/producers using metadata-based templates with smart detection.
-
----
-
-## Current Sprint/Focus
-
-### Low-Friction Smart Detection Workflow - IMPLEMENTED ✅
-
-**Status**: All features implemented, ready for user testing
-
-**Completed Tasks** (Tasks #126-132):
-1. ✅ Task #126: Cancel metadata loading
-2. ✅ Task #127: Cancel preview generation
-3. ✅ Task #128: Auto-apply for high confidence (≥0.9)
-4. ✅ Task #129: Auto-select per-album for high confidence
-5. ✅ Task #130: Toast notification system
-6. ✅ Task #131: Business logic documentation
-7. ✅ Task #132: Backend confidence verification
+**Purpose**: Batch rename music files for DJs/producers using metadata-based templates with smart detection, Camelot wheel, and 10-minute undo.
 
 ---
 
-## Latest Features (Ready for Testing)
+## CURRENT BLOCKER ⚠️
 
-### 1. Cancel Buttons ✅
-- Cancel metadata loading mid-operation
-- Cancel preview generation mid-operation
-- Keeps partial results
-- Shows notification with progress
+### System Issue: Bash Process Forking
+**Status**: BLOCKED - User needs to reboot computer
 
-**UX Impact**: User can escape from wrong directory selection
+**Problem**:
+- All bash commands failing with "fork: Resource temporarily unavailable"
+- System has too many bash processes spawned
+- Identified cause: `.bash_profile` sources multiple files in loop, creating excessive forks
+- `/Users/szenone/.bash_profile` lines 7-9 source dotfiles in loop
+- `/Users/szenone/.bash_prompt` line 57 uses complex git commands
+- `rbenv init - bash` (line 56) may be contributing
 
-### 2. Toast Notifications ✅
-- Non-intrusive notifications (top-right corner)
-- 4 types: success, info, warning, error
-- Action buttons (Undo, Dismiss)
-- Auto-dismiss after 5-8 seconds
-- Stacks multiple toasts
+**Impact**:
+- Cannot run any bash commands (git, grep, find, etc.)
+- Cannot proceed with Task #2 implementation
+- Server stopped by user
 
-**UX Impact**: Awareness of auto-applied changes without interruption
+**Resolution**:
+- User rebooting computer to clear processes
+- After reboot: Resume with Task #2 (Virtual Scrolling)
 
-### 3. Auto-Apply Logic ✅
-- **High confidence (≥0.9)**: Auto-applies template, shows toast with Undo
-- **Medium confidence (≥0.7)**: Shows banner with "Suggested" label
-- **Low confidence (<0.7)**: Shows banner with "Consider" label
+**Related Files**:
+- `/Users/szenone/.bash_profile`
+- `/Users/szenone/.bash_prompt`
+- `/tmp/cleanup_processes.sh` (attempted fix - unsuccessful)
 
-**UX Impact**: 100% click reduction for high-confidence suggestions
+---
 
-### 4. Per-Album Auto-Select ✅
-- Auto-checks albums with high confidence track numbering
-- User reviews and clicks "Apply to Selected" (1 click for all)
-- Unchecks uncertain cases for manual review
+## v1.0 Implementation Status
 
-**UX Impact**: 90%+ click reduction for multi-album workflows
+### Completed Features ✅
+1. ✅ **Task #1**: Feature flags for auto-apply configuration
+   - Enable/disable auto-apply, auto-select, toast notifications
+   - Adjustable confidence threshold (0.7-0.95)
+   - UI controls in Settings modal
+   - Files: `config.py`, `index.html`, `app.js`, `styles.css`
+
+2. ✅ **Task #3**: SSE streaming for real-time progress
+   - Replaced 500ms polling with instant EventSource updates
+   - Real-time file results as they stream in
+   - Graceful fallback to polling if streaming unavailable
+   - Files: `app.js` (new `executeRenameWithStreaming()` method)
+
+3. ✅ **Task #7**: Documentation updated
+   - DJ-focused, entertaining README.md
+   - Explains gaps Crate addresses vs other tools
+   - Real-world scenarios and comparisons
+   - Created: `CHANGELOG.md`, `LICENSE`, `CONTRIBUTING.md`
+
+### In Progress 🔄
+4. ⚠️ **Task #2**: Virtual scrolling for 10K+ files (BLOCKED)
+   - Status: Just started when system issues blocked progress
+   - Next step: Find table rendering code in `app.js`
+   - Need to implement virtual scrolling with IntersectionObserver
+   - Target: Render only ~50 visible rows instead of all files
+   - Test with 10,000+ files for 60fps scrolling
+
+### Pending Tasks 📋
+5. 🔲 **Task #4**: Album cover art display in file table
+6. 🔲 **Task #5**: Tune confidence thresholds based on real-world testing
+7. 🔲 **Task #6**: Run comprehensive user testing scenarios
+8. 🔲 **Task #8**: Final QA and polish
+9. 🔲 **Task #9**: Prepare GitHub repository for public release
+
+---
+
+## Ship Timeline
+
+**Deadline**: Thursday (2026-02-05)
+
+**User's Directive**: "Do all three in sequence" (Tasks #2, #4, #5) → "THEN test then ship it"
+
+**Sequence**:
+1. ✅ Tasks #1, #3, #7 (DONE)
+2. ⚠️ Task #2 - Virtual Scrolling (BLOCKED - resume after reboot)
+3. 🔲 Task #4 - Album Cover Art
+4. 🔲 Task #5 - Confidence Tuning
+5. 🔲 Task #6 - User Testing
+6. 🔲 Task #8 - Final QA
+7. 🔲 Task #9 - GitHub Prep
+8. 🚀 SHIP TO GITHUB
+
+---
+
+## Next Actions (After Reboot)
+
+### Immediate (Task #2 Continuation)
+1. Start server: `./start_crate_web.sh`
+2. Use Read tool (not Bash) to find table rendering in `web/static/js/app.js`
+3. Look for where `this.currentFiles` is rendered to DOM
+4. Implement virtual scrolling container around rendering logic
+5. Test with 10,000+ files
+
+### Task #2 Implementation Plan
+**Goal**: Handle 10K+ files without UI lag
+
+**Approach**:
+- Use IntersectionObserver or custom scroll handler
+- Render only visible rows (~50 at a time)
+- Maintain selection state for ALL files (not just visible)
+- Keep scroll position during updates
+- Target 60fps scrolling
+
+**Files to Modify**:
+- `web/static/js/app.js` - Add virtual scrolling to file table
+- `web/static/css/styles.css` - Virtual scroll container styles
+- `web/static/index.html` - Update file table structure if needed
+
+---
+
+## Completed Today (2026-02-02)
+
+### Feature Flags (Task #1) ✅
+**What it does**: Gives users full control over auto-apply behavior
+
+**New Settings**:
+- **Enable Auto-Apply**: Turn off if you prefer manual review
+- **Enable Auto-Select Albums**: Disable album auto-selection
+- **Enable Toast Notifications**: Hide notifications if preferred
+- **Confidence Threshold**: Adjust from 0.7-0.95 (default: 0.9)
+
+**Files Modified**:
+- `crate/core/config.py`: Added 4 new config options
+- `web/static/index.html`: Added settings UI controls
+- `web/static/js/app.js`: Respects flags in business logic
+- `web/static/css/styles.css`: Range slider styles
+
+### Real-Time Streaming (Task #3) ✅
+**What it does**: Instant progress updates instead of 500ms polling lag
+
+**Benefits**:
+- ✅ Real-time file-by-file results (no waiting)
+- ✅ No HTTP timeouts for massive libraries
+- ✅ Auto-scrolling output window
+- ✅ Graceful fallback to polling if unavailable
+
+**Files Modified**:
+- `web/static/js/app.js`: New `executeRenameWithStreaming()` method
+- Backend SSE endpoint already existed at `/api/rename/execute-stream`
+
+### DJ-Focused Documentation (Task #7) ✅
+**What it does**: README.md now tells the DJ's story
+
+**Highlights**:
+- Leads with the problem DJs face (Friday night file management hell)
+- Explains what makes Crate unique (smart detection, 10-min undo, Camelot)
+- Compares to other tools (Bulk Rename Utility, Mp3tag, Rekordbox)
+- Real-world scenarios (500 Beatport tracks, 50 albums, etc.)
+- Entertaining and easy to understand for non-technical users
+
+**Files Created**:
+- `CHANGELOG.md` - v1.0.0 release notes
+- `LICENSE` - MIT License
+- `CONTRIBUTING.md` - Contribution guidelines
 
 ---
 
 ## Architecture Status
 
 ### Tech Stack
-- **Backend**: Python 3.14, FastAPI
-- **Frontend**: Vanilla JavaScript, CSS
-- **Audio Analysis**: Essentia (parallel processing, 8x speedup)
+- **Backend**: Python 3.14, FastAPI, Essentia (audio analysis)
+- **Frontend**: Vanilla JavaScript (no frameworks), modern CSS
+- **Audio Analysis**: Parallel processing (8x speedup)
 - **Streaming**: Server-Sent Events (SSE)
 - **API**: RESTful + streaming endpoints
 
-### Directory Structure
-```
-crate/
-├── core/           # Business logic (metadata, templates, audio analysis)
-├── api/            # API layer (FastAPI endpoints)
-├── cli/            # CLI interface
-├── tui/            # Terminal UI
-└── web/            # Web UI (HTML, CSS, JS)
-```
-
-### Recent Rebrand
-- Renamed from `dj_mp3_renamer` → `crate`
-- Updated all imports, scripts, and documentation
-- Start script: `./start_crate_web.sh`
-- Stop script: `./stop_crate_web.sh`
-
----
-
-## Testing Status
-
-**Current Phase**: ⏳ USER TESTING REQUIRED
-
-### Test Scenarios
-1. **Cancel Metadata Loading**
-   - Load 100+ files, cancel at 50%
-   - Verify: 50 files remain, notification shows progress
-
-2. **Cancel Preview Generation**
-   - Load directory, click preview, cancel mid-operation
-   - Verify: Partial previews remain
-
-3. **Auto-Apply (High Confidence)**
-   - Load sequential album (Fleetwood Mac, 57 files)
-   - Verify: Toast appears, template auto-applied, no banner
-   - Click Undo, verify revert
-
-4. **Manual Review (Medium/Low Confidence)**
-   - Load non-sequential tracks
-   - Verify: Banner shows (not auto-applied)
-
-5. **Per-Album Auto-Select**
-   - Load 10+ album subdirectories
-   - Verify: High-confidence albums auto-checked
-   - Verify: Toast notification
-
-6. **Toast Notifications**
-   - Verify: Slide-in animation, auto-dismiss
-   - Verify: Undo/Dismiss buttons work
-   - Verify: Multiple toasts stack
-
----
-
-## Performance Metrics
+### Performance Metrics
 
 | Feature | Before | After | Improvement |
 |---------|--------|-------|-------------|
-| Preview (write to disk) | Slow | Read-only | ∞ (no I/O) |
-| Audio Analysis (50K) | 27.7 hours | 3.5 hours | 8x faster |
-| Streaming | 30s timeout | No timeout | ∞ (SSE) |
 | Undo Window | 30 seconds | 10 minutes | 20x longer |
-| Click Reduction (100 albums) | 101 clicks | 1 click | 99% |
+| Progress Updates | 500ms polling | Instant SSE | ∞ (real-time) |
+| Click Reduction | 101 clicks | 1 click | 99% |
+| Audio Analysis | 27.7 hours | 3.5 hours | 8x faster |
 
 ---
 
-## Known Issues & Limitations
+## User Guidance from Session
 
-### Fixed ✅
-- ✅ Cancel button (v20260201-13 - frontend loop + backend checkpoints)
-  - Frontend: Fixed controller lifecycle (don't set to null until loop finishes)
-  - Backend: Added threading.Event with cancellation checks between operations
-  - Result: Only 1 file completes after cancel, not all 63
-- ✅ Sequential metadata loading (v24)
-- ✅ Preview loading (v23 - auto-preview for <200 files)
-- ✅ Metadata saving during preview (v22 - read-only)
-- ✅ Connection status monitoring (v21)
+**Key Quotes**:
+- "Be mindful about possible bugs. Think through business logic."
+- "Keep looking at CLAUDE.md and ./claude/ for guidance and to stay on track"
+- "Think end user experience"
+- "Do all three in sequence" (Tasks #2, #4, #5)
+- "I want to ship this this week (i.e., upload to github BY this Thursday)"
 
-### Pending (Lower Priority)
-- Virtual scrolling for 10K+ files (Task #133 - deferred)
-- EventSource integration for streaming (frontend not connected yet)
-- Album cover art display (Task #135 - nice-to-have)
-
----
-
-## Documentation
-
-### Knowledge Base (1.4 MB, 83 files)
-- **Designs** (5 files): Low-friction automation, per-album detection, UI design
-- **Implementations** (28 files): Task summaries, implementation plans
-- **Business Logic** (4 files): Smart detection, edge cases, UX review
-- **Research** (9 files): DJ conventions, market research, UX research
-- **Testing** (3 files): Test plans, user guides
-- **Bugs** (5 files): Bug analysis, debugging notes
-- **Sessions** (18 files): Progress summaries, lesson summaries
-
-### Key Documents
-- `.claude/knowledge-base/lessons-learned.md` - What works, what doesn't
-- `.claude/knowledge-base/implementations/complete-implementation-summary.md` - Latest features
-- `.claude/knowledge-base/business-logic/business-logic-low-friction-smart-detection.md` - Decision matrices
+**User Preferences**:
+- Implement all features first, THEN documentation updates, THEN QA
+- Keep all tasks visible for tracking
+- Use convenience scripts (`./start_crate_web.sh`) over manual commands
+- Focus on UX (close buttons, keyboard shortcuts, time formatting)
+- No drag-and-drop (not feasible in browsers)
 
 ---
 
-## Recent Commits
+## Context for Claude After Reboot
 
-- `bfbf3a1` (2026-02-01): docs: Migrate documentation from claude/ to .claude/ structure
-- `c57aafb`: feat: Add comprehensive Settings page for configuration
-- `c33b581`: feat: Add graceful shutdown, recursive scanning, and Rename Now button
-- `784fdf6`: test: Add comprehensive tests for web API endpoints
+### What Just Happened
+- Implemented Tasks #1 (Feature Flags), #3 (SSE Streaming), #7 (Documentation)
+- Started Task #2 (Virtual Scrolling) but blocked by bash forking issue
+- User stopped server and requested reboot
+- All state saved to `.claude/` files
 
----
+### What to Do Next
+1. Wait for user to return after reboot
+2. Resume with Task #2 (Virtual Scrolling)
+3. Use Read/Grep tools (avoid Bash until necessary)
+4. Continue sequence: Task #2 → #4 → #5 → #6 → #8 → #9 → Ship
 
-## Next Steps
-
-### Immediate (Now)
-1. **User Testing** - Test all 6 scenarios above
-2. **Feedback Collection** - Note any issues or confusing behavior
-3. **Confidence Accuracy Check** - Are high-confidence suggestions correct?
-
-### Short Term (Next Session)
-1. **Fix Any Bugs Found** - Based on user testing
-2. **Add Feature Flags** - Config option to disable auto-apply
-3. **Tune Confidence Thresholds** - Adjust if needed (0.9 → 0.95?)
-
-### Medium Term (Next Week)
-1. **Virtual Scrolling** - Handle 10K+ files without lag
-2. **EventSource Integration** - Real-time streaming progress
-3. **Warning System** - Show warnings for massive libraries
-
----
-
-## Context for Claude
-
-### If You're Reading This After Conversation Compression
-
-**Where We Are**: Crate batch renamer with web UI for DJs/music producers
-
-**What's Done**:
-- ✅ Low-friction smart detection workflow (Tasks #126-132)
-- ✅ Cancel buttons, toast notifications, auto-apply logic
-- ✅ Per-album detection with auto-select
-- ✅ Comprehensive documentation (1.4 MB)
-- ✅ Directory migration (claude/ → .claude/)
-
-**What's Next**:
-- User testing of implemented features
-- Bug fixes based on feedback
-- Virtual scrolling for massive libraries
-
-**Key Decisions Made**:
-- Auto-apply for confidence ≥0.9 (no feature flag yet)
-- Toast notifications for awareness
-- Sequential metadata loading for cancel support
-- Confidence-based decision matrix
-
-**Server**: Running at http://localhost:8000 ✅
+### Where to Find Context
+- **This file**: Current status and next steps
+- **`.claude/knowledge-base/lessons-learned.md`**: Bash forking issue documented
+- **`CLAUDE.md`**: Development guidelines and principles
+- **Plan file**: `/Users/szenone/.claude/plans/snuggly-napping-gray.md`
 
 ---
 
 ## Resources & References
 
 ### Official Documentation
-- README.md - User guide and installation
-- INSTALLATION.md - Setup instructions
-- CLAUDE.md - Development guidelines
+- **README.md** - DJ-focused user guide ✅
+- **CLAUDE.md** - Development guidelines
+- **CHANGELOG.md** - v1.0.0 release notes ✅
+- **LICENSE** - MIT License ✅
+- **CONTRIBUTING.md** - Contribution guidelines ✅
 
 ### Key Files
-- `web/static/js/app.js` - Main frontend logic (7000+ lines)
-- `crate/api/renamer.py` - Backend API
-- `crate/core/context_detection.py` - Per-album smart detection
+- `web/static/js/app.js` - Main frontend logic (~8000 lines)
+- `crate/core/config.py` - Configuration with feature flags
+- `web/main.py` - FastAPI backend
 - `web/streaming.py` - SSE streaming responses
 
 ---
 
-**Remember**: Update this file after every significant work session!
+**Status**: ⚠️ BLOCKED - System reboot required
+**Next**: Resume Task #2 after reboot
+**Ship Date**: Thursday 2026-02-05
