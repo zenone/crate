@@ -58,3 +58,4 @@ certs/
 # Runtime files
 *.pid
 .crate_web.pid
+.crate_web.pid.port
