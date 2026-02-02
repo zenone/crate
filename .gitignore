@@ -32,7 +32,11 @@ build/
 *~
 
 # Claude Code local settings (never commit user-specific settings)
-.claude/settings.local.json
+# Claude Code development files (keep local only)
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+IMPLEMENTATION_PLAN.md
 
 # Testing
 .pytest_cache/
