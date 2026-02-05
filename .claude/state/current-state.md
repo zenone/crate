@@ -44,12 +44,12 @@
 
 ## Current Sprint / Focus
 
-### EOD Ship Checklist (remaining)
-1) Run **manual smoke test** on real MP3 fixture:
-   - CLI: preview + execute + undo
-   - Web: preview + execute + undo
-2) Sanity-check README + docs render correctly on GitHub.
-3) Create release/tag (decide version).
+### EOD Ship Checklist
+- [x] Manual smoke test (MP3 fixture: `/Users/szenone/Music/DJ/CrateSmokeTest`)
+  - CLI: dry-run + real run (0 renamed, 8 skipped, 0 errors)
+  - Web: health + preview + execute + undo (using `undo_session_id`)
+- [ ] Sanity-check README + docs render correctly on GitHub.
+- [ ] Tag + release: **v0.1.0**
 
 ---
 
