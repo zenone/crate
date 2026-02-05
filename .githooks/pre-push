@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-echo "[pre-push] Running: make verify"
+echo "[pre-push] Running quality gate: make verify"
 make verify

@@ -1,73 +1,61 @@
-# Backup directory
-.backup/
+# .gitignore (Project Template)
+# Keep this file broadly useful; add project-specific ignores near the bottom.
 
-# Python virtual environment
-.venv/
-venv/
-ENV/
-env/
-
-# Python bytecode
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-
-# Logs
-*.log
-
-# macOS
-.DS_Store
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Claude Code local settings (never commit user-specific settings)
-# Claude Code development files (keep local only)
-.claude/
-CLAUDE.md
-CLAUDE.local.md
-IMPLEMENTATION_PLAN.md
-
-# Testing
-.pytest_cache/
-.coverage
-.coverage*
-htmlcov/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# SSL Certificates (never commit private keys!)
-certs/
+# --- Secrets / env (never commit) ---
+.env
+.env.*
+secrets/
 *.pem
 *.key
 *.crt
-*.csr
+*.p12
+*.pfx
+credentials.json
+service-account.json
 
-# Runtime files
-*.pid
-*.port
-.crate_web.pid
-.crate_web.pid.port
-.crate_web.pid*
-.dj_renamer_web.pid
-.crate_web*.pid
-claude/
-clawd_write_test.txt
+# --- AI / IDE local state ---
+.claude/settings.local.json
+CLAUDE.local.md
+.cursor/
+.continue/
 
-# Local-only / accidental copy artifacts
-.venv.nosync/
-web/uploads/
+# --- macOS ---
+.DS_Store
+._*
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.coverage*
+htmlcov/
+.venv/
+venv/
+*.egg-info/
+
+# --- Node / JS ---
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# --- Logs / temp ---
+*.log
+tmp/
+.temp/
+.cache/
+
+# --- Editor / IDE ---
+.vscode/
+.idea/
+*.iml
+
+# --- Project-specific ignores (add below) ---
 .backup/
+.crate_web.pid.port
+web/uploads/
+
+# data/
+# *.sqlite3

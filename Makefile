@@ -1,20 +1,27 @@
-.PHONY: setup test lint format verify web
+.PHONY: help setup test lint format verify
+
+help:
+	@echo "Common targets:"
+	@echo "  make setup   - install deps / bootstrap (project-specific)"
+	@echo "  make test    - run tests"
+	@echo "  make lint    - run lint/static checks"
+	@echo "  make format  - auto-format"
+	@echo "  make verify  - best-effort quality gate (runs test/lint/format if wired)"
+	@echo ""
+	@echo "This template does not assume a stack."
+	@echo "After choosing a stack, update this Makefile (or replace it)."
 
 setup:
-	python3 -m venv .venv
-	. .venv/bin/activate && pip install -U pip && pip install -e '.[dev]'
+	@echo "No-op. Choose a stack, then wire setup commands here."
 
 test:
-	. .venv/bin/activate && pytest -q
+	@echo "No-op. Choose a stack, then wire test commands here (pytest/npm/etc)."
 
 lint:
-	. .venv/bin/activate && ruff check .
+	@echo "No-op. Choose a stack, then wire lint commands here (ruff/eslint/etc)."
 
 format:
-	. .venv/bin/activate && ruff format .
+	@echo "No-op. Choose a stack, then wire formatter commands here (ruff/black/prettier/etc)."
 
 verify:
-	./scripts/verify.sh
-
-web:
-	./start_crate_web.sh
+	@./scripts/verify.sh

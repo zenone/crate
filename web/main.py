@@ -963,7 +963,7 @@ async def undo_rename(session_id: str, http_request: Request):
         if session_id not in undo_sessions:
             raise HTTPException(
                 status_code=404,
-                detail="Undo session not found or expired (sessions expire after 30 seconds)"
+                detail="Undo session not found or expired (sessions expire after 10 minutes)"
             )
 
         session = undo_sessions[session_id]
@@ -973,7 +973,7 @@ async def undo_rename(session_id: str, http_request: Request):
             del undo_sessions[session_id]
             raise HTTPException(
                 status_code=404,
-                detail="Undo session expired (available for 30 seconds only)"
+                detail="Undo session expired (available for 10 minutes only)"
             )
 
         # Revert renames
