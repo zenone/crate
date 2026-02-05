@@ -115,15 +115,7 @@ function wireDirectoryBrowserModal() {
       item.querySelector('.browser-item-name').textContent = d.name;
 
       item.addEventListener('click', () => {
-        // single click selects
-        selectedPath = d.path;
-        pathDisplay.value = selectedPath;
-        listEl.querySelectorAll('.browser-item').forEach(el => el.classList.remove('selected'));
-        item.classList.add('selected');
-      });
-
-      item.addEventListener('dblclick', () => {
-        // double click navigates
+        // Single click navigates (web-native feel)
         browseTo(d.path).catch(e => toast(`Browse failed: ${e.message}`));
       });
 
