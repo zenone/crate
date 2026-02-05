@@ -113,7 +113,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             BarColumn(),
             TaskProgressColumn(),
             TimeRemainingColumn(),  # ETA
-            TextColumn("[dim]{task.completed}/{task.total} files"),  # Count
+            # When total is unknown, Rich shows "None"; keep it clean.
+            TextColumn("[dim]{task.completed} files"),  # Count
             console=console,
         ) as progress:
 
