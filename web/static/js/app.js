@@ -11,11 +11,30 @@ async function refreshHealth() {
   }
 }
 
+function updateActionButtons() {
+  const previewBtn = document.getElementById('preview-btn');
+  const renameBtn = document.getElementById('rename-now-btn');
+  const selected = getSelectedMp3Paths();
+
+  // Enable preview if we have any MP3s listed (even if none selected, it can preview all)
+  const anyMp3 = document.querySelectorAll('input.file-select:not(:disabled)').length > 0;
+  if (previewBtn) previewBtn.disabled = !anyMp3;
+
+  // Enable rename only when at least one file is selected
+  if (renameBtn) renameBtn.disabled = selected.length === 0;
+}
+
 async function loadDirectory(path, recursive = false) {
   const dirInput = document.getElementById('directory-path');
   if (dirInput) dirInput.value = path;
   const contents = await API.listDirectory(path, recursive);
   showFiles(contents);
+
+  // Wire checkbox changes for selection-driven actions
+  document.querySelectorAll('input.file-select').forEach((el) => {
+    el.addEventListener('change', updateActionButtons);
+  });
+  updateActionButtons();
 }
 
 function wireDirectoryBrowserModal() {
@@ -183,17 +202,93 @@ function wire() {
     });
   }
 
-  // Wire preview + execute buttons if present
-  const floatingPreview = document.getElementById('floating-preview-btn');
-  const floatingRename = document.getElementById('floating-rename-btn');
+  // Preview modal wiring
+  const previewBtn = document.getElementById('preview-btn');
+  const previewModal = document.getElementById('preview-modal');
+  const previewList = document.getElementById('preview-list');
+  const previewLoading = document.getElementById('preview-loading');
+  const previewEmpty = document.getElementById('preview-empty');
+  const previewCloseEls = previewModal ? previewModal.querySelectorAll('.modal-close, .modal-overlay, #preview-cancel-btn, #preview-empty-close-btn') : [];
+
+  function openPreviewModal() {
+    previewModal?.classList.remove('hidden');
+  }
+  function closePreviewModal() {
+    previewModal?.classList.add('hidden');
+  }
+  previewCloseEls?.forEach((el) => el.addEventListener('click', closePreviewModal));
 
   async function preview() {
     const p = dirInput?.value?.trim();
     if (!p) return;
+
     const files = getSelectedMp3Paths();
     const resp = await API.previewRename({ path: p, recursive: false, file_paths: files.length ? files : null });
-    toast(`Preview: will_rename=${resp.stats?.will_rename ?? 0}, will_skip=${resp.stats?.will_skip ?? 0}, errors=${resp.stats?.errors ?? 0}`);
+
+    // Update stats
+    const setText = (id, v) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = String(v ?? 0);
+    };
+    setText('preview-stat-total', resp.total);
+    setText('preview-stat-rename', resp.stats?.will_rename);
+    setText('preview-stat-skip', resp.stats?.will_skip);
+    setText('preview-stat-errors', resp.stats?.errors);
+
+    // Render list
+    if (previewList) previewList.innerHTML = '';
+    const previews = resp.previews || [];
+
+    if (previewLoading) previewLoading.classList.add('hidden');
+
+    if (!previews.length) {
+      previewEmpty?.classList.remove('hidden');
+      return;
+    }
+    previewEmpty?.classList.add('hidden');
+
+    for (const pr of previews) {
+      const src = (pr.src || '').split('/').pop();
+      const dst = pr.dst ? pr.dst.split('/').pop() : '';
+      const status = pr.status;
+      const reason = pr.reason || '';
+
+      const row = document.createElement('div');
+      row.className = 'preview-item';
+      row.innerHTML = `
+        <div class="preview-item-main">
+          <div class="preview-item-src"></div>
+          <div class="preview-item-dst"></div>
+        </div>
+        <div class="preview-item-meta"></div>
+      `;
+      row.querySelector('.preview-item-src').textContent = src;
+      row.querySelector('.preview-item-dst').textContent = (status === 'will_rename') ? `→ ${dst}` : reason || 'No change';
+      row.querySelector('.preview-item-meta').textContent = status;
+
+      previewList.appendChild(row);
+    }
+
+    openPreviewModal();
   }
+
+  if (previewBtn) {
+    previewBtn.addEventListener('click', () => {
+      if (previewLoading) previewLoading.classList.remove('hidden');
+      previewEmpty?.classList.add('hidden');
+      openPreviewModal();
+      preview().catch((e) => {
+        console.error(e);
+        toast(`Preview failed: ${e.message}`);
+        closePreviewModal();
+      });
+    });
+  }
+
+  // Wire execute buttons if present
+  const floatingPreview = document.getElementById('floating-preview-btn');
+  const floatingRename = document.getElementById('floating-rename-btn');
+  const renameNowBtn = document.getElementById('rename-now-btn');
 
   async function execute() {
     const p = dirInput?.value?.trim();
@@ -227,6 +322,10 @@ function wire() {
 
   if (floatingPreview) floatingPreview.addEventListener('click', () => preview().catch(e => toast(`Preview failed: ${e.message}`)));
   if (floatingRename) floatingRename.addEventListener('click', () => execute().catch(e => toast(`Execute failed: ${e.message}`)));
+  if (renameNowBtn) renameNowBtn.addEventListener('click', () => execute().catch(e => toast(`Execute failed: ${e.message}`)));
+
+  // Initial disabled state (will be enabled after directory load)
+  updateActionButtons();
 }
 
 window.addEventListener('load', async () => {
