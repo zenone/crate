@@ -3,8 +3,13 @@
 export function setApiBadge(state, text) {
   const badge = document.getElementById('api-status-badge');
   if (!badge) return;
-  badge.classList.remove('loading', 'ok', 'error');
-  badge.classList.add(state);
+
+  // Normalize state names to CSS classes
+  // CSS supports: loading | ready | error
+  const cssState = (state === 'ok') ? 'ready' : state;
+
+  badge.classList.remove('loading', 'ready', 'error', 'ok');
+  badge.classList.add(cssState);
   badge.textContent = text;
 }
 
