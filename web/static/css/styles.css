@@ -825,7 +825,6 @@ a:hover {
 .col-year {
     min-width: 80px;
     text-align: center;
-    font-family: var(--font-mono);
     vertical-align: middle;
 }
 
@@ -836,7 +835,6 @@ a:hover {
 .col-duration {
     min-width: 80px;
     text-align: center;
-    font-family: var(--font-mono);
     vertical-align: middle;
 }
 
@@ -844,6 +842,21 @@ a:hover {
 .col-key {
     min-width: 80px;
     text-align: center;
+}
+
+/* Keep header typography consistent; use mono only for cell values */
+.file-table thead th.col-year,
+.file-table thead th.col-duration,
+.file-table thead th.col-bpm,
+.file-table thead th.col-key {
+    font-family: inherit;
+    line-height: 1.2;
+}
+
+.file-table tbody td.col-year,
+.file-table tbody td.col-duration,
+.file-table tbody td.col-bpm,
+.file-table tbody td.col-key {
     font-family: var(--font-mono);
 }
 
