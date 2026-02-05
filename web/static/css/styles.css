@@ -327,27 +327,68 @@ a:hover {
 }
 
 .status-badge {
-    display: inline-block;
-    padding: 0.375rem 1rem;
-    border-radius: var(--radius-sm);
-    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: 9999px; /* pill */
+    font-size: 0.8125rem;
     font-weight: 600;
     font-family: var(--font-mono);
+    letter-spacing: 0.01em;
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text-muted);
+    user-select: none;
+}
+
+/* Dot indicator (color only; text still conveys status) */
+.status-badge::before {
+    content: "";
+    width: 0.5rem;
+    height: 0.5rem;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.06);
 }
 
 .status-badge.loading {
-    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(59, 130, 246, 0.25);
+    background: rgba(59, 130, 246, 0.08);
     color: var(--text-muted);
 }
-
-.status-badge.ready {
-    background: rgba(16, 185, 129, 0.2);
-    color: var(--success);
+.status-badge.loading::before {
+    background: rgba(59, 130, 246, 0.9);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15), 0 0 14px rgba(59, 130, 246, 0.35);
 }
 
+/* Connected */
+.status-badge.ready {
+    border-color: rgba(16, 185, 129, 0.28);
+    background: rgba(16, 185, 129, 0.10);
+    color: var(--success);
+}
+.status-badge.ready::before {
+    background: rgba(16, 185, 129, 0.95);
+    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.18), 0 0 14px rgba(16, 185, 129, 0.35);
+}
+
+/* Disconnected */
 .status-badge.error {
-    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.30);
+    background: rgba(239, 68, 68, 0.10);
     color: var(--error);
+}
+.status-badge.error::before {
+    background: rgba(239, 68, 68, 0.95);
+    box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.20), 0 0 14px rgba(239, 68, 68, 0.35);
+}
+
+/* Reduced motion: no fancy changes needed, but keep deterministic */
+@media (prefers-reduced-motion: reduce) {
+    .status-badge::before {
+        box-shadow: none;
+    }
 }
 
 /* File Browser Section */
