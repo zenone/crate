@@ -1,0 +1,23 @@
+name: CI (node)
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+      - name: Install deps
+        run: |
+          # TODO: replace with pnpm/yarn if preferred
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+      - name: Test
+        run: |
+          # TODO: wire your test script
+          npm test --if-present

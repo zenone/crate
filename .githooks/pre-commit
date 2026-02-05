@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Keep pre-commit lightweight. Developers can run full verify when ready.
+# If you want this stricter, switch to: make verify
+
+echo "[pre-commit] Checking for obvious secrets / env files staged..."
+
+# Block committing .env files
+if git diff --cached --name-only | grep -E '(^|/)\.env($|\.)' >/dev/null 2>&1; then
+  echo "ERROR: Refusing to commit .env files. Use .env.example and keep .env untracked." >&2
+  exit 1
+fi
+
+exit 0

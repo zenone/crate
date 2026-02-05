@@ -1,0 +1,38 @@
+# Stack decision (timeboxed)
+
+> Default recommendation (2026): **TypeScript + Next.js (App Router) + Postgres + Prisma/Drizzle + Auth.js + Tailwind/shadcn**.
+> Use this unless constraints suggest otherwise. Timebox research; ship.
+
+## Context
+- Project:
+- Constraints (security, latency, cost, team skills, deploy target):
+
+## Recommendation (pick one)
+**Recommended stack (default):**
+- Runtime/language: TypeScript (Node 22+)
+- Web: Next.js 15+ (App Router)
+- DB: Postgres (managed)
+- ORM: Prisma (or Drizzle)
+- Auth: Auth.js (or Clerk)
+- UI: Tailwind + component library (e.g., shadcn)
+- Validation: Zod
+- Testing: Vitest (unit) + Playwright (e2e)
+- Lint/format: ESLint + Prettier (or Biome)
+
+## Alternatives (2)
+1) Python API + React UI
+2) Go API + TS web
+
+## Why this choice (brief)
+- Pros:
+- Cons:
+- Key tradeoffs:
+
+## Research notes (timeboxed)
+- Sources consulted (3–5 max):
+  - 
+
+## Next steps
+- Wire `Makefile` targets (`setup/test/lint/format`)
+- Add CI (copy from chosen variant)
+- Record decision in `.claude/knowledge-base/tech-stack-decisions.md`

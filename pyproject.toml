@@ -1,0 +1,126 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crate"
+version = "1.0.0"
+description = "Your music library, organized. Rename MP3 files using metadata into DJ-friendly filenames."
+readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "MIT"}
+keywords = ["mp3", "rename", "metadata", "id3", "dj", "music", "audio"]
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Multimedia :: Sound/Audio",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "mutagen>=1.46.0",
+    "tqdm>=4.65.0",
+]
+
+[project.optional-dependencies]
+# Audio analysis backends (Task #88)
+# Tier 1: Recommended (best performance, 2x faster, more accurate)
+audio-essentia = [
+    "essentia>=2.1b6.dev1389",
+    "numpy>=1.25",
+]
+
+# Tier 2: Alternative/Fallback (better compatibility, pure Python)
+audio-librosa = [
+    "librosa>=0.10.0",
+    "numpy>=1.25",
+    "soundfile>=0.12.0",
+]
+
+# Database lookup for metadata
+audio-acoustid = [
+    "pyacoustid>=1.3.0",
+]
+
+# Full audio analysis (recommended for DJ use)
+audio = [
+    "crate[audio-essentia]",
+    "crate[audio-librosa]",
+    "crate[audio-acoustid]",
+]
+
+# Web interface
+web = [
+    "fastapi>=0.104.0",
+    "uvicorn>=0.24.0",
+]
+
+# Complete installation (all features)
+all = [
+    "crate[audio]",
+    "crate[web]",
+]
+
+# Development dependencies
+dev = [
+    "crate[all]",
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "black>=23.7.0",
+    "mypy>=1.4.0",
+    "ruff>=0.0.280",
+]
+
+[project.scripts]
+crate = "crate.cli.main:main"
+crate-tui = "crate.tui:run_tui"
+
+[project.urls]
+Homepage = "https://github.com/yourusername/crate"
+Repository = "https://github.com/yourusername/crate"
+Issues = "https://github.com/yourusername/crate/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = ["-v", "--strict-markers", "--tb=short"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311', 'py312']
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N"]
+# E501: we'll let ruff format/black handle wrapping later (many long log strings)
+# N818: allow domain-specific exception names
+ignore = ["E501", "N818"]
+
+[tool.coverage.run]
+source = ["dj_mp3_renamer"]
+omit = ["tests/*", "*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]

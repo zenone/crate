@@ -1,0 +1,30 @@
+# Local Development
+
+## Prereqs
+- OS:
+- Runtime:
+- Package manager:
+
+## Setup
+```bash
+# make setup
+```
+
+## Run
+```bash
+# make run
+```
+
+## Test
+```bash
+make test
+```
+
+## Lint / format
+```bash
+make lint
+make format
+```
+
+## Common issues
+- 

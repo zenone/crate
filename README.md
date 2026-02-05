@@ -1,4 +1,4 @@
-# 🎧 DJ MP3 Renamer (djrenamer.py)
+# 📦 Crate: The DJ's Indestructible Library Tool
 
 A **DJ-first MP3 renaming and metadata cleanup tool** designed for real-world workflows using:
 
@@ -7,28 +7,42 @@ A **DJ-first MP3 renaming and metadata cleanup tool** designed for real-world wo
 - USB export + Finder browsing
 - Long-term library hygiene and portability
 
-This tool focuses on what actually matters to DJs:
+**Crate** focuses on what actually matters to DJs:
 
-- Human-readable, scan-friendly filenames
+- Human-readable, scan-friendly filenames (`Artist - Title`)
 - Clean, deterministic metadata
 - Album/EP ordering that *never breaks*
 - Optional MusicBrainz-style identification for poorly tagged files
 
 ---
 
-## ✨ What This Tool Does
+## ✨ What Crate Does
+
+### Screenshots
+
+Web UI (directory picker + connected status):
+
+![Crate Web UI](docs/assets/web-ui.png)
+
+Web UI (preview example):
+
+![Crate Web Preview](docs/assets/web-preview.png)
+
+CLI (dry-run preview):
+
+![Crate CLI](docs/assets/cli.png)
 
 ### 1. Smart DJ-Friendly Filenames
 Creates filenames like:
 
 ```
-Artist - Track Title (Extended Mix) [8A 128 BPM].mp3
+Artist - Track Title (Extended Mix) [8A 128].mp3
 01 Artist - Track Title.mp3
 ```
 
 Why this works:
 - **Artist - Title first** → fastest scanning on CDJs & USBs
-- Optional **Key + BPM** for instant context when browsing files
+- Optional **Camelot Key + BPM** for instant context
 - **Track numbers preserved** for albums/EPs
 
 ---
@@ -36,107 +50,46 @@ Why this works:
 ### 2. Deep Metadata Reading (ID3 Best Practices)
 
 Reads metadata from **all common DJ tag variants**, including:
-
-- Standard ID3 frames:
-  - `TPE1` (Artist)
-  - `TIT2` (Title)
-  - `TALB` (Album)
-  - `TRCK` (Track Number)
-  - `TBPM` (BPM)
-  - `TKEY` (Key)
-
-- Common DJ custom tags:
-  - `TXXX:INITIALKEY`
-  - `TXXX:BPM`
-  - `TXXX:TEMPO`
-  - `TXXX:MIXNAME`
-  - `TXXX:VERSION`
-
-If metadata is missing, it **falls back to parsing the filename** safely.
+- Standard ID3 frames (`TPE1`, `TIT2`, `TALB`, `TBPM`, `TKEY`)
+- Rekordbox/Serato custom tags
+- Fallback to filename parsing if tags are missing
 
 ---
 
 ### 3. Album / EP Detection (Automatic)
 
 When processing folders:
-
-- If **all tracks share the same album tag**
-- And **most tracks have track numbers**
-
-➡️ The tool automatically treats the folder as an album and prefixes:
-
-```
-01
-02
-03
-...
-```
-
-You can override this behavior explicitly (see examples below).
-
----
-
-### 4. Optional Metadata Cleanup (Highly Recommended)
-
-With `--clean-tags`, the tool:
-
-- Normalizes whitespace
-- Fixes smart quotes
-- Standardizes `feat.` formatting
-- Writes:
-  - `TBPM` (BPM)
-  - `TKEY` (optionally in Camelot format)
-  - `TRCK` (properly formatted)
-- Preserves MusicBrainz IDs when found
-
-This ensures **future-proof libraries** across tools and years.
-
----
-
-### 5. Optional Online Identification (Picard-like)
-
-For badly tagged or unknown files:
-
-- Uses **Chromaprint (fpcalc)** to fingerprint audio
-- Queries **AcoustID**
-- Resolves metadata from **MusicBrainz**
-
-This is intentionally **opt-in**, slower, and conservative.
+- If **all tracks share the same album tag**...
+- And **most tracks have track numbers**...
+➡️ Crate automatically treats the folder as an album and prefixes `01`, `02`...
 
 ---
 
 ## 📦 Installation
 
-### Requirements
-- macOS (tested)
-- Python 3.9+
-
-### Install Dependencies
+If you just want to use Crate locally (recommended):
 
 ```bash
-pip install mutagen tqdm requests
+pip install .
 ```
 
-### Optional (for online identification)
+Or follow the full install guide: `INSTALLATION.md`.
 
-```bash
-brew install chromaprint
-export ACOUSTID_API_KEY="your_acoustid_api_key"
-```
+(We’ll publish to PyPI once we’re ready.)
 
 ---
 
 ## 🚀 Usage
 
+Non-technical? Start here: **`docs/GETTING_STARTED.md`**
+
 ### Basic Structure
 
 ```bash
-python3 djrenamer.py PATH [options]
+crate PATH [options]
 ```
 
-Where `PATH` is:
-- A single `.mp3` file, or
-- A folder containing MP3s
+Where `PATH` is a file or folder.
 
 ---
 
@@ -145,7 +98,7 @@ Where `PATH` is:
 ### Dry run on a folder (no changes made)
 
 ```bash
-python3 djrenamer.py ~/Music/Incoming --recursive --dry-run -vv
+crate ~/Music/Incoming --recursive --dry-run -v
 ```
 
 What happens:
@@ -160,184 +113,79 @@ What happens:
 ### Example 1: Rename a single MP3
 
 ```bash
-python3 djrenamer.py "Unknown Track.mp3"
+crate "Unknown Track.mp3"
 ```
 
-Output:
+### Example 2: Recursive folder processing (Label dumps)
+
+```bash
+crate ~/Music/NewTracks --recursive
 ```
-Unknown Artist - Unknown Title.mp3
+
+### Example 3: Include Key & BPM in filenames (default)
+
+```bash
+crate ~/Music/NewTracks
+# Output: Artist - Track Title [8A 128].mp3
 ```
+
+> **Note on Speed:** By default, Crate runs in **Fast Mode** (reading existing ID3 tags only). This allows it to scan thousands of files in seconds.
+>
+> If your files are missing Key/BPM tags, use `--analyze` to enable **Deep Scan** (AI audio analysis). This reads the entire file and is slower but magical for untagged files.
+> ```bash
+> crate ~/Music/Untagged --analyze
+> ```
 
 ---
 
-### Example 2: Rename all MP3s in a folder
+## 💻 Web Interface
+
+Prefer a visual experience? Crate comes with a modern Web UI.
 
 ```bash
-python3 djrenamer.py ~/Music/NewTracks
+python run_web.py
 ```
+*Then open http://localhost:8000*
 
----
+Features:
+- **Drag & Drop** uploads
+- **Dark Mode** (Supreme UX)
+- **Live Preview** before renaming
+- **Undo** functionality
 
-### Example 3: Recursive folder processing
-
-```bash
-python3 djrenamer.py ~/Music/NewTracks --recursive
-```
-
-Perfect for:
-- Label folders
-- Beatport/Bandcamp dumps
-- USB prep folders
-
----
-
-### Example 4: Include Key & BPM in filenames (default)
-
-```bash
-python3 djrenamer.py ~/Music/NewTracks
-```
-
-Filename example:
-```
-Artist - Track Title [8A 128 BPM].mp3
-```
-
-Disable if you prefer ultra-clean names:
-
-```bash
-python3 djrenamer.py ~/Music/NewTracks --no-key-bpm
-```
-
----
-
-### Example 5: Clean and normalize metadata (recommended)
-
-```bash
-python3 djrenamer.py ~/Music/NewTracks --clean-tags --write-bpm --write-key-camelot
-```
-
-This will:
-- Write BPM to `TBPM`
-- Convert musical keys → Camelot (e.g. Am → 8A)
-- Normalize Artist / Title / Album / TRCK
-
----
-
-### Example 6: Force album numbering
-
-```bash
-python3 djrenamer.py ~/Music/Albums --force-album
-```
-
-Always prefixes track numbers if `TRCK` exists:
-
-```
-01 Artist - Intro.mp3
-02 Artist - Main Track.mp3
-```
-
----
-
-### Example 7: Disable album numbering entirely
-
-```bash
-python3 djrenamer.py ~/Music/Singles --no-album
-```
-
----
-
-### Example 8: Online metadata recovery (advanced)
-
-```bash
-export ACOUSTID_API_KEY="your_key"
-
-python3 djrenamer.py ~/Music/Unknown   --recursive   --online   --user-agent "YourNameDJRenamer/1.0 (email@example.com)"
-```
-
-Use this when:
-- Files are badly tagged
-- Artist/title missing
-- You want Picard-like recovery
-
-⚠️ **Slower** (rate-limited) by design.
+API / integration:
+- OpenAPI: http://localhost:8000/docs
+- Human summary: `docs/API.md`
 
 ---
 
 ## ⚙️ All CLI Options
 
 ```text
+usage: crate [-h] [--recursive] [--dry-run] [--workers WORKERS] [-l LOG] [-v] [--template TEMPLATE] path
+
 positional arguments:
-  path                  File or folder to process
+  path                  File or directory to process
 
 optional arguments:
-  -r, --recursive        Recurse into subfolders
-  --dry-run              Show changes without applying them
-  -v, -vv                Increase verbosity
-
-  --include-key-bpm      Append [Key BPM] to filenames (default)
-  --no-key-bpm           Disable key/bpm in filenames
-
-  --clean-tags           Normalize and write metadata
-  --write-bpm            Write TBPM tag when BPM is known
-  --write-key-camelot    Write key as Camelot (8A, 9B, etc.)
-
-  --auto-album           Auto-detect albums (default)
-  --force-album          Always prefix track numbers
-  --no-album             Never prefix track numbers
-
-  --online               Use AcoustID + MusicBrainz
-  --user-agent           HTTP User-Agent for MusicBrainz
+  -h, --help            show this help message and exit
+  --recursive           Recurse into subfolders
+  --dry-run             Show changes without applying them
+  --workers WORKERS     Number of worker threads (default: 4)
+  -l LOG, --log LOG     Write detailed log to a file
+  -v, --verbosity       Increase verbosity (-v, -vv)
+  --template TEMPLATE   Filename template. Default: '{artist} - {title}{mix_paren}{kb}'
 ```
-
----
-
-## 🧠 Recommended DJ Workflow
-
-1. **Download tracks**
-2. Move into a staging folder:
-   ```
-   ~/Music/Incoming
-   ```
-3. Dry run:
-   ```bash
-   python3 djrenamer.py ~/Music/Incoming --recursive --dry-run -v
-   ```
-4. Clean + rename:
-   ```bash
-   python3 djrenamer.py ~/Music/Incoming --recursive --clean-tags --write-bpm --write-key-camelot
-   ```
-5. Import into Rekordbox
-6. Analyze, cue, export to USB
-
----
-
-## ⚠️ Important Notes
-
-- This tool **never overwrites files**
-- Filename collisions automatically become:
-  ```
-  Track Name.mp3
-  Track Name (2).mp3
-  ```
-- Rekordbox BPM/key analysis is *not* relied upon
-- Online mode respects MusicBrainz rate limits
 
 ---
 
 ## 🛡️ Philosophy
 
-This tool is opinionated on purpose.
-
-It favors:
-- Stability over cleverness
-- Human readability over gimmicks
-- DJ reality over theoretical purity
+Crate is opinionated on purpose. It favors **Stability** over cleverness and **Human Readability** over database purity.
 
 If your USB ever corrupts, Rekordbox breaks, or you switch platforms —
-your library will still make sense.
+**your library will still make sense.**
 
 ---
 
-## 🖤 Built for DJs who care about their libraries
-
-Happy digging.
+## 🖤 Built for DJs who care about their libraries.

@@ -1,0 +1,56 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- New features go here
+
+### Changed
+- Changes to existing functionality
+
+### Deprecated
+- Features that will be removed in future versions
+
+### Removed
+- Features removed in this release
+
+### Fixed
+- Bug fixes
+
+### Security
+- Security-related changes
+
+---
+
+## [1.0.0] - YYYY-MM-DD
+
+### Added
+- Initial release
+- Feature A
+- Feature B
+
+---
+
+## Version Guidelines
+
+**MAJOR.MINOR.PATCH** (e.g., 2.1.3)
+
+- **MAJOR**: Breaking changes (API changes, removed features)
+- **MINOR**: New features (backward compatible)
+- **PATCH**: Bug fixes (backward compatible)
+
+**Pre-release**: `1.0.0-alpha.1`, `1.0.0-beta.2`, `1.0.0-rc.1`
+
+**When to bump**:
+- Breaking API change → MAJOR
+- New feature → MINOR
+- Bug fix → PATCH
+- Multiple changes → Use highest applicable
+
+[Unreleased]: https://github.com/USER/REPO/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/USER/REPO/releases/tag/v1.0.0
