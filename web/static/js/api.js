@@ -52,6 +52,10 @@ export const API = {
     return this._postJson(`/api/rename/undo?session_id=${encodeURIComponent(sessionId)}`, null);
   },
 
+  async cancelOperation(operationId) {
+    return this._postJson(`/api/operation/${encodeURIComponent(operationId)}/cancel`, null);
+  },
+
   async _getJson(path) {
     const r = await fetch(path, { method: 'GET', headers: { 'Accept': 'application/json' } });
     if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
