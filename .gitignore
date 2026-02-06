@@ -14,8 +14,6 @@ credentials.json
 service-account.json
 
 # --- AI / IDE local state ---
-.claude/settings.local.json
-CLAUDE.local.md
 .cursor/
 .continue/
 
@@ -60,3 +58,6 @@ web/uploads/
 
 # data/
 # *.sqlite3
+
+# Local configuration
+.local/

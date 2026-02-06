@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Create a lightweight context bundle for AI sessions.
+# Create a lightweight context bundle of key project files.
+# Useful for code reviews, onboarding, or documentation.
 # Output: tmp/context.txt
 
 ROOT="${1:-.}"
@@ -10,26 +11,30 @@ OUT="tmp/context.txt"
 mkdir -p tmp
 
 {
-  echo "# Context Pack"
+  echo "# Project Context"
   echo "Generated: $(date -Is)"
   echo
-  echo "## Repo tree (depth 3)"
+  echo "## Repository Structure (depth 3)"
   find "$ROOT" -maxdepth 3 -type f \
     -not -path '*/.git/*' \
     -not -path '*/node_modules/*' \
     -not -path '*/.venv/*' \
     -not -path '*/dist/*' \
     -not -path '*/build/*' \
+    -not -path '*/.local/*' \
     | sed 's#^\./##' \
     | sort
   echo
-  echo "## Key docs"
-  for f in README.md CLAUDE.md PROJECT.md docs/STACK_DECISION.md docs/LOCAL_DEV.md; do
+  echo "## Key Documentation"
+  for f in README.md PROJECT.md docs/STACK_DECISION.md docs/LOCAL_DEV.md; do
     if [ -f "$f" ]; then
-      echo "\n---\n### $f\n"
+      echo ""
+      echo "---"
+      echo "### $f"
+      echo ""
       sed -n '1,200p' "$f"
     fi
   done
 } > "$OUT"
 
-echo "Wrote: $OUT"
+echo "Wrote context to: $OUT"
