@@ -1,5 +1,5 @@
 import { API } from './api.js';
-import { setApiBadge, showFiles, toast, getSelectedMp3Paths } from './ui.js';
+import { setApiBadge, showFiles, toast, getSelectedMp3Paths, updateRowMetadata } from './ui.js';
 
 const state = {
   directory: null,
@@ -137,6 +137,8 @@ function wireTableSelectionHandlers() {
   updateActionButtons();
 }
 
+let metadataAbort = null;
+
 async function loadDirectory(path, recursive = true) {
   const dirInput = $('directory-path');
   if (dirInput) dirInput.value = path;
@@ -162,6 +164,85 @@ async function loadDirectory(path, recursive = true) {
   });
 
   wireTableSelectionHandlers();
+
+  // Start metadata loading (best-effort)
+  loadMetadataForVisibleFiles(filteredSorted).catch((e) => {
+    console.error(e);
+  });
+}
+
+async function loadMetadataForVisibleFiles(files) {
+  const progressEl = $('metadata-progress');
+  const barEl = $('metadata-progress-bar');
+  const textEl = $('metadata-progress-text');
+  const cancelBtn = $('metadata-cancel-btn');
+  const currentNameEl = $('metadata-current-file-name');
+
+  // Cancel any prior run
+  if (metadataAbort) {
+    metadataAbort.abort();
+  }
+  metadataAbort = new AbortController();
+
+  const mp3s = (files || []).filter((f) => f.is_mp3);
+  if (!mp3s.length) {
+    if (progressEl) progressEl.classList.add('hidden');
+    return;
+  }
+
+  let cancelled = false;
+  const onCancel = () => {
+    cancelled = true;
+    metadataAbort?.abort();
+    if (progressEl) progressEl.classList.add('hidden');
+  };
+  cancelBtn?.addEventListener('click', onCancel, { once: true });
+
+  progressEl?.classList.remove('hidden');
+
+  const total = mp3s.length;
+  for (let i = 0; i < total; i++) {
+    if (cancelled) break;
+    const f = mp3s[i];
+
+    const pct = Math.floor(((i) / total) * 100);
+    if (barEl) barEl.style.width = `${pct}%`;
+    if (textEl) textEl.textContent = `Loading metadata: ${i}/${total} files (${pct}%)`;
+    if (currentNameEl) currentNameEl.textContent = f.name;
+
+    // Skip if we already have metadata cached on the object
+    if (f.metadata) {
+      updateRowMetadata(f.path, f.metadata);
+      continue;
+    }
+
+    try {
+      const resp = await fetch('/api/file/metadata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ path: f.path, recursive: false, write_metadata: false }),
+        signal: metadataAbort.signal,
+      });
+      if (!resp.ok) {
+        // ignore failures per-file
+        continue;
+      }
+      const data = await resp.json();
+      const md = data.metadata;
+      f.metadata = md;
+      const artUrl = API.albumArtUrl(f.path);
+      updateRowMetadata(f.path, md, artUrl);
+    } catch (e) {
+      // Abort = user cancelled; otherwise ignore
+      if (e?.name === 'AbortError') break;
+    }
+  }
+
+  if (barEl) barEl.style.width = '100%';
+  if (textEl) textEl.textContent = `Loading metadata: ${total}/${total} files (100%)`;
+  if (currentNameEl) currentNameEl.textContent = '—';
+  // hide after short delay
+  setTimeout(() => progressEl?.classList.add('hidden'), 600);
 }
 
 function wireSearchAndSort() {

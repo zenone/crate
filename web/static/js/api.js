@@ -22,6 +22,21 @@ export const API = {
     });
   },
 
+  async fileMetadata(path, write_metadata = false) {
+    return this._postJson('/api/file/metadata', {
+      path,
+      recursive: false,
+      write_metadata: !!write_metadata,
+    });
+  },
+
+  albumArtUrl(path) {
+    // GET /api/file/album-art?file_path=...
+    const u = new URL('/api/file/album-art', window.location.origin);
+    u.searchParams.set('file_path', path);
+    return u.toString();
+  },
+
   async previewRename({ path, recursive, template = null, enhance_metadata = false, file_paths = null }) {
     return this._postJson('/api/rename/preview', {
       path,
