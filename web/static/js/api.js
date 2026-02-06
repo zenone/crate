@@ -56,6 +56,14 @@ export const API = {
     return this._postJson(`/api/operation/${encodeURIComponent(operationId)}/cancel`, null);
   },
 
+  async getConfig() {
+    return this._getJson('/api/config');
+  },
+
+  async updateConfig(updates) {
+    return this._postJson('/api/config/update', { updates });
+  },
+
   async _getJson(path) {
     const r = await fetch(path, { method: 'GET', headers: { 'Accept': 'application/json' } });
     if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);

@@ -321,6 +321,164 @@ function wireDirectoryBrowserModal() {
   });
 }
 
+function wireSettingsModal() {
+  const modal = $('settings-modal');
+  const openBtnTop = $('settings-btn');
+  const openBtnBottom = $('settings-btn-bottom');
+  const saveBtn = $('settings-save-btn');
+  const resetBtn = $('settings-reset-btn');
+  const cancelBtn = $('settings-cancel-btn');
+  const form = $('settings-form');
+
+  if (!modal || (!openBtnTop && !openBtnBottom)) return;
+
+  const closeEls = modal.querySelectorAll('.modal-close, .modal-overlay');
+
+  function open() {
+    modal.classList.remove('hidden');
+  }
+
+  function close() {
+    modal.classList.add('hidden');
+  }
+
+  async function loadIntoForm() {
+    try {
+      const cfg = await API.getConfig();
+
+      // Populate known fields if present
+      const setVal = (id, v) => {
+        const el = $(id);
+        if (!el) return;
+        el.value = v ?? '';
+      };
+      const setChk = (id, v) => {
+        const el = $(id);
+        if (!el) return;
+        el.checked = !!v;
+      };
+
+      setVal('acoustid-api-key', cfg.acoustid_api_key);
+      setChk('enable-musicbrainz', cfg.enable_musicbrainz);
+      setChk('use-mb-for-all-fields', cfg.use_mb_for_all_fields);
+
+      setChk('auto-detect-bpm', cfg.auto_detect_bpm);
+      setChk('auto-detect-key', cfg.auto_detect_key);
+
+      setChk('remember-last-directory', cfg.remember_last_directory);
+      setChk('recursive-default', cfg.recursive_default);
+
+      setVal('track-number-padding', cfg.track_number_padding);
+      setChk('verify-mode', cfg.verify_mode);
+
+      setChk('enable-smart-detection', cfg.enable_smart_detection);
+      setChk('enable-per-album-detection', cfg.enable_per_album_detection);
+      setChk('enable-auto-select-albums', cfg.enable_auto_select_albums);
+      setChk('enable-auto-apply', cfg.enable_auto_apply);
+
+      setChk('enable-toast-notifications', cfg.enable_toast_notifications);
+
+      const conf = $('confidence-threshold');
+      const confVal = $('confidence-threshold-value');
+      if (conf) {
+        conf.value = String(cfg.confidence_threshold ?? conf.value);
+        if (confVal) confVal.textContent = String(conf.value);
+      }
+    } catch (e) {
+      toast(`Failed to load settings: ${e.message}`);
+    }
+  }
+
+  function collectUpdates() {
+    const updates = {};
+
+    const getVal = (id) => {
+      const el = $(id);
+      return el ? el.value : undefined;
+    };
+    const getChk = (id) => {
+      const el = $(id);
+      return el ? !!el.checked : undefined;
+    };
+
+    // Only include keys that exist in form (avoid blasting unknown keys)
+    updates.acoustid_api_key = getVal('acoustid-api-key');
+    updates.enable_musicbrainz = getChk('enable-musicbrainz');
+    updates.use_mb_for_all_fields = getChk('use-mb-for-all-fields');
+
+    updates.auto_detect_bpm = getChk('auto-detect-bpm');
+    updates.auto_detect_key = getChk('auto-detect-key');
+
+    updates.remember_last_directory = getChk('remember-last-directory');
+    updates.recursive_default = getChk('recursive-default');
+
+    const pad = getVal('track-number-padding');
+    if (pad !== undefined && pad !== '') updates.track_number_padding = Number(pad);
+
+    updates.verify_mode = getChk('verify-mode');
+
+    updates.enable_smart_detection = getChk('enable-smart-detection');
+    updates.enable_per_album_detection = getChk('enable-per-album-detection');
+    updates.enable_auto_select_albums = getChk('enable-auto-select-albums');
+    updates.enable_auto_apply = getChk('enable-auto-apply');
+
+    updates.enable_toast_notifications = getChk('enable-toast-notifications');
+
+    const conf = $('confidence-threshold');
+    if (conf) updates.confidence_threshold = Number(conf.value);
+
+    return updates;
+  }
+
+  async function save() {
+    try {
+      const updates = collectUpdates();
+      await API.updateConfig(updates);
+      toast('Settings saved');
+      close();
+    } catch (e) {
+      toast(`Save failed: ${e.message}`);
+    }
+  }
+
+  openBtnTop?.addEventListener('click', () => {
+    open();
+    loadIntoForm();
+  });
+  openBtnBottom?.addEventListener('click', () => {
+    open();
+    loadIntoForm();
+  });
+
+  closeEls.forEach((el) => el.addEventListener('click', close));
+  cancelBtn?.addEventListener('click', close);
+
+  saveBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    save();
+  });
+
+  resetBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    // Simple behavior: re-fetch config from backend
+    await loadIntoForm();
+    toast('Settings reloaded');
+  });
+
+  // live update label for slider
+  const conf = $('confidence-threshold');
+  const confVal = $('confidence-threshold-value');
+  conf?.addEventListener('input', () => {
+    if (confVal) confVal.textContent = String(conf.value);
+  });
+
+  // prevent full-page reload on Enter
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    save();
+  });
+}
+
 function wirePreviewModal() {
   const previewBtn = $('preview-btn');
   const floatingPreview = $('floating-preview-btn');
@@ -491,6 +649,7 @@ function wire() {
   });
 
   wirePreviewModal();
+  wireSettingsModal();
 
   const progress = wireProgressOverlay();
 
