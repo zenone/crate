@@ -13,7 +13,7 @@ secrets/
 credentials.json
 service-account.json
 
-# --- AI / IDE local state ---
+# --- Local dev assistant / IDE state ---
 .cursor/
 .continue/
 
