@@ -54,6 +54,7 @@ tmp/
 
 # --- Project-specific ignores (add below) ---
 .backup/
+.crate_web.pid
 .crate_web.pid.port
 web/uploads/
 
