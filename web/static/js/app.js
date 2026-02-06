@@ -42,10 +42,15 @@ function updateActionButtons() {
   if (renameBtn) renameBtn.disabled = selected.length === 0;
 
   if (floatingSel) {
-    floatingSel.textContent = `${selected.length} file${selected.length === 1 ? '' : 's'} selected`;
+    if (selected.length > 0) {
+      floatingSel.textContent = `${selected.length} file${selected.length === 1 ? '' : 's'} selected`;
+    } else {
+      floatingSel.textContent = anyMp3 ? 'Select files to rename' : '0 files selected';
+    }
   }
   if (floatingBar) {
-    setHidden(floatingBar, selected.length === 0);
+    // Keep actions discoverable: show bar when there are MP3s loaded.
+    setHidden(floatingBar, !anyMp3);
   }
 }
 
