@@ -1097,6 +1097,15 @@ async def update_config(request: ConfigUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/favicon.ico")
+async def favicon():
+    """Serve favicon.ico (avoid browser 404 spam)."""
+    ico_path = static_dir / "favicon.ico"
+    if not ico_path.exists():
+        raise HTTPException(status_code=404, detail="favicon.ico not found")
+    return FileResponse(ico_path)
+
+
 # Root endpoint - serve main HTML page
 @app.get("/", response_class=HTMLResponse)
 async def root():
