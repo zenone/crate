@@ -22,7 +22,7 @@ A **DJ-first MP3 renaming and metadata cleanup tool** designed for real-world wo
 
 Web UI (directory picker + connected status):
 
-![Crate Web UI](docs/assets/web-ui.png)
+![Crate Web UI](docs/assets/screenshots/web-ui-directory-select.webp)
 
 Web UI (preview example):
 
