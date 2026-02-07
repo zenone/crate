@@ -72,6 +72,28 @@ function applyFilterSort(files) {
   const cmpStr = (a, b) => String(a ?? '').toLowerCase().localeCompare(String(b ?? '').toLowerCase());
   const cmpNum = (a, b) => (Number(a ?? 0) - Number(b ?? 0));
 
+  const strOr = (v) => String(v ?? '').toLowerCase();
+  const numOrNull = (v) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : null;
+  };
+  const cmpNumNullLast = (a, b) => {
+    const na = numOrNull(a);
+    const nb = numOrNull(b);
+    if (na == null && nb == null) return 0;
+    if (na == null) return 1;
+    if (nb == null) return -1;
+    return na - nb;
+  };
+  const cmpStrNullLast = (a, b) => {
+    const sa = strOr(a);
+    const sb = strOr(b);
+    if (!sa && !sb) return 0;
+    if (!sa) return 1;
+    if (!sb) return -1;
+    return sa.localeCompare(sb);
+  };
+
   out.sort((a, b) => {
     switch (mode) {
       case 'name-asc': return cmpStr(a.name, b.name);
@@ -81,9 +103,23 @@ function applyFilterSort(files) {
       case 'size-desc': return -cmpNum(a.size, b.size);
       case 'size-asc': return cmpNum(a.size, b.size);
       // Metadata sorts (may be absent; keep stable-ish)
-      case 'bpm-asc': return cmpNum(a.metadata?.bpm, b.metadata?.bpm) || cmpStr(a.name, b.name);
-      case 'bpm-desc': return -cmpNum(a.metadata?.bpm, b.metadata?.bpm) || cmpStr(a.name, b.name);
-      case 'track-asc': return cmpNum(a.metadata?.track, b.metadata?.track) || cmpStr(a.name, b.name);
+      case 'artist-asc': return cmpStrNullLast(a.metadata?.artist, b.metadata?.artist) || cmpStr(a.name, b.name);
+      case 'artist-desc': return -cmpStrNullLast(a.metadata?.artist, b.metadata?.artist) || cmpStr(a.name, b.name);
+      case 'title-asc': return cmpStrNullLast(a.metadata?.title, b.metadata?.title) || cmpStr(a.name, b.name);
+      case 'title-desc': return -cmpStrNullLast(a.metadata?.title, b.metadata?.title) || cmpStr(a.name, b.name);
+      case 'album-asc': return cmpStrNullLast(a.metadata?.album, b.metadata?.album) || cmpStr(a.name, b.name);
+      case 'album-desc': return -cmpStrNullLast(a.metadata?.album, b.metadata?.album) || cmpStr(a.name, b.name);
+      case 'genre-asc': return cmpStrNullLast(a.metadata?.genre, b.metadata?.genre) || cmpStr(a.name, b.name);
+      case 'genre-desc': return -cmpStrNullLast(a.metadata?.genre, b.metadata?.genre) || cmpStr(a.name, b.name);
+      case 'year-asc': return cmpNumNullLast(a.metadata?.year, b.metadata?.year) || cmpStr(a.name, b.name);
+      case 'year-desc': return -cmpNumNullLast(a.metadata?.year, b.metadata?.year) || cmpStr(a.name, b.name);
+      case 'duration-asc': return cmpNumNullLast(a.metadata?.duration, b.metadata?.duration) || cmpStr(a.name, b.name);
+      case 'duration-desc': return -cmpNumNullLast(a.metadata?.duration, b.metadata?.duration) || cmpStr(a.name, b.name);
+      case 'bpm-asc': return cmpNumNullLast(a.metadata?.bpm, b.metadata?.bpm) || cmpStr(a.name, b.name);
+      case 'bpm-desc': return -cmpNumNullLast(a.metadata?.bpm, b.metadata?.bpm) || cmpStr(a.name, b.name);
+      case 'key-asc': return cmpStrNullLast(a.metadata?.key || a.metadata?.camelot, b.metadata?.key || b.metadata?.camelot) || cmpStr(a.name, b.name);
+      case 'key-desc': return -cmpStrNullLast(a.metadata?.key || a.metadata?.camelot, b.metadata?.key || b.metadata?.camelot) || cmpStr(a.name, b.name);
+      case 'track-asc': return cmpNumNullLast(a.metadata?.track, b.metadata?.track) || cmpStr(a.name, b.name);
       default: return cmpStr(a.name, b.name);
     }
   });
@@ -243,6 +279,60 @@ async function loadMetadataForVisibleFiles(files) {
   if (currentNameEl) currentNameEl.textContent = '—';
   // hide after short delay
   setTimeout(() => progressEl?.classList.add('hidden'), 600);
+}
+
+function updateSortIndicators() {
+  const headers = Array.from(document.querySelectorAll('th.sortable'));
+  headers.forEach((th) => {
+    th.setAttribute('aria-sort', 'none');
+    const ind = th.querySelector('.sort-indicator');
+    if (ind) ind.textContent = '';
+  });
+
+  const mode = state.sortMode || 'name-asc';
+  const [field, dir] = mode.split('-');
+  const active = headers.find((th) => th.dataset.sort === field);
+  if (!active) return;
+
+  active.setAttribute('aria-sort', dir === 'desc' ? 'descending' : 'ascending');
+  const ind = active.querySelector('.sort-indicator');
+  if (ind) ind.textContent = dir === 'desc' ? '▼' : '▲';
+}
+
+function wireSortableHeaders() {
+  const headers = Array.from(document.querySelectorAll('th.sortable'));
+  if (!headers.length) return;
+
+  const sortSel = $('file-sort-select');
+
+  function toggle(field) {
+    const cur = state.sortMode || 'name-asc';
+    const [curField, curDir] = cur.split('-');
+    const nextDir = (curField === field && curDir === 'asc') ? 'desc' : 'asc';
+    state.sortMode = `${field}-${nextDir}`;
+
+    if (sortSel) sortSel.value = state.sortMode;
+    updateSortIndicators();
+
+    if (state.directory) {
+      loadDirectory(state.directory, true).catch((e) => toast(`Sort failed: ${e.message}`));
+    }
+  }
+
+  headers.forEach((th) => {
+    const field = th.dataset.sort;
+    if (!field) return;
+
+    th.addEventListener('click', () => toggle(field));
+    th.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        toggle(field);
+      }
+    });
+  });
+
+  updateSortIndicators();
 }
 
 function wireSearchAndSort() {
@@ -723,6 +813,7 @@ function wire() {
 
   wireDirectoryBrowserModal();
   wireSearchAndSort();
+  wireSortableHeaders();
 
   refreshBtn?.addEventListener('click', async () => {
     try {
