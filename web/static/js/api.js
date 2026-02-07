@@ -79,6 +79,18 @@ export const API = {
     return this._postJson('/api/config/update', { updates });
   },
 
+  async firstRunStatus() {
+    return this._getJson('/api/config/first-run');
+  },
+
+  async completeFirstRun() {
+    return this._postJson('/api/config/complete-first-run', null);
+  },
+
+  async validateTemplate(template) {
+    return this._postJson('/api/template/validate', { template });
+  },
+
   async _getJson(path) {
     const r = await fetch(path, { method: 'GET', headers: { 'Accept': 'application/json' } });
     if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);

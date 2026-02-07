@@ -81,7 +81,7 @@ class TestConflictResolution:
         assert result["conflicts"] == []
 
     def test_resolve_tag_vs_ai_match(self):
-        """Tags and AI agree."""
+        """Tags and analysis agree."""
         result = resolve_metadata_conflict(
             field="bpm",
             tag_value="128",
@@ -91,10 +91,10 @@ class TestConflictResolution:
         )
         assert result["final_value"] == "128"
         assert result["source"] == "Tags"
-        assert result["validated_by"] == "AI Audio"
+        assert result["validated_by"] == "Audio Analysis"
 
     def test_resolve_tag_vs_ai_conflict(self):
-        """Tags and AI disagree."""
+        """Tags and analysis disagree."""
         result = resolve_metadata_conflict(
             field="bpm",
             tag_value="128",
@@ -105,7 +105,7 @@ class TestConflictResolution:
         assert result["final_value"] == "128"  # Trust tags by default
         assert result["source"] == "Tags"
         assert len(result["conflicts"]) > 0
-        assert result["conflicts"][0]["disagreement"] == "AI Audio suggests: 126"
+        assert result["conflicts"][0]["disagreement"] == "Audio Analysis suggests: 126"
 
     def test_resolve_mb_high_confidence_overrides(self):
         """MusicBrainz with high confidence overrides bad tags."""

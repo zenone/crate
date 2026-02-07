@@ -71,7 +71,7 @@ class PreviewRequest(BaseModel):
     recursive: bool = False
     template: Optional[str] = None
     file_paths: Optional[List[str]] = None  # Specific files to preview
-    enhance_metadata: bool = False  # Enable MusicBrainz/AI metadata
+    enhance_metadata: bool = False  # Enable MusicBrainz/audio analysis metadata
 
 
 class ExecuteRenameRequest(BaseModel):

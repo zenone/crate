@@ -164,7 +164,7 @@ def resolve_metadata_conflict(
         field: Field name (e.g., "bpm", "artist")
         tag_value: Value from ID3 tags
         mb_value: Value from MusicBrainz
-        ai_value: Value from AI audio analysis
+        ai_value: Value from audio analysis
         mb_confidence: MusicBrainz confidence score
         verify_mode: If True, flag discrepancies even if tags present
 
@@ -190,7 +190,7 @@ def resolve_metadata_conflict(
     if mb_value:
         sources["MusicBrainz"] = mb_value
     if ai_value:
-        sources["AI Audio"] = ai_value
+        sources["Audio Analysis"] = ai_value
 
     # No values available
     if not sources:
@@ -224,16 +224,16 @@ def resolve_metadata_conflict(
                 comparison = compare_bpm_values(tag_value, ai_value)
                 if not comparison["matches"]:
                     result["conflicts"].append({
-                        "sources": ["Tags", "AI Audio"],
+                        "sources": ["Tags", "Audio Analysis"],
                         "values": [tag_value, ai_value],
                         "difference_percent": comparison["difference_percent"],
-                        "disagreement": f"AI Audio suggests: {ai_value}"
+                        "disagreement": f"Audio Analysis suggests: {ai_value}"
                     })
 
-                    # If verify mode, trust AI over suspicious tags
+                    # If verify mode, trust analysis over suspicious tags
                     if verify_mode and comparison["difference_percent"] > 5:
                         result["final_value"] = ai_value
-                        result["source"] = "AI Audio"
+                        result["source"] = "Audio Analysis"
                         result["overridden"] = f"Tags ({tag_value}) overridden in verify mode"
                         return result
 
@@ -241,9 +241,9 @@ def resolve_metadata_conflict(
                 comparison = compare_key_values(tag_value, ai_value)
                 if not comparison["matches"] and not comparison.get("enharmonic"):
                     result["conflicts"].append({
-                        "sources": ["Tags", "AI Audio"],
+                        "sources": ["Tags", "Audio Analysis"],
                         "values": [tag_value, ai_value],
-                        "disagreement": f"AI Audio suggests: {ai_value}"
+                        "disagreement": f"Audio Analysis suggests: {ai_value}"
                     })
 
     # Non-critical fields (artist, title, album, year)
@@ -264,7 +264,7 @@ def resolve_metadata_conflict(
         result["source"] = "MusicBrainz"
     elif ai_value:
         result["final_value"] = ai_value
-        result["source"] = "AI Audio"
+        result["source"] = "Audio Analysis"
     else:
         result["final_value"] = ""
         result["source"] = "None"

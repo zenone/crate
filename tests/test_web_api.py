@@ -144,8 +144,8 @@ class TestPreviewEndpoint:
                 None
             )
 
-            # AI analysis detects BPM
-            mock_ai.return_value = ("128", "AI Audio", "Am", "Tags")
+            # audio analysis detects BPM
+            mock_ai.return_value = ("128", "Audio Analysis", "Am", "Tags")
 
             response = client.post(
                 "/api/rename/preview",
@@ -162,7 +162,7 @@ class TestPreviewEndpoint:
             if data["previews"]:
                 preview = data["previews"][0]
                 if preview["metadata"]:
-                    # BPM should be from AI
+                    # BPM should be from analysis
                     assert preview["metadata"].get("bpm") == "128"
 
     def test_preview_with_invalid_path(self, client):

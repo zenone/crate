@@ -269,7 +269,7 @@ class ResultsPanel(Static):
             box=box.ROUNDED,  # Rounded box style
             show_lines=True,  # Show horizontal lines between every row
             row_styles=["", "dim"],  # Alternating row styles for better readability
-            caption="[dim italic]Source Legend: Tags=ID3 metadata | AI Audio=Auto-detected via audio analysis | MusicBrainz=Database lookup[/dim italic]",
+            caption="[dim italic]Source Legend: Tags=ID3 metadata | Audio Analysis=Auto-detected via audio analysis | MusicBrainz=Database lookup[/dim italic]",
             caption_justify="left",
         )
 
@@ -312,7 +312,7 @@ class ResultsPanel(Static):
 
             # Map internal names to user-friendly display names
             source_map = {
-                "Analyzed": "AI Audio",
+                "Analyzed": "Audio Analysis",
                 "Database": "MusicBrainz",
                 "MusicBrainz": "MusicBrainz",  # Direct return from audio_analysis
                 "ID3": "Tags",

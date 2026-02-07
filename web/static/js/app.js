@@ -497,6 +497,67 @@ function wireDirectoryBrowserModal() {
   });
 }
 
+function wireFirstRunModal() {
+  const modal = $('first-run-modal');
+  const saveBtn = $('first-run-save-btn');
+  const skipBtn = $('first-run-skip-btn');
+  const inputKey = $('first-run-acoustid-key');
+
+  if (!modal) return;
+
+  function open() { modal.classList.remove('hidden'); }
+  function close() { modal.classList.add('hidden'); }
+
+  async function complete() {
+    try {
+      await API.completeFirstRun();
+    } catch (e) {
+      // non-fatal: still allow UI to proceed
+      console.warn(e);
+    }
+  }
+
+  async function maybeShow() {
+    try {
+      const st = await API.firstRunStatus();
+      if (st.first_run) {
+        open();
+      }
+    } catch (e) {
+      // don't block app
+      console.warn(e);
+    }
+  }
+
+  saveBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    try {
+      const key = (inputKey?.value || '').trim();
+      if (key) {
+        await API.updateConfig({
+          acoustid_api_key: key,
+          enable_musicbrainz: true,
+        });
+        toast('Saved. MusicBrainz lookup enabled.');
+      }
+      await complete();
+      close();
+    } catch (err) {
+      toast(`Save failed: ${err.message}`);
+    }
+  });
+
+  skipBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await complete();
+    close();
+    toast('Skipped setup. You can add keys later in Settings.');
+  });
+
+  // Kick off after wiring
+  maybeShow();
+}
+
 function wireSettingsModal() {
   const modal = $('settings-modal');
   const openBtnTop = $('settings-btn');
@@ -516,6 +577,25 @@ function wireSettingsModal() {
 
   function close() {
     modal.classList.add('hidden');
+  }
+
+  function debounce(fn, ms) {
+    let t = null;
+    return (...args) => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => fn(...args), ms);
+    };
+  }
+
+  function insertAtCursor(textarea, text) {
+    const start = textarea.selectionStart ?? textarea.value.length;
+    const end = textarea.selectionEnd ?? textarea.value.length;
+    const before = textarea.value.slice(0, start);
+    const after = textarea.value.slice(end);
+    textarea.value = before + text + after;
+    const pos = start + text.length;
+    textarea.setSelectionRange(pos, pos);
+    textarea.focus();
   }
 
   async function loadIntoForm() {
@@ -606,6 +686,64 @@ function wireSettingsModal() {
     return updates;
   }
 
+  async function validateTemplateUi() {
+    const tpl = $('default-template');
+    const preview = $('template-preview');
+    if (!tpl || !preview) return;
+
+    const text = (tpl.value || '').trim();
+    if (!text) {
+      preview.textContent = '';
+      preview.classList.remove('template-valid', 'template-invalid');
+      return;
+    }
+
+    try {
+      const res = await API.validateTemplate(text);
+      preview.innerHTML = '';
+
+      const line1 = document.createElement('div');
+      line1.className = 'template-validation-line';
+
+      if (res.valid) {
+        preview.classList.add('template-valid');
+        preview.classList.remove('template-invalid');
+        line1.textContent = `✓ Valid template${res.example ? ` — Example: ${res.example}` : ''}`;
+        preview.appendChild(line1);
+      } else {
+        preview.classList.add('template-invalid');
+        preview.classList.remove('template-valid');
+        line1.textContent = '✕ Template has issues:';
+        preview.appendChild(line1);
+
+        const ul = document.createElement('ul');
+        ul.className = 'template-validation-list';
+        for (const err of (res.errors || [])) {
+          const li = document.createElement('li');
+          li.textContent = err;
+          ul.appendChild(li);
+        }
+        preview.appendChild(ul);
+      }
+
+      if (res.warnings && res.warnings.length) {
+        const warn = document.createElement('div');
+        warn.className = 'template-validation-warnings';
+        warn.textContent = `Warnings: ${res.warnings.join(' • ')}`;
+        preview.appendChild(warn);
+      }
+    } catch (e) {
+      // avoid noisy toasts while typing; just show small error
+      preview.classList.add('template-invalid');
+      preview.classList.remove('template-valid');
+      preview.textContent = `Template validation failed: ${e.message}`;
+    }
+  }
+
+  const validateTemplateDebounced = debounce(() => {
+    validateTemplateUi().catch(() => {});
+  }, 250);
+
   async function save() {
     try {
       const updates = collectUpdates();
@@ -647,6 +785,32 @@ function wireSettingsModal() {
   conf?.addEventListener('input', () => {
     if (confVal) confVal.textContent = String(conf.value);
   });
+
+  // Template UX wiring
+  const preset = $('template-preset');
+  const tpl = $('default-template');
+
+  preset?.addEventListener('change', () => {
+    const v = preset.value;
+    if (!v) return;
+    if (tpl) tpl.value = v;
+    validateTemplateDebounced();
+  });
+
+  document.querySelectorAll('button.variable-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (!tpl) return;
+      const token = btn.dataset.variable;
+      if (!token) return;
+      insertAtCursor(tpl, token);
+      validateTemplateDebounced();
+    });
+  });
+
+  tpl?.addEventListener('input', () => validateTemplateDebounced());
+  // Validate on modal open as well
+  openBtnTop?.addEventListener('click', () => setTimeout(() => validateTemplateDebounced(), 0));
+  openBtnBottom?.addEventListener('click', () => setTimeout(() => validateTemplateDebounced(), 0));
 
   // prevent full-page reload on Enter
   form?.addEventListener('submit', (e) => {
@@ -814,6 +978,7 @@ function wire() {
   wireDirectoryBrowserModal();
   wireSearchAndSort();
   wireSortableHeaders();
+  wireFirstRunModal();
 
   refreshBtn?.addEventListener('click', async () => {
     try {

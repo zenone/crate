@@ -6,8 +6,8 @@ A minimal example showing the template in action.
 
 ```
 hello-api/
-├── CLAUDE.md           # AI guidance (from template)
-├── .claude/            # AI memory (from template)
+├── CLAUDE.md           # dev guidance (from template)
+├── .claude/            # dev memory (from template)
 ├── src/
 │   ├── core/           # Business logic
 │   │   └── greeter.py

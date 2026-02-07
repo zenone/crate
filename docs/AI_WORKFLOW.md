@@ -1,4 +1,4 @@
-# AI workflow (2026)
+# Workflow notes (2026)
 
 ## The loop
 1) Clarify goal + constraints (or write a short spec in `PROJECT.md`)

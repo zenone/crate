@@ -269,7 +269,7 @@ class RenamerAPI:
 
     def _enhance_metadata(self, src: Path, meta: dict, write_tags: bool = True, cancel_event: Optional[threading.Event] = None) -> dict:
         """
-        Enhance metadata using MusicBrainz and AI audio analysis with conflict resolution.
+        Enhance metadata using MusicBrainz and audio analysis with conflict resolution.
 
         Args:
             src: Source file path
@@ -313,7 +313,7 @@ class RenamerAPI:
             except Exception as mb_err:
                 self.logger.warning(f"MusicBrainz lookup failed: {mb_err}")
 
-        # Step 2: AI Audio analysis for BPM/Key (if still needed)
+        # Step 2: Audio Analysis analysis for BPM/Key (if still needed)
         ai_bpm = None
         ai_key = None
 
@@ -333,7 +333,7 @@ class RenamerAPI:
                     acoustid_api_key=self.config.get("acoustid_api_key")
                 )
             except Exception as ai_err:
-                self.logger.error(f"AI audio analysis failed: {ai_err}", exc_info=True)
+                self.logger.error(f"audio analysis failed: {ai_err}", exc_info=True)
 
         # Step 3: Resolve conflicts for each field
         conflicts = []
@@ -414,11 +414,11 @@ class RenamerAPI:
                 write_bpm = None
                 write_key = None
 
-                if bpm_resolution["source"] in ["MusicBrainz", "AI Audio"] and meta["bpm"]:
+                if bpm_resolution["source"] in ["MusicBrainz", "Audio Analysis"] and meta["bpm"]:
                     write_bpm = meta["bpm"]
                     needs_write = True
 
-                if key_resolution["source"] in ["MusicBrainz", "AI Audio"] and meta["key"]:
+                if key_resolution["source"] in ["MusicBrainz", "Audio Analysis"] and meta["key"]:
                     write_key = meta["key"]
                     needs_write = True
 
@@ -1048,7 +1048,7 @@ class RenamerAPI:
         Performs comprehensive metadata analysis including:
         - Reading existing ID3 tags
         - MusicBrainz lookup (if enabled)
-        - AI audio analysis for BPM/Key
+        - audio analysis for BPM/Key
         - Conflict resolution between sources
         - Returns enhanced metadata
 
@@ -1095,7 +1095,7 @@ class RenamerAPI:
             self.logger.error(f"Failed to read {file_path}: {err}")
             return None
 
-        # Enhance with MusicBrainz + AI analysis
+        # Enhance with MusicBrainz + audio analysis
         try:
             enhanced = self._enhance_metadata(file_path, meta, write_tags=write_tags, cancel_event=cancel_event)
             return enhanced

@@ -133,7 +133,7 @@ crate ~/Music/NewTracks
 
 > **Note on Speed:** By default, Crate runs in **Fast Mode** (reading existing ID3 tags only). This allows it to scan thousands of files in seconds.
 >
-> If your files are missing Key/BPM tags, use `--analyze` to enable **Deep Scan** (AI audio analysis). This reads the entire file and is slower but magical for untagged files.
+> If your files are missing Key/BPM tags, use `--analyze` to enable **Deep Scan** (audio analysis). This reads the entire file and is slower but magical for untagged files.
 > ```bash
 > crate ~/Music/Untagged --analyze
 > ```

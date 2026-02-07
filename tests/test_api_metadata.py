@@ -5,7 +5,7 @@ Tests verify:
 - Basic file analysis
 - Metadata enhancement integration
 - Error handling for missing/corrupted files
-- Config integration (MusicBrainz, AI)
+- Config integration (MusicBrainz, audio analysis)
 - Return format and field completeness
 """
 

@@ -19,7 +19,7 @@ git commit -m "Initial commit from template"
 - Optional: copy a variant CI scaffold (`variants/*/.github/workflows/ci.yml`).
 
 ## Helpful commands
-Create a context bundle for AI sessions:
+Create a context bundle for dev sessions:
 ```bash
 ./scripts/context-pack.sh
 ```

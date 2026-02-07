@@ -1,6 +1,6 @@
 # Project Template (2026) — What this is
 
-A reusable skeleton for starting new projects with AI coding tools:
+A reusable skeleton for starting new projects with dev coding tools:
 - Claude Code / Claude CLI
 - Cursor
 - OpenClaw (tool-using agent)
@@ -20,4 +20,4 @@ Key files:
 Quickstart:
 - Copy this template into a new repo directory (without `.git/`), then `git init`.
 - Fill `PROJECT.md` (see `docs/PROJECT.md.template`)
-- Start an AI session and tell it to read `CLAUDE.md` + `.claude/state/current-state.md`.
+- Start an dev session and tell it to read `CLAUDE.md` + `.claude/state/current-state.md`.
