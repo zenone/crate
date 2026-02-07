@@ -318,7 +318,8 @@
             <p>Crate v2.0.0</p>
             <p class="footer-links">
                 <a href="/docs" target="_blank">API Docs</a> •
-                <a href="/api/health" target="_blank">Health Check</a>
+                <a href="/api/health" target="_blank">Health Check</a> •
+                <button id="shortcuts-hint-btn" class="link-button" type="button" aria-label="Show keyboard shortcuts">Keyboard shortcuts: press ?</button>
             </p>
         </footer>
     </div>
@@ -1093,6 +1094,26 @@
             <div class="modal-footer">
                 <button id="browser-select-btn" class="btn btn-primary">Select Folder</button>
                 <button id="browser-cancel-btn" class="btn btn-secondary">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcuts-modal" class="modal hidden" role="dialog" aria-labelledby="shortcuts-title" aria-modal="true">
+        <div class="modal-overlay" aria-hidden="true"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="shortcuts-title">⌨️ Keyboard Shortcuts</h2>
+                <button class="modal-close" aria-label="Close dialog" title="Close">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="shortcuts-grid">
+                    <div class="shortcut-row"><code>?</code><span>Show this help</span></div>
+                    <div class="shortcut-row"><code>Esc</code><span>Close dialogs</span></div>
+                    <div class="shortcut-row"><code>Ctrl</code>+<code>A</code><span>Select all files</span></div>
+                    <div class="shortcut-row"><code>Ctrl</code>+<code>P</code><span>Preview rename changes</span></div>
+                </div>
+                <p class="shortcuts-note">Tip: shortcuts work when you’re not typing in a text field.</p>
             </div>
         </div>
     </div>

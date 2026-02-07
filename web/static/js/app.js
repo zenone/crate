@@ -1094,7 +1094,47 @@ function wireProgressOverlay() {
   };
 }
 
-function wire() {\n  smartSuggestionUi = wireSmartSuggestionBanner();
+function isTextEditingTarget(el) {
+  if (!el) return false;
+  const tag = String(el.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+  if (el.isContentEditable) return true;
+  return false;
+}
+
+function wireShortcutsModal() {
+  const modal = $('shortcuts-modal');
+  const hintBtn = $('shortcuts-hint-btn');
+  if (!modal) return { open: () => {}, close: () => {}, isOpen: () => false };
+
+  const closeEls = modal.querySelectorAll('.modal-close, .modal-overlay');
+  let lastFocus = null;
+
+  function open() {
+    lastFocus = document.activeElement;
+    modal.classList.remove('hidden');
+    (modal.querySelector('.modal-close'))?.focus();
+  }
+
+  function close() {
+    modal.classList.add('hidden');
+    if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+    lastFocus = null;
+  }
+
+  function isOpen() {
+    return !modal.classList.contains('hidden');
+  }
+
+  closeEls.forEach((el) => el.addEventListener('click', close));
+  hintBtn?.addEventListener('click', open);
+
+  return { open, close, isOpen };
+}
+
+function wire() {
+  smartSuggestionUi = wireSmartSuggestionBanner();
+  const shortcuts = wireShortcutsModal();
   const refreshBtn = $('refresh-btn');
   const dirInput = $('directory-path');
 
@@ -1213,6 +1253,44 @@ function wire() {\n  smartSuggestionUi = wireSmartSuggestionBanner();
   // Also keep rename available from floating action bar
   $('floating-rename-btn')?.addEventListener('click', () => {
     // modal wired above
+  });
+
+  // Global keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Don't interfere while typing
+    if (isTextEditingTarget(e.target)) return;
+
+    // '?' shortcut (Shift+/)
+    if (e.key === '?' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      shortcuts.open();
+      return;
+    }
+
+    // ESC closes shortcuts modal
+    if (e.key === 'Escape' && shortcuts.isOpen()) {
+      e.preventDefault();
+      shortcuts.close();
+      return;
+    }
+
+    // Ctrl+P triggers preview
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'p' || e.key === 'P')) {
+      // prevent browser print dialog
+      e.preventDefault();
+      $('preview-btn')?.click();
+      return;
+    }
+
+    // Ctrl+A selects all enabled files
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+      e.preventDefault();
+      const selectAll = $('select-all');
+      if (selectAll && !selectAll.disabled) {
+        selectAll.checked = true;
+        selectAll.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+    }
   });
 
   // initial

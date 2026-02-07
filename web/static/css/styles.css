@@ -266,6 +266,48 @@ a:hover {
     text-decoration: underline;
 }
 
+.link-button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    color: var(--accent-primary);
+    font: inherit;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.link-button:hover {
+    color: var(--accent-light);
+    text-decoration: underline;
+}
+
+.shortcuts-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.shortcut-row {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    align-items: center;
+    gap: 12px;
+}
+
+.shortcut-row code {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+}
+
+.shortcuts-note {
+    margin-top: 14px;
+    opacity: 0.8;
+}
+
 /* Footer */
 .app-footer {
     padding: var(--spacing-md);
