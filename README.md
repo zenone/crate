@@ -179,6 +179,14 @@ optional arguments:
 
 ---
 
+## 👤 About
+
+Built by Steve Zenone.
+
+- LinkedIn: https://www.linkedin.com/in/zenone/
+
+---
+
 ## 🛡️ Philosophy
 
 Crate is opinionated on purpose. It favors **Stability** over cleverness and **Human Readability** over database purity.
