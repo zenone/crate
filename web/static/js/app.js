@@ -174,6 +174,7 @@ function wireTableSelectionHandlers() {
 }
 
 let metadataAbort = null;
+let smartSuggestionUi = null;
 
 async function loadDirectory(path, recursive = true) {
   const dirInput = $('directory-path');
@@ -205,6 +206,125 @@ async function loadDirectory(path, recursive = true) {
   loadMetadataForVisibleFiles(filteredSorted).catch((e) => {
     console.error(e);
   });
+}
+
+function wireSmartSuggestionBanner() {
+  const banner = $('smart-suggestion-banner');
+  const useBtn = $('suggestion-use-btn');
+  const ignoreBtn = $('suggestion-ignore-btn');
+  const dismissBtn = $('suggestion-dismiss-btn');
+
+  if (!banner) return { show: () => {}, hide: () => {} };
+
+  let lastTemplate = null;
+
+  function hide() {
+    banner.classList.add('hidden');
+  }
+
+  function show({ label, confidenceText, description, template }) {
+    lastTemplate = template;
+    const set = (id, v) => { const el = $(id); if (el) el.textContent = v ?? ''; };
+    set('suggestion-label', label || 'Smart Suggestion');
+    set('suggestion-confidence', confidenceText || '');
+    set('suggestion-description', description || '');
+    set('suggestion-template', template || '');
+    banner.classList.remove('hidden');
+  }
+
+  useBtn?.addEventListener('click', async () => {
+    if (!lastTemplate) return;
+    try {
+      await API.updateConfig({ default_template: lastTemplate });
+      toast('Template applied.');
+      hide();
+    } catch (e) {
+      toast(`Failed to apply template: ${e.message}`);
+    }
+  });
+
+  ignoreBtn?.addEventListener('click', () => {
+    hide();
+  });
+
+  dismissBtn?.addEventListener('click', () => {
+    // Dismiss is stronger: store per-directory so it doesn't keep popping.
+    if (state.directory) {
+      try {
+        localStorage.setItem(`crate:suggestion:dismissed:${state.directory}`, '1');
+      } catch (e) {
+        // ignore
+      }
+    }
+    hide();
+  });
+
+  return { show, hide };
+}
+
+async function maybeAnalyzeContext(files) {
+  try {
+    if (!state.directory) return;
+
+    // Respect dismiss per directory
+    try {
+      if (localStorage.getItem(`crate:suggestion:dismissed:${state.directory}`) === '1') return;
+    } catch (e) {
+      // ignore
+    }
+
+    const cfg = await API.getConfig();
+    if (!cfg.enable_smart_detection) {
+      smartSuggestionUi?.hide?.();
+      return;
+    }
+
+    const mp3s = (files || []).filter((f) => f.is_mp3);
+    if (mp3s.length < 2) {
+      smartSuggestionUi?.hide?.();
+      return;
+    }
+
+    // Keep payload bounded.
+    const payload = mp3s.slice(0, 200).map((f) => ({
+      path: f.path,
+      name: f.name,
+      size: f.size,
+      is_mp3: true,
+      metadata: f.metadata || null,
+      modified_time: f.modified_time ?? null,
+      created_time: f.created_time ?? null,
+    }));
+
+    const res = await API.analyzeContext(payload);
+
+    // Per-album mode requires additional UI not yet implemented; hide banner in that case.
+    if (res?.per_album_mode) {
+      smartSuggestionUi?.hide?.();
+      return;
+    }
+
+    const sug = res?.default_suggestion;
+    const tpl = sug?.template || sug?.suggested_template || null;
+    if (!tpl) {
+      smartSuggestionUi?.hide?.();
+      return;
+    }
+
+    const conf = sug?.confidence;
+    const confText = (typeof conf === 'number') ? `Confidence: ${(conf * 100).toFixed(0)}%` : '';
+
+    smartSuggestionUi?.show?.({
+      label: 'Smart Suggestion',
+      confidenceText: confText,
+      description: sug?.reason || 'Recommended template based on your files',
+      template: tpl,
+    });
+  } catch (e) {
+    // Never block main UI.
+    console.warn(e);
+    smartSuggestionUi?.hide?.();
+  }
 }
 
 async function loadMetadataForVisibleFiles(files) {
@@ -279,6 +399,9 @@ async function loadMetadataForVisibleFiles(files) {
   if (currentNameEl) currentNameEl.textContent = '—';
   // hide after short delay
   setTimeout(() => progressEl?.classList.add('hidden'), 600);
+
+  // After best-effort metadata load, try to show smart template suggestion.
+  await maybeAnalyzeContext(mp3s);
 }
 
 function updateSortIndicators() {
@@ -971,7 +1094,7 @@ function wireProgressOverlay() {
   };
 }
 
-function wire() {
+function wire() {\n  smartSuggestionUi = wireSmartSuggestionBanner();
   const refreshBtn = $('refresh-btn');
   const dirInput = $('directory-path');
 

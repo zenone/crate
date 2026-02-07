@@ -91,6 +91,10 @@ export const API = {
     return this._postJson('/api/template/validate', { template });
   },
 
+  async analyzeContext(files) {
+    return this._postJson('/api/analyze-context', { files });
+  },
+
   async _getJson(path) {
     const r = await fetch(path, { method: 'GET', headers: { 'Accept': 'application/json' } });
     if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
