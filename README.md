@@ -73,7 +73,9 @@ If you just want to use Crate locally (recommended):
 pip install .
 ```
 
-Or follow the full install guide: `INSTALLATION.md`.
+Notes:
+- On macOS, the fastest audio analysis backend (Essentia) currently requires **Python 3.10–3.13**.
+- See the full install guide: `INSTALLATION.md`.
 
 (We’ll publish to PyPI once we’re ready.)
 
