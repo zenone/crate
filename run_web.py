@@ -49,8 +49,8 @@ def main():
         print("Install with: pip install -r requirements-web.txt")
         return 1
 
-    print(f"🎵 DJ MP3 Renamer Web UI")
-    
+    print("🎵 DJ MP3 Renamer Web UI")
+
     # Check for SSL certs.
     # NOTE: Having cert files present is not enough — they must be browser-trusted.
     # For the smoothest non-technical UX, prefer HTTP by default. The helper script
@@ -71,8 +71,8 @@ def main():
         print("🔒 HTTPS enabled")
     else:
         print("🔓 HTTPS disabled (default). For trusted HTTPS, run: ./start_crate_web.sh")
-        
-    print(f"✨ Press Ctrl+C to stop")
+
+    print("✨ Press Ctrl+C to stop")
     print()
 
     # Open browser automatically
@@ -90,7 +90,7 @@ def main():
         "reload": args.reload,
         "log_level": "info",
     }
-    
+
     if ssl_enabled:
         uvicorn_args["ssl_keyfile"] = str(ssl_keyfile)
         uvicorn_args["ssl_certfile"] = str(ssl_certfile)

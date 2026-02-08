@@ -601,20 +601,11 @@ async def analyze_file_context(request: AnalyzeContextRequest):
 
                     logger.info(f"Per-album detection result: per_album_mode={per_album_result.get('per_album_mode')}, albums={len(per_album_result.get('albums', []))}")
 
-                    # If per-album mode is active, return per-album format
+                    # If per-album mode is active, the frontend needs additional UI to support
+                    # album-by-album selection/preview. For v0.1.0 we intentionally do not
+                    # return per-album mode to avoid shipping a teased/unfinished UX.
                     if per_album_result.get("per_album_mode"):
-                        logger.info("✓ Returning per-album mode response to frontend")
-                        # Return per-album format directly (handled by frontend)
-                        # Convert to response format expected by frontend
-                        return {
-                            "contexts": [],  # Empty for per-album mode
-                            "has_multiple_contexts": True,
-                            "default_suggestion": per_album_result.get("global_suggestion"),
-                            "per_album_mode": True,
-                            "albums": per_album_result.get("albums", []),
-                            "warning": per_album_result.get("warning"),
-                            "truncated": per_album_result.get("truncated", False)
-                        }
+                        logger.info("Per-album mode detected, but disabled for v0.1.0; falling back to single-banner")
                     else:
                         logger.info("✗ Per-album mode not activated (< 2 album groups), falling back to single-banner")
                 except Exception as e:
