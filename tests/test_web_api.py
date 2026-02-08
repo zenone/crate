@@ -19,6 +19,33 @@ from fastapi.testclient import TestClient
 from web.main import app
 
 
+class TestDepsEndpoints:
+    def test_deps_status(self, client):
+        r = client.get("/api/deps/status")
+        assert r.status_code == 200
+        data = r.json()
+        assert "platform" in data
+        assert "brew" in data
+        assert "fpcalc" in data
+
+    def test_install_chromaprint_no_brew(self, client):
+        # Simulate macOS but no brew.
+        with patch("web.main.sys.platform", "darwin"), \
+             patch("web.main.shutil.which") as which:
+            which.side_effect = lambda name: None
+            r = client.post("/api/deps/chromaprint/install")
+            assert r.status_code == 400
+
+    def test_install_chromaprint_already_installed(self, client):
+        with patch("web.main.sys.platform", "darwin"), \
+             patch("web.main.shutil.which") as which:
+            which.side_effect = lambda name: "/usr/local/bin/fpcalc" if name == "fpcalc" else "/opt/homebrew/bin/brew"
+            r = client.post("/api/deps/chromaprint/install")
+            assert r.status_code == 200
+            data = r.json()
+            assert data["success"] is True
+
+
 # Test Fixtures
 @pytest.fixture
 def client():

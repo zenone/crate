@@ -790,11 +790,43 @@ function wireSettingsModal() {
     }
   };
 
+  async function refreshDepsUi() {
+    const fpcalc = $('deps-fpcalc');
+    const brew = $('deps-brew');
+    const installBtn = $('deps-install-chromaprint-btn');
+    const out = $('deps-install-output');
+
+    if (!fpcalc || !brew || !installBtn) return;
+
+    fpcalc.textContent = 'Checking…';
+    brew.textContent = 'Checking…';
+    installBtn.disabled = true;
+
+    try {
+      const st = await API.depsStatus();
+      fpcalc.textContent = st.fpcalc ? 'Installed' : 'Missing';
+      brew.textContent = st.brew ? 'Installed' : 'Missing';
+
+      // Only enable when we can actually install.
+      installBtn.disabled = !!st.fpcalc || !st.brew || !String(st.platform || '').includes('darwin');
+
+      if (out) {
+        if (!st.fpcalc && !st.brew) out.textContent = 'Install Homebrew to enable one-click Chromaprint install.';
+        else out.textContent = '';
+      }
+    } catch (e) {
+      fpcalc.textContent = 'Error';
+      brew.textContent = 'Error';
+      if (out) out.textContent = `Dependency check failed: ${e.message}`;
+    }
+  }
+
   function open() {
     lastFocus = document.activeElement;
     modal.classList.remove('hidden');
     (modal.querySelector('.modal-close'))?.focus();
     document.addEventListener('keydown', onKeyDown);
+    refreshDepsUi();
   }
 
   function close() {
@@ -1002,6 +1034,72 @@ function wireSettingsModal() {
     // Simple behavior: re-fetch config from backend
     await loadIntoForm();
     toast('Settings reloaded');
+  });
+
+  // Optional dependency install wiring (Chromaprint)
+  const depsInstallBtn = $('deps-install-chromaprint-btn');
+  const depsOut = $('deps-install-output');
+
+  const depsModal = $('deps-install-modal');
+  const depsConfirm = $('deps-install-confirm-btn');
+  const depsCancel = $('deps-install-cancel-btn');
+
+  let depsLastFocus = null;
+
+  function depsOpen() {
+    if (!depsModal) return;
+    depsLastFocus = document.activeElement;
+    depsModal.classList.remove('hidden');
+    (depsModal.querySelector('.modal-close'))?.focus();
+  }
+
+  function depsClose() {
+    if (!depsModal) return;
+    depsModal.classList.add('hidden');
+    if (depsLastFocus && typeof depsLastFocus.focus === 'function') depsLastFocus.focus();
+    depsLastFocus = null;
+  }
+
+  depsInstallBtn?.addEventListener('click', () => {
+    depsOpen();
+  });
+
+  depsModal?.querySelectorAll('.modal-close, .modal-overlay')?.forEach((el) => el.addEventListener('click', depsClose));
+  depsCancel?.addEventListener('click', depsClose);
+
+  depsConfirm?.addEventListener('click', async () => {
+    if (depsOut) {
+      depsOut.classList.remove('template-valid', 'template-invalid');
+      depsOut.textContent = 'Installing…';
+    }
+
+    if (depsInstallBtn) depsInstallBtn.disabled = true;
+
+    try {
+      const r = await API.installChromaprint();
+      const ok = !!r.success;
+      if (depsOut) {
+        depsOut.classList.toggle('template-valid', ok);
+        depsOut.classList.toggle('template-invalid', !ok);
+        const details = [r.message];
+        if (r.stdout) details.push(`\nstdout:\n${r.stdout}`);
+        if (r.stderr) details.push(`\nstderr:\n${r.stderr}`);
+        depsOut.textContent = details.join('\n');
+      }
+      await refreshDepsUi();
+      if (ok) toast('Chromaprint installed');
+      else toast('Chromaprint install failed');
+    } catch (e) {
+      if (depsOut) {
+        depsOut.classList.add('template-invalid');
+        depsOut.classList.remove('template-valid');
+        depsOut.textContent = `Install failed: ${e.message}`;
+      }
+      toast(`Install failed: ${e.message}`);
+      await refreshDepsUi();
+    } finally {
+      depsClose();
+    }
   });
 
   // live update label for slider

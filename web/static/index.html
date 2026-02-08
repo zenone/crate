@@ -598,6 +598,31 @@
                         </div>
                     </div>
 
+                    <!-- Optional Dependencies -->
+                    <div class="settings-section">
+                        <h3 class="settings-section-title">🧩 Optional Dependencies</h3>
+                        <div class="settings-description">
+                            Enable advanced fingerprint lookup by installing optional system tools.
+                        </div>
+
+                        <div class="form-group">
+                            <div class="deps-status">
+                                <div><strong>Chromaprint (fpcalc):</strong> <span id="deps-fpcalc" class="stat-badge">Checking…</span></div>
+                                <div><strong>Homebrew (brew):</strong> <span id="deps-brew" class="stat-badge">Checking…</span></div>
+                            </div>
+                            <small class="form-help">
+                                Chromaprint enables audio fingerprinting lookups. It’s optional — everything else still works without it.
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="button" id="deps-install-chromaprint-btn" class="btn btn-primary" disabled>
+                                Install Chromaprint (via Homebrew)
+                            </button>
+                            <div id="deps-install-output" class="template-preview" style="margin-top:10px;"></div>
+                        </div>
+                    </div>
+
                     <!-- Filename Template Section -->
                     <div class="settings-section">
                         <h3 class="settings-section-title">📝 Filename Template</h3>
@@ -1114,6 +1139,29 @@
                     <div class="shortcut-row"><code>Ctrl</code>+<code>P</code><span>Preview rename changes</span></div>
                 </div>
                 <p class="shortcuts-note">Tip: shortcuts work when you’re not typing in a text field.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chromaprint Install Confirm Modal -->
+    <div id="deps-install-modal" class="modal hidden" role="dialog" aria-labelledby="deps-install-title" aria-modal="true">
+        <div class="modal-overlay" aria-hidden="true"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="deps-install-title">Install Chromaprint</h2>
+                <button class="modal-close" aria-label="Close dialog" title="Close">✕</button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    This will run: <code>brew install chromaprint</code>
+                </p>
+                <p class="confirm-note">
+                    You may be prompted for your password by Homebrew.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button id="deps-install-confirm-btn" class="btn btn-primary">Install</button>
+                <button id="deps-install-cancel-btn" class="btn btn-secondary">Cancel</button>
             </div>
         </div>
     </div>

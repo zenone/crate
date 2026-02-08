@@ -79,6 +79,14 @@ export const API = {
     return this._postJson('/api/config/update', { updates });
   },
 
+  async depsStatus() {
+    return this._getJson('/api/deps/status');
+  },
+
+  async installChromaprint() {
+    return this._postJson('/api/deps/chromaprint/install', null);
+  },
+
   async firstRunStatus() {
     return this._getJson('/api/config/first-run');
   },

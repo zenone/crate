@@ -7,6 +7,9 @@ Provides REST API endpoints and serves static frontend files.
 import asyncio
 import logging
 import os
+import shutil
+import subprocess
+import sys
 import threading
 import uuid
 from dataclasses import dataclass
@@ -683,6 +686,56 @@ def _enforce_local_origin(request: Request) -> None:
 
     if parsed.hostname not in {"127.0.0.1", "localhost"}:
         raise HTTPException(status_code=403, detail="Disallowed Origin")
+
+
+@app.get("/api/deps/status")
+async def deps_status():
+    """Report optional dependency status for local environment."""
+    return {
+        "platform": sys.platform,
+        "brew": shutil.which("brew") is not None,
+        "fpcalc": shutil.which("fpcalc") is not None,
+    }
+
+
+@app.post("/api/deps/chromaprint/install")
+async def install_chromaprint(http_request: Request):
+    """Install Chromaprint via Homebrew (macOS) with explicit user consent from UI."""
+    _enforce_local_origin(http_request)
+
+    if sys.platform != "darwin":
+        raise HTTPException(status_code=400, detail="Chromaprint install is currently supported only on macOS")
+
+    if shutil.which("fpcalc") is not None:
+        return {"success": True, "message": "Chromaprint already installed", "stdout": "", "stderr": ""}
+
+    brew = shutil.which("brew")
+    if not brew:
+        raise HTTPException(status_code=400, detail="Homebrew not found. Install Homebrew first, then re-try.")
+
+    try:
+        r = subprocess.run(
+            [brew, "install", "chromaprint"],
+            capture_output=True,
+            text=True,
+            timeout=900,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=500, detail="Chromaprint install timed out")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chromaprint install failed: {e}")
+
+    ok = (r.returncode == 0) and (shutil.which("fpcalc") is not None)
+    msg = "Chromaprint installed" if ok else "Chromaprint install failed"
+    return {
+        "success": ok,
+        "message": msg,
+        "returncode": r.returncode,
+        "stdout": r.stdout[-20000:],
+        "stderr": r.stderr[-20000:],
+        "fpcalc": shutil.which("fpcalc") is not None,
+    }
 
 
 # Template validation endpoint
