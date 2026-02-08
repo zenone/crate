@@ -180,9 +180,16 @@ async function loadDirectory(path, recursive = true) {
   const dirInput = $('directory-path');
   if (dirInput) dirInput.value = path;
 
+  // Set early so downstream calls have a value, but prefer canonical path from backend.
   state.directory = path;
   const contents = await API.listDirectory(path, recursive);
   state.contents = contents;
+
+  // Use canonical path from backend to avoid /tmp vs /private/tmp mismatches.
+  if (contents?.path) {
+    state.directory = contents.path;
+    if (dirInput) dirInput.value = contents.path;
+  }
 
   const onlyMp3 = (contents.files || []).filter((f) => f.is_mp3);
   const filteredSorted = applyFilterSort(onlyMp3);
