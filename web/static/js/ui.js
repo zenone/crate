@@ -114,12 +114,13 @@ export function showFiles(contents) {
 
     // Fill metadata if already present
     if (f.metadata) {
-      updateRowMetadata(f.path, f.metadata);
+      // Default mode here; app.js will re-apply with the user's setting after config load.
+      updateRowMetadata(f.path, f.metadata, null, { keyDisplayMode: 'musical' });
     }
   }
 }
 
-export function updateRowMetadata(path, metadata, albumArtUrl = null) {
+export function updateRowMetadata(path, metadata, albumArtUrl = null, opts = null) {
   const row = document.querySelector(`tr[data-path="${cssEscape(path)}"]`);
   if (!row) return;
 
@@ -137,7 +138,19 @@ export function updateRowMetadata(path, metadata, albumArtUrl = null) {
   setText('col-year', metadata.year);
   setText('col-genre', metadata.genre);
   setText('col-bpm', metadata.bpm);
-  setText('col-key', metadata.key || metadata.camelot || '');
+
+  const mode = (opts && opts.keyDisplayMode) ? String(opts.keyDisplayMode) : 'musical';
+  const musical = metadata.key || '';
+  const camelot = metadata.camelot || '';
+  let keyText = '';
+  if (mode === 'camelot') keyText = camelot || musical;
+  else if (mode === 'both') {
+    if (camelot && musical) keyText = `${camelot} (${musical})`;
+    else keyText = camelot || musical;
+  } else {
+    keyText = musical || camelot;
+  }
+  setText('col-key', keyText);
 
   // Duration may be seconds or mm:ss; just display if present
   setText('col-duration', metadata.duration || metadata.length || '');

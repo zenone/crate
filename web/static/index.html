@@ -563,7 +563,22 @@
                                 <span>Auto-detect Key</span>
                             </label>
                             <small id="auto-detect-key-help" class="form-help">
-                                Use audio analysis (librosa) to detect musical key if missing
+                                Use audio analysis to detect musical key if missing
+                            </small>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="key-display-mode">
+                                Key Display
+                                <span class="label-hint">(how the Key column is shown)</span>
+                            </label>
+                            <select id="key-display-mode" name="key_display_mode" class="form-control">
+                                <option value="musical">Musical (C, Am, etc.)</option>
+                                <option value="camelot">Camelot (8A, 9B, etc.)</option>
+                                <option value="both">Both (8A (Am))</option>
+                            </select>
+                            <small class="form-help">
+                                Many DJ tools let you switch between musical and Camelot notation. Choose what’s easiest to scan.
                             </small>
                         </div>
 

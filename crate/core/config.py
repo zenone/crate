@@ -37,6 +37,12 @@ DEFAULT_CONFIG = {
     "enable_auto_select_albums": True,  # Auto-select albums in per-album mode
     "enable_toast_notifications": True,  # Show toast notifications for actions
     "confidence_threshold": 0.9,  # Confidence threshold for auto-apply (0.7-0.95)
+
+    # Web UI preference: how to display musical key
+    # - "musical": C, Am, Gm, etc.
+    # - "camelot": 8A, 9B, etc.
+    # - "both": 8A (Am)
+    "key_display_mode": "musical",
 }
 
 

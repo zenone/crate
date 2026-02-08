@@ -736,6 +736,16 @@ a:hover {
     transition: all 0.2s;
 }
 
+/* Ensure centered headers align visually with the rest (Year/Duration/BPM/Key). */
+.file-table thead th.col-year.sortable,
+.file-table thead th.col-duration.sortable,
+.file-table thead th.col-bpm.sortable,
+.file-table thead th.col-key.sortable {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .file-table th.sortable:hover {
     color: var(--accent-light);
     background: rgba(255, 255, 255, 0.03);

@@ -415,7 +415,7 @@ async function loadMetadataForVisibleFiles(files) {
 
     // Skip if we already have metadata cached on the object
     if (f.metadata) {
-      updateRowMetadata(f.path, f.metadata);
+      updateRowMetadata(f.path, f.metadata, null, { keyDisplayMode: $('key-display-mode')?.value });
       continue;
     }
 
@@ -434,7 +434,7 @@ async function loadMetadataForVisibleFiles(files) {
       const md = data.metadata;
       f.metadata = md;
       const artUrl = API.albumArtUrl(f.path);
-      updateRowMetadata(f.path, md, artUrl);
+      updateRowMetadata(f.path, md, artUrl, { keyDisplayMode: $('key-display-mode')?.value });
     } catch (e) {
       // Abort = user cancelled; otherwise ignore
       if (e?.name === 'AbortError') break;
@@ -878,6 +878,9 @@ function wireSettingsModal() {
       setChk('auto-detect-bpm', cfg.auto_detect_bpm);
       setChk('auto-detect-key', cfg.auto_detect_key);
 
+      const keyMode = $('key-display-mode');
+      if (keyMode && cfg.key_display_mode) keyMode.value = String(cfg.key_display_mode);
+
       setChk('remember-last-directory', cfg.remember_last_directory);
       setChk('recursive-default', cfg.recursive_default);
 
@@ -921,6 +924,9 @@ function wireSettingsModal() {
 
     updates.auto_detect_bpm = getChk('auto-detect-bpm');
     updates.auto_detect_key = getChk('auto-detect-key');
+
+    const keyMode = getVal('key-display-mode');
+    if (keyMode !== undefined) updates.key_display_mode = keyMode;
 
     updates.remember_last_directory = getChk('remember-last-directory');
     updates.recursive_default = getChk('recursive-default');
@@ -1151,6 +1157,17 @@ function wireSettingsModal() {
   });
 
   tpl?.addEventListener('input', () => validateTemplateDebounced());
+
+  // Key display mode affects table rendering; apply immediately.
+  const keyModeEl = $('key-display-mode');
+  keyModeEl?.addEventListener('change', () => {
+    // Re-render key cells for any rows that already have metadata.
+    const files = state.contents?.files || [];
+    for (const f of files) {
+      if (f?.metadata) updateRowMetadata(f.path, f.metadata, null, { keyDisplayMode: keyModeEl.value });
+    }
+  });
+
   // Validate on modal open as well
   openBtnTop?.addEventListener('click', () => setTimeout(() => validateTemplateDebounced(), 0));
   openBtnBottom?.addEventListener('click', () => setTimeout(() => validateTemplateDebounced(), 0));
