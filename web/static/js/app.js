@@ -1,5 +1,5 @@
 import { API } from './api.js';
-import { setApiBadge, showFiles, toast, getSelectedMp3Paths, updateRowMetadata } from './ui.js';
+import { setApiBadge, showFiles, toast, updateRowMetadata } from './ui.js';
 
 const state = {
   directory: null,
@@ -30,6 +30,10 @@ function setHidden(el, hidden) {
   el.classList.toggle('hidden', !!hidden);
 }
 
+function getSelectedPaths() {
+  return Array.from(state.selectedPaths);
+}
+
 function updateActionButtons() {
   const previewBtn = $('preview-btn');
   const renameBtn = $('rename-now-btn');
@@ -37,7 +41,7 @@ function updateActionButtons() {
   const floatingSel = $('floating-selection-count');
 
   const anyMp3 = document.querySelectorAll('input.file-select:not(:disabled)').length > 0;
-  const selected = getSelectedMp3Paths();
+  const selected = getSelectedPaths();
 
   if (previewBtn) previewBtn.disabled = !anyMp3;
   if (renameBtn) renameBtn.disabled = selected.length === 0;
@@ -1076,7 +1080,7 @@ function wirePreviewModal() {
     const p = (state.directory || $('directory-path')?.value || '').trim();
     if (!p) return;
 
-    const files = getSelectedMp3Paths();
+    const files = getSelectedPaths();
     const resp = await API.previewRename({ path: p, recursive: false, file_paths: files.length ? files : null });
 
     const setText = (id, v) => { const el = $(id); if (el) el.textContent = String(v ?? 0); };
@@ -1152,7 +1156,7 @@ function wireRenameConfirmModal(executeFn, previewFn) {
   };
 
   function open() {
-    const count = getSelectedMp3Paths().length;
+    const count = getSelectedPaths().length;
     const cntEl = $('rename-file-count');
     if (cntEl) cntEl.textContent = String(count);
     lastFocus = document.activeElement;
@@ -1169,8 +1173,8 @@ function wireRenameConfirmModal(executeFn, previewFn) {
   }
 
   closeEls?.forEach((el) => el.addEventListener('click', close));
-  openBtn?.addEventListener('click', () => { if (getSelectedMp3Paths().length) open(); });
-  floatingRename?.addEventListener('click', () => { if (getSelectedMp3Paths().length) open(); });
+  openBtn?.addEventListener('click', () => { if (getSelectedPaths().length) open(); });
+  floatingRename?.addEventListener('click', () => { if (getSelectedPaths().length) open(); });
 
   previewBtn?.addEventListener('click', () => {
     close();
@@ -1295,7 +1299,7 @@ function wire() {
   async function execute() {
     const p = (state.directory || dirInput?.value || '').trim();
     if (!p) return;
-    const files = getSelectedMp3Paths();
+    const files = getSelectedPaths();
     if (!files.length) {
       toast('Select at least one MP3');
       return;
