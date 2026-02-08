@@ -3,6 +3,8 @@ Command-line interface (thin wrapper around API).
 """
 
 import argparse
+import shutil
+import subprocess
 import sys
 import warnings
 from pathlib import Path
@@ -79,6 +81,83 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _preflight_optional_deps_for_analyze(logger, console) -> None:
+    """Preflight optional system dependencies for analyze mode.
+
+    Goal: premium UX. If a user requests analyze mode and optional tooling is
+    missing, tell them clearly up-front (before progress UI starts).
+
+    This is best-effort and should never block rename functionality.
+    """
+    if sys.platform != "darwin":
+        return
+
+    if shutil.which("fpcalc") is not None:
+        return
+
+    brew = shutil.which("brew")
+    cmd = "brew install chromaprint"
+
+    # If we can't install automatically, at least show exact command.
+    if not brew:
+        msg = (
+            "Optional dependency missing: fpcalc (Chromaprint). "
+            "Fingerprint lookup is disabled.\n"
+            "Install Homebrew, then run: brew install chromaprint"
+        )
+        if console:
+            console.print(f"[yellow]{msg}[/yellow]")
+        else:
+            logger.warning(msg)
+        return
+
+    interactive = sys.stdin.isatty() and sys.stdout.isatty()
+    if not interactive:
+        msg = (
+            "Optional dependency missing: fpcalc (Chromaprint). "
+            "Fingerprint lookup is disabled in this run.\n"
+            f"To enable it, run: {cmd}"
+        )
+        if console:
+            console.print(f"[yellow]{msg}[/yellow]")
+        else:
+            logger.warning(msg)
+        return
+
+    # Interactive: ask once, before any progress UI.
+    if console:
+        console.print(
+            "[yellow]Optional dependency missing: fpcalc (Chromaprint).[/yellow]\n"
+            "This enables audio fingerprint lookups."
+        )
+        console.print(f"Run now? [bold]{cmd}[/bold]")
+    else:
+        logger.warning("Optional dependency missing: fpcalc (Chromaprint).")
+        logger.warning(f"To enable fingerprint lookup, run: {cmd}")
+
+    try:
+        ans = input("Install Chromaprint now? [Y/n] ").strip().lower()
+    except Exception:
+        ans = "n"
+
+    if ans not in ("", "y", "yes"):
+        return
+
+    try:
+        # Use explicit brew path from which(); do not assume PATH inside subprocess.
+        r = subprocess.run([brew, "install", "chromaprint"], check=False)
+        if r.returncode != 0:
+            if console:
+                console.print("[red]Chromaprint install failed.[/red]")
+            else:
+                logger.warning("Chromaprint install failed")
+    except Exception as e:
+        if console:
+            console.print(f"[red]Chromaprint install failed: {e}[/red]")
+        else:
+            logger.warning(f"Chromaprint install failed: {e}")
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """
     Main entry point for CLI.
@@ -104,6 +183,10 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # Determine auto-detect mode (Default off, enabled by flag)
     auto_detect = args.analyze
+
+    # Preflight optional dependencies for analyze mode (do this before Rich progress starts).
+    if auto_detect:
+        _preflight_optional_deps_for_analyze(logger, console)
 
     if RICH_AVAILABLE and args.verbosity < 2:
         # SUPREME UX: Rich Progress Bar

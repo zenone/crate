@@ -1043,6 +1043,7 @@ function wireSettingsModal() {
   const depsModal = $('deps-install-modal');
   const depsConfirm = $('deps-install-confirm-btn');
   const depsCancel = $('deps-install-cancel-btn');
+  const depsCopy = $('deps-copy-command-btn');
 
   let depsLastFocus = null;
 
@@ -1066,6 +1067,25 @@ function wireSettingsModal() {
 
   depsModal?.querySelectorAll('.modal-close, .modal-overlay')?.forEach((el) => el.addEventListener('click', depsClose));
   depsCancel?.addEventListener('click', depsClose);
+
+  depsCopy?.addEventListener('click', async () => {
+    const cmd = 'brew install chromaprint';
+    try {
+      await navigator.clipboard.writeText(cmd);
+      toast('Copied install command');
+    } catch (e) {
+      // Fallback: select text for manual copy
+      const el = $('deps-install-command');
+      if (el) {
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+      toast('Copy failed. Command selected for manual copy.');
+    }
+  });
 
   depsConfirm?.addEventListener('click', async () => {
     if (depsOut) {

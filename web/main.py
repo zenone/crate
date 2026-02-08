@@ -698,19 +698,27 @@ async def deps_status():
     }
 
 
+_chromaprint_install_lock = threading.Lock()
+
+
 @app.post("/api/deps/chromaprint/install")
 async def install_chromaprint(http_request: Request):
     """Install Chromaprint via Homebrew (macOS) with explicit user consent from UI."""
     _enforce_local_origin(http_request)
 
+    if not _chromaprint_install_lock.acquire(blocking=False):
+        raise HTTPException(status_code=409, detail="Chromaprint install already in progress")
+
     if sys.platform != "darwin":
         raise HTTPException(status_code=400, detail="Chromaprint install is currently supported only on macOS")
 
     if shutil.which("fpcalc") is not None:
-        return {"success": True, "message": "Chromaprint already installed", "stdout": "", "stderr": ""}
+        _chromaprint_install_lock.release()
+        return {"success": True, "message": "Chromaprint already installed", "command": "brew install chromaprint", "stdout": "", "stderr": "", "fpcalc": True}
 
     brew = shutil.which("brew")
     if not brew:
+        _chromaprint_install_lock.release()
         raise HTTPException(status_code=400, detail="Homebrew not found. Install Homebrew first, then re-try.")
 
     try:
@@ -721,21 +729,25 @@ async def install_chromaprint(http_request: Request):
             timeout=900,
             check=False,
         )
+
+        ok = (r.returncode == 0) and (shutil.which("fpcalc") is not None)
+        msg = "Chromaprint installed" if ok else "Chromaprint install failed"
+        return {
+            "success": ok,
+            "message": msg,
+            "command": "brew install chromaprint",
+            "returncode": r.returncode,
+            "stdout": r.stdout[-20000:],
+            "stderr": r.stderr[-20000:],
+            "fpcalc": shutil.which("fpcalc") is not None,
+        }
+
     except subprocess.TimeoutExpired:
         raise HTTPException(status_code=500, detail="Chromaprint install timed out")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Chromaprint install failed: {e}")
-
-    ok = (r.returncode == 0) and (shutil.which("fpcalc") is not None)
-    msg = "Chromaprint installed" if ok else "Chromaprint install failed"
-    return {
-        "success": ok,
-        "message": msg,
-        "returncode": r.returncode,
-        "stdout": r.stdout[-20000:],
-        "stderr": r.stderr[-20000:],
-        "fpcalc": shutil.which("fpcalc") is not None,
-    }
+    finally:
+        _chromaprint_install_lock.release()
 
 
 # Template validation endpoint
