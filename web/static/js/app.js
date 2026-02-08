@@ -8,6 +8,7 @@ const state = {
   sortMode: 'name-asc',
   lastOperationId: null,
   lastUndoSessionId: null,
+  selectedPaths: new Set(),
 };
 
 function $(id) {
@@ -145,18 +146,38 @@ function renderCounts({ totalFiles, mp3Count, shownCount }) {
   }
 }
 
+function restoreSelectionFromState() {
+  // Re-apply checkboxes for any selected paths still visible.
+  for (const cb of Array.from(document.querySelectorAll('input.file-select'))) {
+    const p = cb.dataset.path;
+    if (!p) continue;
+    cb.checked = state.selectedPaths.has(p);
+  }
+}
+
+function syncSelectAllUi() {
+  const enabled = Array.from(document.querySelectorAll('input.file-select:not(:disabled)'));
+  const checked = enabled.filter((c) => c.checked);
+  const selectAll = $('select-all');
+  if (!selectAll) return;
+  selectAll.checked = enabled.length > 0 && checked.length === enabled.length;
+  selectAll.indeterminate = checked.length > 0 && checked.length < enabled.length;
+}
+
 function wireTableSelectionHandlers() {
+  // Restore selection after re-render (search/sort/refresh)
+  restoreSelectionFromState();
+  syncSelectAllUi();
+
   // per-row checkbox change
   document.querySelectorAll('input.file-select').forEach((el) => {
     el.addEventListener('change', () => {
-      // keep select-all in sync
-      const enabled = Array.from(document.querySelectorAll('input.file-select:not(:disabled)'));
-      const checked = enabled.filter((c) => c.checked);
-      const selectAll = $('select-all');
-      if (selectAll) {
-        selectAll.checked = enabled.length > 0 && checked.length === enabled.length;
-        selectAll.indeterminate = checked.length > 0 && checked.length < enabled.length;
+      const p = el.dataset.path;
+      if (p) {
+        if (el.checked) state.selectedPaths.add(p);
+        else state.selectedPaths.delete(p);
       }
+      syncSelectAllUi();
       updateActionButtons();
     });
   });
@@ -165,7 +186,15 @@ function wireTableSelectionHandlers() {
   if (selectAll) {
     selectAll.addEventListener('change', () => {
       const enabled = Array.from(document.querySelectorAll('input.file-select:not(:disabled)'));
-      for (const cb of enabled) cb.checked = selectAll.checked;
+      for (const cb of enabled) {
+        const p = cb.dataset.path;
+        cb.checked = selectAll.checked;
+        if (p) {
+          if (cb.checked) state.selectedPaths.add(p);
+          else state.selectedPaths.delete(p);
+        }
+      }
+      syncSelectAllUi();
       updateActionButtons();
     });
   }
@@ -180,6 +209,8 @@ async function loadDirectory(path, recursive = true) {
   const dirInput = $('directory-path');
   if (dirInput) dirInput.value = path;
 
+  const prevDir = state.directory;
+
   // Set early so downstream calls have a value, but prefer canonical path from backend.
   state.directory = path;
   const contents = await API.listDirectory(path, recursive);
@@ -189,6 +220,11 @@ async function loadDirectory(path, recursive = true) {
   if (contents?.path) {
     state.directory = contents.path;
     if (dirInput) dirInput.value = contents.path;
+  }
+
+  // If the directory changed (including canonicalization), clear selection.
+  if (prevDir && state.directory && prevDir !== state.directory) {
+    state.selectedPaths.clear();
   }
 
   const onlyMp3 = (contents.files || []).filter((f) => f.is_mp3);
