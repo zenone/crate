@@ -9,6 +9,7 @@ Usage:
 """
 
 import argparse
+import socket
 import sys
 import warnings
 from pathlib import Path
@@ -19,6 +20,23 @@ warnings.filterwarnings("ignore", message=".*LibreSSL.*")
 # Add project root to path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
+
+
+def _is_port_available(host: str, port: int) -> bool:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((host, port))
+        return True
+    except OSError:
+        return False
+
+
+def _pick_fallback_port(host: str, start_port: int, max_tries: int = 25) -> int | None:
+    for p in range(start_port + 1, start_port + 1 + max_tries):
+        if _is_port_available(host, p):
+            return p
+    return None
 
 
 def main():
@@ -41,6 +59,23 @@ def main():
         help="Enable auto-reload for development",
     )
     args = parser.parse_args()
+
+    # Premium UX: if the default port is already in use, automatically pick a nearby free port.
+    requested_port = args.port
+    if not _is_port_available(args.host, args.port):
+        if requested_port == 8000:
+            fallback = _pick_fallback_port(args.host, requested_port)
+            if fallback is not None:
+                args.port = fallback
+                print(f"ℹ️  Port {requested_port} is already in use. Using {args.port} instead.")
+            else:
+                print(f"Error: Port {requested_port} is already in use, and no fallback port was found.")
+                print("Tip: stop the existing server or run with --port <PORT>.")
+                return 1
+        else:
+            print(f"Error: Port {requested_port} is already in use.")
+            print("Tip: stop the existing server or run with --port <PORT>.")
+            return 1
 
     try:
         import uvicorn
@@ -75,7 +110,7 @@ def main():
     print("✨ Press Ctrl+C to stop")
     print()
 
-    # Open browser automatically
+    # Open browser automatically (only after we know the port is free)
     try:
         import webbrowser
         webbrowser.open(f"{protocol}://{args.host}:{args.port}")
