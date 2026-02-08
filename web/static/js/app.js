@@ -514,8 +514,27 @@ function wireDirectoryBrowserModal() {
   let current = null;
   let selectedPath = null;
 
-  function open() { modal.classList.remove('hidden'); }
-  function close() { modal.classList.add('hidden'); }
+  let lastFocus = null;
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  };
+
+  function open() {
+    lastFocus = document.activeElement;
+    modal.classList.remove('hidden');
+    (modal.querySelector('.modal-close'))?.focus();
+    document.addEventListener('keydown', onKeyDown);
+  }
+
+  function close() {
+    modal.classList.add('hidden');
+    document.removeEventListener('keydown', onKeyDown);
+    if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+    lastFocus = null;
+  }
 
   function setLoading(isLoading) {
     if (!loadingEl) return;
@@ -628,8 +647,27 @@ function wireFirstRunModal() {
 
   if (!modal) return;
 
-  function open() { modal.classList.remove('hidden'); }
-  function close() { modal.classList.add('hidden'); }
+  let lastFocus = null;
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  };
+
+  function open() {
+    lastFocus = document.activeElement;
+    modal.classList.remove('hidden');
+    (modal.querySelector('input, button, [tabindex]:not([tabindex="-1"])'))?.focus();
+    document.addEventListener('keydown', onKeyDown);
+  }
+
+  function close() {
+    modal.classList.add('hidden');
+    document.removeEventListener('keydown', onKeyDown);
+    if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+    lastFocus = null;
+  }
 
   async function complete() {
     try {
@@ -677,6 +715,9 @@ function wireFirstRunModal() {
     toast('Skipped setup. You can add keys later in Settings.');
   });
 
+  // Close on overlay click
+  modal.querySelector('.modal-overlay')?.addEventListener('click', close);
+
   // Kick off after wiring
   maybeShow();
 }
@@ -694,12 +735,26 @@ function wireSettingsModal() {
 
   const closeEls = modal.querySelectorAll('.modal-close, .modal-overlay');
 
+  let lastFocus = null;
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  };
+
   function open() {
+    lastFocus = document.activeElement;
     modal.classList.remove('hidden');
+    (modal.querySelector('.modal-close'))?.focus();
+    document.addEventListener('keydown', onKeyDown);
   }
 
   function close() {
     modal.classList.add('hidden');
+    document.removeEventListener('keydown', onKeyDown);
+    if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+    lastFocus = null;
   }
 
   function debounce(fn, ms) {
@@ -951,8 +1006,27 @@ function wirePreviewModal() {
   const previewEmpty = $('preview-empty');
   const closeEls = previewModal ? previewModal.querySelectorAll('.modal-close, .modal-overlay, #preview-cancel-btn, #preview-empty-close-btn') : [];
 
-  function open() { previewModal?.classList.remove('hidden'); }
-  function close() { previewModal?.classList.add('hidden'); }
+  let lastFocus = null;
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  };
+
+  function open() {
+    lastFocus = document.activeElement;
+    previewModal?.classList.remove('hidden');
+    (previewModal?.querySelector('.modal-close'))?.focus();
+    document.addEventListener('keydown', onKeyDown);
+  }
+
+  function close() {
+    previewModal?.classList.add('hidden');
+    document.removeEventListener('keydown', onKeyDown);
+    if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+    lastFocus = null;
+  }
   closeEls?.forEach((el) => el.addEventListener('click', close));
 
   async function runPreview() {
@@ -1026,13 +1100,30 @@ function wireRenameConfirmModal(executeFn, previewFn) {
   const previewBtn = $('rename-confirm-preview-btn');
   const execBtn = $('rename-confirm-execute-btn');
 
+  let lastFocus = null;
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      close();
+    }
+  };
+
   function open() {
     const count = getSelectedMp3Paths().length;
     const cntEl = $('rename-file-count');
     if (cntEl) cntEl.textContent = String(count);
+    lastFocus = document.activeElement;
     modal?.classList.remove('hidden');
+    (modal?.querySelector('.modal-close'))?.focus();
+    document.addEventListener('keydown', onKeyDown);
   }
-  function close() { modal?.classList.add('hidden'); }
+
+  function close() {
+    modal?.classList.add('hidden');
+    document.removeEventListener('keydown', onKeyDown);
+    if (lastFocus && typeof lastFocus.focus === 'function') lastFocus.focus();
+    lastFocus = null;
+  }
 
   closeEls?.forEach((el) => el.addEventListener('click', close));
   openBtn?.addEventListener('click', () => { if (getSelectedMp3Paths().length) open(); });
