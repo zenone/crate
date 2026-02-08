@@ -145,9 +145,11 @@ crate ~/Music/NewTracks
 Prefer a visual experience? Crate comes with a modern Web UI.
 
 ```bash
-python run_web.py
+./crate-web.sh --no-https
 ```
-*Then open http://localhost:8000*
+*Then open http://127.0.0.1:8000*
+
+> Dev note: `python run_web.py` is a lightweight dev launcher. For the best end-user experience (instance management + HTTPS helper), prefer `./crate-web.sh`.
 
 Features:
 - **Drag & Drop** uploads

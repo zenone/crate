@@ -1,5 +1,9 @@
 #!/bin/bash
-# Start the Crate web UI with HTTPS auto-config and smart instance management
+# Back-compat wrapper.
+# Prefer: ./crate-web.sh
+
+echo "ℹ️  start_crate_web.sh is deprecated. Launching ./crate-web.sh..."
+exec "$(cd "$(dirname "$0")" && pwd)/crate-web.sh" "$@"
 
 set -e  # Exit on error
 
