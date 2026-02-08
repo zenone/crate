@@ -741,9 +741,7 @@ a:hover {
 .file-table thead th.col-duration.sortable,
 .file-table thead th.col-bpm.sortable,
 .file-table thead th.col-key.sortable {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    text-align: center;
 }
 
 .file-table th.sortable:hover {

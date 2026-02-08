@@ -19,6 +19,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from crate.api import RenamerAPI, RenameRequest
+from crate.core.config import DEFAULT_CONFIG
 
 MUTAGEN_AVAILABLE = find_spec("mutagen") is not None
 
@@ -38,8 +39,13 @@ def logger():
 
 @pytest.fixture
 def api_instance():
-    """Create RenamerAPI instance with 2 workers for testing."""
-    return RenamerAPI(workers=2)
+    """Create RenamerAPI instance with 2 workers for testing.
+
+    Tests must be deterministic and should not depend on any real user config on disk.
+    """
+    api = RenamerAPI(workers=2)
+    api.config = dict(DEFAULT_CONFIG)
+    return api
 
 
 @pytest.fixture

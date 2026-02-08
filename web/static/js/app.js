@@ -1211,6 +1211,24 @@ function wirePreviewModal() {
   }
   closeEls?.forEach((el) => el.addEventListener('click', close));
 
+  function setTablePreviewCell(filePath, text, isSame = false) {
+    const row = document.querySelector(`tr[data-path="${String(filePath).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"]`);
+    if (!row) return;
+    const td = row.querySelector('td.col-preview');
+    if (!td) return;
+
+    td.innerHTML = '';
+    if (!text) {
+      td.textContent = '';
+      return;
+    }
+
+    const span = document.createElement('span');
+    span.className = isSame ? 'preview-same' : 'preview-new';
+    span.textContent = text;
+    td.appendChild(span);
+  }
+
   async function runPreview() {
     const p = (state.directory || $('directory-path')?.value || '').trim();
     if (!p) return;
@@ -1235,27 +1253,97 @@ function wirePreviewModal() {
     }
     previewEmpty?.classList.add('hidden');
 
+    // Preview selection wiring
+    const selAll = $('preview-select-all');
+    const selCount = $('preview-selection-count');
+    const execBtn = $('preview-execute-btn');
+
+    const selected = new Set();
+    const allPaths = [];
+
+    const syncUi = () => {
+      if (selCount) selCount.textContent = `${selected.size} selected`;
+      if (execBtn) execBtn.disabled = selected.size === 0;
+      if (selAll) {
+        selAll.checked = selected.size === allPaths.length && allPaths.length > 0;
+        selAll.indeterminate = selected.size > 0 && selected.size < allPaths.length;
+      }
+    };
+
+    if (selAll) {
+      selAll.onchange = () => {
+        selected.clear();
+        if (selAll.checked) {
+          for (const pth of allPaths) selected.add(pth);
+        }
+        // update all checkboxes
+        previewList?.querySelectorAll('input.preview-select')?.forEach((cb) => { cb.checked = selected.has(cb.dataset.path); });
+        syncUi();
+      };
+    }
+
     for (const pr of previews) {
+      const srcPath = pr.src;
+      allPaths.push(srcPath);
+
       const src = (pr.src || '').split('/').pop();
       const dst = pr.dst ? pr.dst.split('/').pop() : '';
       const status = pr.status;
       const reason = pr.reason || '';
 
+      // Update table "Preview (New Name)" column immediately
+      if (status === 'will_rename') setTablePreviewCell(srcPath, dst, false);
+      else setTablePreviewCell(srcPath, '', true);
+
       const row = document.createElement('div');
       row.className = 'preview-item';
       row.innerHTML = `
-        <div class="preview-item-main">
-          <div class="preview-item-src"></div>
-          <div class="preview-item-dst"></div>
+        <div class="preview-item-main" style="display:flex; gap:12px; align-items:flex-start;">
+          <div style="min-width:22px; padding-top:2px;">
+            <input class="preview-select" type="checkbox" data-path="" />
+          </div>
+          <div style="flex:1;">
+            <div class="preview-item-src"></div>
+            <div class="preview-item-dst"></div>
+          </div>
         </div>
         <div class="preview-item-meta"></div>
       `;
+      const cb = row.querySelector('input.preview-select');
+      cb.dataset.path = srcPath;
+
       row.querySelector('.preview-item-src').textContent = src;
       row.querySelector('.preview-item-dst').textContent = (status === 'will_rename') ? `→ ${dst}` : reason || 'No change';
       row.querySelector('.preview-item-meta').textContent = status;
 
+      // Default select all preview items (common UX)
+      cb.checked = true;
+      selected.add(srcPath);
+
+      cb.addEventListener('change', () => {
+        if (cb.checked) selected.add(srcPath);
+        else selected.delete(srcPath);
+        syncUi();
+      });
+
       previewList.appendChild(row);
     }
+
+    syncUi();
+
+    // Execute from preview modal: carry selection into main flow (keeps one execute implementation).
+    execBtn?.addEventListener('click', () => {
+      const filesToRename = Array.from(selected);
+      if (!filesToRename.length) return;
+
+      // Replace global selection with the preview selection.
+      state.selectedPaths.clear();
+      for (const pth of filesToRename) state.selectedPaths.add(pth);
+
+      close();
+      // Open the normal confirmation modal (user still confirms).
+      $('rename-now-btn')?.click();
+    }, { once: true });
   }
 
   function startPreview() {

@@ -95,7 +95,7 @@ class RenamerAPI:
 
         # Process files
         book = ReservationBook()
-        template = request.template or DEFAULT_TEMPLATE
+        template = request.template or self.get_config_value("default_template", DEFAULT_TEMPLATE)
 
         results = []
         cancel_event = threading.Event()
@@ -781,7 +781,7 @@ class RenamerAPI:
         # Calculate targets for each file
         previews = []
         book = ReservationBook()
-        template = request.template or DEFAULT_TEMPLATE
+        template = request.template or self.get_config_value("default_template", DEFAULT_TEMPLATE)
 
         for src in mp3s:
             try:

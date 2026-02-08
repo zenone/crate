@@ -18,13 +18,19 @@ import pytest
 
 from crate.api import RenamerAPI, RenameRequest
 from crate.api.models import FilePreview
+from crate.core.config import DEFAULT_CONFIG
 
 
 # Test Fixtures
 @pytest.fixture
 def api_instance():
-    """Create RenamerAPI instance for testing."""
-    return RenamerAPI(workers=2)
+    """Create RenamerAPI instance for testing.
+
+    Tests must be deterministic and should not depend on any real user config on disk.
+    """
+    api = RenamerAPI(workers=2)
+    api.config = dict(DEFAULT_CONFIG)
+    return api
 
 
 @pytest.fixture
