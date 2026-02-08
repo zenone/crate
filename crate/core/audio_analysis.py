@@ -17,6 +17,9 @@ No API keys needed for audio analysis (all local processing).
 """
 
 import logging
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 from typing import Callable, Optional, Tuple
 
@@ -53,6 +56,84 @@ except ImportError:
 
 # Default AcoustID API key (free tier, can be overridden in config)
 DEFAULT_ACOUSTID_API_KEY = "8XaBELgH"  # Free public key for open-source projects
+
+# Optional dependency state (avoid repeated prompts/warnings)
+_FP_CALC_CHECKED = False
+_FP_CALC_AVAILABLE = False
+_FP_CALC_WARNED = False
+
+
+def _ensure_fpcalc_available(logger: logging.Logger) -> bool:
+    """Ensure Chromaprint's `fpcalc` binary is available.
+
+    If missing, emit a single actionable message.
+
+    Interactive behavior:
+    - If running in a TTY on macOS and Homebrew is available, offer to install.
+    - Otherwise, provide install instructions and continue without AcoustID lookup.
+
+    Returns:
+        True if fpcalc is available, else False.
+    """
+    global _FP_CALC_CHECKED, _FP_CALC_AVAILABLE, _FP_CALC_WARNED
+
+    if _FP_CALC_CHECKED:
+        return _FP_CALC_AVAILABLE
+
+    _FP_CALC_CHECKED = True
+    _FP_CALC_AVAILABLE = shutil.which("fpcalc") is not None
+
+    if _FP_CALC_AVAILABLE:
+        return True
+
+    # Missing: warn once with actionable guidance.
+    if not _FP_CALC_WARNED:
+        _FP_CALC_WARNED = True
+
+        is_macos = sys.platform == "darwin"
+        brew = shutil.which("brew")
+        interactive = sys.stdin.isatty() and sys.stdout.isatty()
+
+        if is_macos and interactive and brew:
+            logger.warning(
+                "Optional dependency missing: fpcalc (Chromaprint). "
+                "AcoustID fingerprint lookup is disabled until installed."
+            )
+            try:
+                ans = input("Install Chromaprint now via Homebrew? (brew install chromaprint) [Y/n] ").strip().lower()
+            except Exception:
+                ans = "n"
+
+            if ans in ("", "y", "yes"):
+                try:
+                    subprocess.run([brew, "install", "chromaprint"], check=False)
+                except Exception as e:
+                    logger.warning(f"Chromaprint install attempt failed: {e}")
+
+                _FP_CALC_AVAILABLE = shutil.which("fpcalc") is not None
+                if not _FP_CALC_AVAILABLE:
+                    logger.warning(
+                        "fpcalc is still not available. "
+                        "Install manually: brew install chromaprint"
+                    )
+                return _FP_CALC_AVAILABLE
+
+            logger.warning("Skipping install. To enable AcoustID lookup: brew install chromaprint")
+            return False
+
+        # Non-interactive / not macOS / no brew
+        if is_macos and not brew:
+            logger.warning(
+                "Optional dependency missing: fpcalc (Chromaprint). "
+                "AcoustID fingerprint lookup is disabled. Install Homebrew, then run: brew install chromaprint"
+            )
+        else:
+            logger.warning(
+                "Optional dependency missing: fpcalc (Chromaprint). "
+                "AcoustID fingerprint lookup is disabled. Install Chromaprint (provides fpcalc) to enable it."
+            )
+
+    return False
 
 
 def detect_bpm_from_audio(file_path: Path, logger: logging.Logger) -> Tuple[Optional[str], str]:
@@ -290,6 +371,10 @@ def lookup_acoustid(file_path: Path, logger: logging.Logger, api_key: Optional[s
     """
     if not ACOUSTID_AVAILABLE:
         logger.debug("acoustid not installed - skipping database lookup")
+        return None, "Unavailable"
+
+    # acoustid.match requires Chromaprint's `fpcalc` binary.
+    if not _ensure_fpcalc_available(logger):
         return None, "Unavailable"
 
     # Use provided key or default
