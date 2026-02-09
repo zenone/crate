@@ -921,6 +921,55 @@ a:hover {
     align-items: center;
 }
 
+.source-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    border: 1px solid rgba(255,255,255,0.10);
+    color: var(--text-secondary);
+    background: rgba(255,255,255,0.04);
+}
+.source-tags { border-color: rgba(59,130,246,0.35); color: rgba(147,197,253,0.95); }
+.source-mb { border-color: rgba(16,185,129,0.35); color: rgba(110,231,183,0.95); }
+.source-analyzed { border-color: rgba(234,179,8,0.35); color: rgba(253,230,138,0.95); }
+.source-unknown { opacity: 0.6; }
+
+.row-actions-btn {
+    border: 1px solid rgba(255,255,255,0.10);
+    background: rgba(255,255,255,0.03);
+    color: var(--text-secondary);
+    border-radius: 8px;
+    padding: 0.15rem 0.45rem;
+    cursor: pointer;
+}
+.row-actions-btn:hover { background: rgba(255,255,255,0.06); color: var(--text-primary); }
+
+.row-actions-menu {
+    width: 220px;
+    background: rgba(20, 22, 34, 0.98);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px;
+    padding: 0.35rem;
+    z-index: 2000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+.row-actions-menu.hidden { display: none; }
+
+.row-actions-item {
+    width: 100%;
+    text-align: left;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    padding: 0.45rem 0.55rem;
+    border-radius: 10px;
+    cursor: pointer;
+}
+.row-actions-item:hover { background: rgba(255,255,255,0.06); }
+
 .col-actions {
     min-width: 120px;
     text-align: right;

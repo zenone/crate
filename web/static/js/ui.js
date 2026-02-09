@@ -95,6 +95,17 @@ export function showFiles(contents) {
     const tdActions = document.createElement('td');
     tdActions.className = 'col-actions';
 
+    // Row actions (client-side)
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'row-actions-btn';
+    btn.textContent = '⋯';
+    btn.title = 'Actions';
+    btn.setAttribute('aria-label', `Actions for ${f.name}`);
+    btn.dataset.path = f.path;
+    btn.dataset.name = f.name;
+    tdActions.appendChild(btn);
+
     tr.appendChild(tdCheck);
     tr.appendChild(tdArt);
     tr.appendChild(tdName);
@@ -155,10 +166,48 @@ export function updateRowMetadata(path, metadata, albumArtUrl = null, opts = nul
   // Duration may be seconds or mm:ss; just display if present
   setText('col-duration', metadata.duration || metadata.length || '');
 
-  // Source badges (basic)
+  // Source badges (derived from metadata source attribution)
   const srcTd = getTd('col-source');
   if (srcTd) {
-    srcTd.textContent = metadata.source || '';
+    const norm = (s) => {
+      const v = String(s || '').trim();
+      if (!v) return '';
+      if (v.toLowerCase() === 'id3' || v.toLowerCase() === 'tags') return 'Tags';
+      if (v.toLowerCase().includes('musicbrainz') || v.toLowerCase() === 'database') return 'MusicBrainz';
+      if (v.toLowerCase().includes('audio')) return 'Analyzed';
+      if (v.toLowerCase() === 'analyzed') return 'Analyzed';
+      return v;
+    };
+
+    const sources = new Set([
+      norm(metadata.artist_source),
+      norm(metadata.title_source),
+      norm(metadata.album_source),
+      norm(metadata.year_source),
+      norm(metadata.bpm_source),
+      norm(metadata.key_source),
+    ].filter(Boolean));
+
+    srcTd.innerHTML = '';
+    const wrap = document.createElement('div');
+    wrap.className = 'metadata-sources';
+
+    if (sources.size === 0) {
+      const dim = document.createElement('span');
+      dim.className = 'source-badge source-unknown';
+      dim.textContent = '—';
+      wrap.appendChild(dim);
+    } else {
+      for (const s of sources) {
+        const b = document.createElement('span');
+        const cls = s === 'Tags' ? 'source-tags' : (s === 'MusicBrainz' ? 'source-mb' : (s === 'Analyzed' ? 'source-analyzed' : 'source-other'));
+        b.className = `source-badge ${cls}`;
+        b.textContent = s;
+        wrap.appendChild(b);
+      }
+    }
+
+    srcTd.appendChild(wrap);
   }
 
   // Album art

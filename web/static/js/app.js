@@ -168,10 +168,95 @@ function syncSelectAllUi() {
   selectAll.indeterminate = checked.length > 0 && checked.length < enabled.length;
 }
 
+function wireRowActions() {
+  // Lightweight action menu for non-technical UX.
+  const existing = document.getElementById('row-actions-menu');
+  if (existing) existing.remove();
+
+  const menu = document.createElement('div');
+  menu.id = 'row-actions-menu';
+  menu.className = 'row-actions-menu hidden';
+  menu.innerHTML = `
+    <button type="button" class="row-actions-item" data-action="copy-path">Copy file path</button>
+    <button type="button" class="row-actions-item" data-action="copy-name">Copy filename</button>
+    <button type="button" class="row-actions-item" data-action="select-only">Select only this</button>
+    <button type="button" class="row-actions-item" data-action="preview-only">Preview this</button>
+  `;
+  document.body.appendChild(menu);
+
+  let current = null;
+
+  const hide = () => {
+    menu.classList.add('hidden');
+    current = null;
+  };
+
+  document.addEventListener('click', (e) => {
+    // Close when clicking outside
+    if (!menu.classList.contains('hidden')) {
+      const t = e.target;
+      if (!menu.contains(t) && !t.classList?.contains('row-actions-btn')) hide();
+    }
+  });
+
+  document.querySelectorAll('button.row-actions-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      current = { path: btn.dataset.path, name: btn.dataset.name };
+
+      const r = btn.getBoundingClientRect();
+      menu.style.position = 'fixed';
+      menu.style.top = `${Math.min(window.innerHeight - 10, r.bottom + 6)}px`;
+      menu.style.left = `${Math.min(window.innerWidth - 220, r.left)}px`;
+      menu.classList.remove('hidden');
+    });
+  });
+
+  menu.querySelectorAll('button.row-actions-item').forEach((item) => {
+    item.addEventListener('click', async () => {
+      if (!current?.path) return;
+      const action = item.dataset.action;
+
+      const copy = async (text) => {
+        try {
+          await navigator.clipboard.writeText(text);
+          toast('Copied');
+        } catch {
+          toast('Copy failed');
+        }
+      };
+
+      if (action === 'copy-path') await copy(current.path);
+      if (action === 'copy-name') await copy(current.name || current.path.split('/').pop());
+
+      if (action === 'select-only') {
+        state.selectedPaths.clear();
+        state.selectedPaths.add(current.path);
+        restoreSelectionFromState();
+        syncSelectAllUi();
+        updateActionButtons();
+      }
+
+      if (action === 'preview-only') {
+        state.selectedPaths.clear();
+        state.selectedPaths.add(current.path);
+        restoreSelectionFromState();
+        syncSelectAllUi();
+        updateActionButtons();
+        $('preview-btn')?.click();
+      }
+
+      hide();
+    });
+  });
+}
+
 function wireTableSelectionHandlers() {
   // Restore selection after re-render (search/sort/refresh)
   restoreSelectionFromState();
   syncSelectAllUi();
+  wireRowActions();
 
   // per-row checkbox change
   document.querySelectorAll('input.file-select').forEach((el) => {
