@@ -821,8 +821,23 @@ async def execute_rename(request: ExecuteRenameRequest, http_request: Request):
         if not request.file_paths:
             raise HTTPException(status_code=400, detail="No files specified for rename")
 
+        # Validate and normalize provided paths (fail fast with clear UX messages).
+        raw_paths = [str(fp).strip() for fp in request.file_paths if str(fp).strip()]
+        mp3_paths = [Path(fp) for fp in raw_paths if fp.lower().endswith('.mp3')]
+
+        if not mp3_paths:
+            raise HTTPException(status_code=400, detail="No valid .mp3 files were provided")
+
+        # Ensure selected files still exist.
+        missing = [p for p in mp3_paths if not p.expanduser().exists()]
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Selected file(s) no longer exist. Click Refresh and try again. Missing: {missing[0]}"
+            )
+
         # Convert file paths to Path objects
-        file_paths_tuple = tuple(Path(fp) for fp in request.file_paths)
+        file_paths_tuple = tuple(mp3_paths)
 
         # Start async rename operation
         rename_request = RenameRequest(
@@ -874,8 +889,22 @@ async def execute_rename_stream(request: ExecuteRenameRequest, http_request: Req
         if not request.file_paths:
             raise HTTPException(status_code=400, detail="No files specified for rename")
 
+        # Validate and normalize provided paths (fail fast with clear UX messages).
+        raw_paths = [str(fp).strip() for fp in request.file_paths if str(fp).strip()]
+        mp3_paths = [Path(fp) for fp in raw_paths if fp.lower().endswith('.mp3')]
+
+        if not mp3_paths:
+            raise HTTPException(status_code=400, detail="No valid .mp3 files were provided")
+
+        missing = [p for p in mp3_paths if not p.expanduser().exists()]
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Selected file(s) no longer exist. Click Refresh and try again. Missing: {missing[0]}"
+            )
+
         # Convert file paths to Path objects
-        file_paths_tuple = tuple(Path(fp) for fp in request.file_paths)
+        file_paths_tuple = tuple(mp3_paths)
 
         # Start async rename operation
         rename_request = RenameRequest(

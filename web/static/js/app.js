@@ -1522,10 +1522,24 @@ function wire() {
   async function execute() {
     const p = (state.directory || dirInput?.value || '').trim();
     if (!p) return;
-    const files = getSelectedPaths();
-    if (!files.length) {
+    const selected = getSelectedPaths();
+    if (!selected.length) {
       toast('Select at least one MP3');
       return;
+    }
+
+    // Guardrail: selection can become stale if the directory refreshes or files were renamed.
+    // Only execute on paths that are still present in the current directory listing.
+    const valid = new Set((state.contents?.files || []).filter((f) => f.is_mp3).map((f) => f.path));
+    const files = selected.filter((p) => valid.has(p));
+    if (!files.length) {
+      state.selectedPaths.clear();
+      toast('Selection is out of date. Click Refresh and select files again.');
+      return;
+    }
+
+    if (files.length !== selected.length) {
+      toast(`Some selected files were missing after refresh. Proceeding with ${files.length}.`);
     }
 
     state.lastUndoSessionId = null;
@@ -1554,14 +1568,20 @@ function wire() {
     for (let i = 0; i < 240; i++) {
       const st = await API.getOperation(op);
 
+      const total = (typeof st.total === 'number' && st.total > 0) ? st.total : files.length;
       progress.set({
         progress: st.progress ?? 0,
-        total: st.total ?? files.length,
+        total,
         currentFile: (st.current_file || '').split('/').pop(),
         message: st.status === 'running' ? '' : `Status: ${st.status}`,
       });
 
       if (st.status === 'completed') {
+        if ((st.total ?? 0) === 0) {
+          progress.setOutputHtml('<div>❌ No files were processed. Your selection may be stale — click Refresh and try again.</div>');
+          progress.setDone();
+          break;
+        }
         const renamed = st.results?.renamed ?? 0;
         const skipped = st.results?.skipped ?? 0;
         const errors = st.results?.errors ?? 0;
