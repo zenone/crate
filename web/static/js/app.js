@@ -1243,9 +1243,29 @@ function wireSettingsModal() {
 
   tpl?.addEventListener('input', () => validateTemplateDebounced());
 
+  function syncKeySortLabels(mode) {
+    const sel = $('file-sort-select');
+    if (!sel) return;
+    const asc = sel.querySelector('option[value="key-asc"]');
+    const desc = sel.querySelector('option[value="key-desc"]');
+
+    const m = String(mode || 'musical');
+    let label = 'Key';
+    if (m === 'camelot') label = 'Key (Camelot)';
+    else if (m === 'both') label = 'Key (Camelot+Musical)';
+    else label = 'Key (Musical)';
+
+    if (asc) asc.textContent = `${label} (Asc)`;
+    if (desc) desc.textContent = `${label} (Desc)`;
+  }
+
   // Key display mode affects table rendering; apply immediately.
   const keyModeEl = $('key-display-mode');
+  syncKeySortLabels(keyModeEl?.value);
+
   keyModeEl?.addEventListener('change', () => {
+    syncKeySortLabels(keyModeEl.value);
+
     // Re-render key cells for any rows that already have metadata.
     const files = state.contents?.files || [];
     for (const f of files) {
