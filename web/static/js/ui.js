@@ -188,21 +188,39 @@ export function updateRowMetadata(path, metadata, albumArtUrl = null, opts = nul
       norm(metadata.key_source),
     ].filter(Boolean));
 
+    const order = ['Tags', 'Analyzed', 'MusicBrainz'];
+    const ordered = [];
+    for (const k of order) {
+      if (sources.has(k)) ordered.push(k);
+    }
+    // Any unexpected sources go last, stable alpha.
+    const extra = Array.from(sources).filter((s) => !order.includes(s)).sort();
+    ordered.push(...extra);
+
+    const tooltip = (s) => {
+      if (s === 'Tags') return 'From embedded tags (ID3)';
+      if (s === 'Analyzed') return 'Computed locally from audio analysis';
+      if (s === 'MusicBrainz') return 'From MusicBrainz/AcoustID lookup';
+      return s;
+    };
+
     srcTd.innerHTML = '';
     const wrap = document.createElement('div');
     wrap.className = 'metadata-sources';
 
-    if (sources.size === 0) {
+    if (ordered.length === 0) {
       const dim = document.createElement('span');
       dim.className = 'source-badge source-unknown';
       dim.textContent = '—';
+      dim.title = 'No source information available';
       wrap.appendChild(dim);
     } else {
-      for (const s of sources) {
+      for (const s of ordered) {
         const b = document.createElement('span');
         const cls = s === 'Tags' ? 'source-tags' : (s === 'MusicBrainz' ? 'source-mb' : (s === 'Analyzed' ? 'source-analyzed' : 'source-other'));
         b.className = `source-badge ${cls}`;
         b.textContent = s;
+        b.title = tooltip(s);
         wrap.appendChild(b);
       }
     }
