@@ -24,6 +24,8 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import crate
+
 # Import the RenamerAPI
 from crate.api import RenamerAPI, RenameRequest
 from crate.api.renamer import OperationCancelled
@@ -194,7 +196,7 @@ def cleanup_expired_sessions():
 app = FastAPI(
     title="Crate",
     description="Batch rename MP3 files with metadata-based templates",
-    version="1.0.0",
+    version=crate.__version__,
 )
 
 # CORS middleware
@@ -224,8 +226,8 @@ async def health_check():
     """Health check endpoint for monitoring."""
     return {
         "status": "ok",
-        "version": "1.0.0",
-        "api": "ready"
+        "version": crate.__version__,
+        "api": "ready",
     }
 
 

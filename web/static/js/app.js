@@ -17,8 +17,12 @@ function $(id) {
 
 async function refreshHealth() {
   try {
-    await API.health();
+    const h = await API.health();
     setApiBadge('ok', 'Connected');
+
+    // Display app version in footer (best-effort).
+    const vEl = $('app-version');
+    if (vEl && h && h.version) vEl.textContent = String(h.version);
   } catch (e) {
     console.error(e);
     setApiBadge('error', 'Disconnected');
