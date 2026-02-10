@@ -15,7 +15,7 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, cast
 from urllib.parse import urlparse
 
 from fastapi import FastAPI, HTTPException, Request
@@ -580,16 +580,15 @@ async def analyze_file_context(request: AnalyzeContextRequest):
         if per_album_enabled:
             # Try per-album detection (requires directory parameter)
             # Extract directory from first file path
-            if files and files[0].get('path'):
-                import os
-                first_file_path = files[0]['path']
+            if files and isinstance(files[0].get("path"), str):
+                first_file_path = cast(str, files[0]["path"])
                 directory = os.path.dirname(first_file_path)
                 logger.info(f"Initial directory from first file: {directory}")
 
                 # Find common parent directory if files from different subdirs
                 for f in files[1:]:
-                    f_path = f.get('path', '')
-                    if f_path:
+                    f_path = f.get("path")
+                    if isinstance(f_path, str) and f_path:
                         f_dir = os.path.dirname(f_path)
                         # Find common parent
                         while not f_dir.startswith(directory) and directory:
@@ -651,7 +650,6 @@ async def analyze_file_context(request: AnalyzeContextRequest):
             contexts=context_responses,
             has_multiple_contexts=len(contexts) > 1,
             default_suggestion=default_suggestion,
-            per_album_mode=False  # Single-banner mode
         )
 
     except Exception as e:
