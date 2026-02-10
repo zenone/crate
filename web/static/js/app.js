@@ -1295,7 +1295,7 @@ function wirePreviewModal() {
   const previewList = $('preview-list');
   const previewLoading = $('preview-loading');
   const previewEmpty = $('preview-empty');
-  const closeEls = previewModal ? previewModal.querySelectorAll('.modal-close, .modal-overlay, #preview-cancel-btn, #preview-empty-close-btn') : [];
+  const closeEls = previewModal ? previewModal.querySelectorAll('.modal-close, .modal-overlay, #preview-cancel-btn, #preview-loading-cancel-btn, #preview-empty-close-btn') : [];
 
   let lastFocus = null;
   const onKeyDown = (e) => {
@@ -1343,7 +1343,11 @@ function wirePreviewModal() {
     if (!p) return;
 
     const files = getSelectedPaths();
-    const resp = await API.previewRename({ path: p, recursive: false, file_paths: files.length ? files : null });
+    const loadedMp3s = (state.contents?.files || []).filter((f) => f && f.is_mp3).map((f) => f.path);
+    // Preview should reflect the currently loaded file set, even when directory listing was recursive.
+    const filePaths = files.length ? files : loadedMp3s;
+
+    const resp = await API.previewRename({ path: p, recursive: false, file_paths: filePaths.length ? filePaths : null });
 
     const setText = (id, v) => { const el = $(id); if (el) el.textContent = String(v ?? 0); };
     setText('preview-stat-total', resp.total);
@@ -1356,7 +1360,8 @@ function wirePreviewModal() {
 
     if (previewLoading) previewLoading.classList.add('hidden');
 
-    if (!previews.length) {
+    const willRename = Number(resp.stats?.will_rename ?? 0);
+    if (willRename === 0) {
       previewEmpty?.classList.remove('hidden');
       return;
     }
@@ -1368,14 +1373,14 @@ function wirePreviewModal() {
     const execBtn = $('preview-execute-btn');
 
     const selected = new Set();
-    const allPaths = [];
+    const renameablePaths = [];
 
     const syncUi = () => {
       if (selCount) selCount.textContent = `${selected.size} selected`;
       if (execBtn) execBtn.disabled = selected.size === 0;
       if (selAll) {
-        selAll.checked = selected.size === allPaths.length && allPaths.length > 0;
-        selAll.indeterminate = selected.size > 0 && selected.size < allPaths.length;
+        selAll.checked = selected.size === renameablePaths.length && renameablePaths.length > 0;
+        selAll.indeterminate = selected.size > 0 && selected.size < renameablePaths.length;
       }
     };
 
@@ -1383,17 +1388,32 @@ function wirePreviewModal() {
       selAll.onchange = () => {
         selected.clear();
         if (selAll.checked) {
-          for (const pth of allPaths) selected.add(pth);
+          for (const pth of renameablePaths) selected.add(pth);
         }
-        // update all checkboxes
-        previewList?.querySelectorAll('input.preview-select')?.forEach((cb) => { cb.checked = selected.has(cb.dataset.path); });
+        // update all checkboxes (ignore disabled)
+        previewList?.querySelectorAll('input.preview-select')?.forEach((cb) => {
+          if (cb.disabled) return;
+          cb.checked = selected.has(cb.dataset.path);
+        });
         syncUi();
       };
     }
 
+    const statusLabel = (s) => {
+      if (s === 'will_rename') return 'Will rename';
+      if (s === 'will_skip') return 'No change';
+      if (s === 'error') return 'Error';
+      return String(s || '');
+    };
+    const statusIcon = (s) => {
+      if (s === 'will_rename') return '✅';
+      if (s === 'will_skip') return '⏭️';
+      if (s === 'error') return '⚠️';
+      return 'ℹ️';
+    };
+
     for (const pr of previews) {
       const srcPath = pr.src;
-      allPaths.push(srcPath);
 
       const src = (pr.src || '').split('/').pop();
       const dst = pr.dst ? pr.dst.split('/').pop() : '';
@@ -1405,35 +1425,63 @@ function wirePreviewModal() {
       else setTablePreviewCell(srcPath, '', true);
 
       const row = document.createElement('div');
-      row.className = 'preview-item';
+      row.className = `preview-item ${status === 'will_skip' ? 'will-skip' : ''} ${status === 'error' ? 'error' : ''}`;
       row.innerHTML = `
-        <div class="preview-item-main" style="display:flex; gap:12px; align-items:flex-start;">
-          <div style="min-width:22px; padding-top:2px;">
-            <input class="preview-select" type="checkbox" data-path="" />
-          </div>
-          <div style="flex:1;">
-            <div class="preview-item-src"></div>
-            <div class="preview-item-dst"></div>
-          </div>
+        <div class="preview-checkbox">
+          <input class="preview-select" type="checkbox" data-path="" />
         </div>
-        <div class="preview-item-meta"></div>
+        <div class="preview-info">
+          <div class="preview-filenames">
+            <div class="preview-original">
+              <span class="preview-label">Current</span>
+              <span class="filename-old"></span>
+            </div>
+            <div class="preview-new">
+              <span class="preview-label">New</span>
+              <span class="filename-new"></span>
+            </div>
+          </div>
+          <div class="preview-reason"></div>
+        </div>
+        <div class="preview-status-icon" aria-label=""></div>
       `;
+
       const cb = row.querySelector('input.preview-select');
       cb.dataset.path = srcPath;
 
-      row.querySelector('.preview-item-src').textContent = src;
-      row.querySelector('.preview-item-dst').textContent = (status === 'will_rename') ? `→ ${dst}` : reason || 'No change';
-      row.querySelector('.preview-item-meta').textContent = status;
+      row.querySelector('.filename-old').textContent = src;
 
-      // Default select all preview items (common UX)
-      cb.checked = true;
-      selected.add(srcPath);
+      const newWrap = row.querySelector('.preview-new');
+      const newNameEl = row.querySelector('.filename-new');
+      const reasonEl = row.querySelector('.preview-reason');
 
-      cb.addEventListener('change', () => {
-        if (cb.checked) selected.add(srcPath);
-        else selected.delete(srcPath);
-        syncUi();
-      });
+      if (status === 'will_rename') {
+        newNameEl.textContent = dst;
+        reasonEl.textContent = '';
+
+        // Default select all renameable items
+        cb.checked = true;
+        selected.add(srcPath);
+        renameablePaths.push(srcPath);
+
+        cb.addEventListener('change', () => {
+          if (cb.checked) selected.add(srcPath);
+          else selected.delete(srcPath);
+          syncUi();
+        });
+      } else {
+        // Non-renameable items are informational only.
+        cb.checked = false;
+        cb.disabled = true;
+
+        // Hide "New" row; show reason instead.
+        if (newWrap) newWrap.classList.add('hidden');
+        if (reasonEl) reasonEl.textContent = reason || (status === 'will_skip' ? 'No change' : 'Unable to preview this file');
+      }
+
+      const iconEl = row.querySelector('.preview-status-icon');
+      iconEl.textContent = statusIcon(status);
+      iconEl.setAttribute('aria-label', statusLabel(status));
 
       previewList.appendChild(row);
     }
