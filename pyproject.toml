@@ -7,7 +7,7 @@ name = "crate"
 version = "0.1.0"
 description = "Your music library, organized. Rename MP3 files using metadata into DJ-friendly filenames."
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = {text = "MIT"}
 keywords = ["mp3", "rename", "metadata", "id3", "dj", "music", "audio"]
 authors = [
@@ -70,9 +70,9 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.0",
-    "black>=23.7.0",
-    "mypy>=1.4.0",
-    "ruff>=0.0.280",
+    "mypy>=1.10.0",
+    "ruff>=0.5.0",
+    # black removed: ruff format is the replacement
 ]
 
 [project.scripts]
@@ -91,29 +91,41 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = ["-v", "--strict-markers", "--tb=short"]
 
-[tool.black]
-line-length = 100
-target-version = ['py39', 'py310', 'py311', 'py312']
+# black config removed: using ruff format instead
+# [tool.black]
+# line-length = 100
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.10"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
 ignore_missing_imports = true
+# Future: enable stricter settings as codebase matures
+# disallow_untyped_defs = true
+# strict = true
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I", "N"]
-# E501: we'll let ruff format/black handle wrapping later (many long log strings)
-# N818: allow domain-specific exception names
-ignore = ["E501", "N818"]
+# E = pycodestyle errors, F = pyflakes, W = pycodestyle warnings
+# I = isort, N = pep8-naming, B = flake8-bugbear, UP = pyupgrade
+select = ["E", "F", "W", "I", "N", "B", "UP"]
+# E501: line length handled by formatter
+# N818: allow domain-specific exception names (e.g., InvalidTagError)
+# UP006/UP007/UP015/UP030/UP032/UP035/UP045: Keep typing syntax as-is for now
+#   Future: run `ruff check --fix --select=UP006` to modernize type annotations
+# B023: loop variable binding (requires careful review)
+# B904: raise-from in exception handlers (requires careful review)
+ignore = ["E501", "N818", "UP006", "UP007", "UP015", "UP030", "UP032", "UP035", "UP045", "B023", "B904"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["B011"]  # Allow assert False in tests
 
 [tool.coverage.run]
-source = ["dj_mp3_renamer"]
+source = ["crate", "web"]
 omit = ["tests/*", "*/tests/*"]
 
 [tool.coverage.report]
