@@ -323,18 +323,26 @@ async function loadDirectory(path, recursive = true) {
   const onlyMp3 = (contents.files || []).filter((f) => f.is_mp3);
   const filteredSorted = applyFilterSort(onlyMp3);
 
+  const mp3Count = contents.mp3_count ?? onlyMp3.length;
+
   showFiles({
     ...contents,
     files: filteredSorted,
     total_files: contents.total_files ?? (contents.files || []).length,
-    mp3_count: contents.mp3_count ?? onlyMp3.length,
+    mp3_count: mp3Count,
   });
 
   renderCounts({
     totalFiles: contents.total_files ?? (contents.files || []).length,
-    mp3Count: contents.mp3_count ?? onlyMp3.length,
+    mp3Count: mp3Count,
     shownCount: filteredSorted.length,
   });
+
+  // Show/hide empty state based on MP3 count
+  const noFilesMsg = $('no-files-message');
+  const fileTable = $('file-table');
+  if (noFilesMsg) noFilesMsg.classList.toggle('hidden', mp3Count > 0);
+  if (fileTable) fileTable.classList.toggle('hidden', mp3Count === 0);
 
   wireTableSelectionHandlers();
 
@@ -752,6 +760,13 @@ function wireDirectoryBrowserModal() {
   }
 
   browseBtn.addEventListener('click', () => {
+    open();
+    browseTo(dirInput?.value?.trim() || null).catch(e => toast(`Browse failed: ${e.message}`));
+  });
+
+  // Empty state "Browse for Music" button - triggers same behavior
+  const emptyBrowseBtn = $('empty-browse-again-btn');
+  emptyBrowseBtn?.addEventListener('click', () => {
     open();
     browseTo(dirInput?.value?.trim() || null).catch(e => toast(`Browse failed: ${e.message}`));
   });
