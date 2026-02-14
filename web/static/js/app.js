@@ -940,7 +940,8 @@ function wireSettingsModal() {
       const depId = block.getAttribute('data-depends-on');
       if (!depId) return;
       const depEl = $(depId);
-      const enabled = depEl ? !!depEl.checked : true;
+      // Treat disabled controlling inputs as effectively OFF.
+      const enabled = depEl ? (!!depEl.checked && !depEl.disabled) : true;
 
       const inputs = block.querySelectorAll('input, select, textarea, button');
       inputs.forEach((el) => {
