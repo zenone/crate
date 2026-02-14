@@ -180,11 +180,13 @@ function wireRowActions() {
   const menu = document.createElement('div');
   menu.id = 'row-actions-menu';
   menu.className = 'row-actions-menu hidden';
+  menu.setAttribute('role', 'menu');
+  menu.setAttribute('aria-label', 'File actions');
   menu.innerHTML = `
-    <button type="button" class="row-actions-item" data-action="copy-path">Copy file path</button>
-    <button type="button" class="row-actions-item" data-action="copy-name">Copy filename</button>
-    <button type="button" class="row-actions-item" data-action="select-only">Select only this</button>
-    <button type="button" class="row-actions-item" data-action="preview-only">Preview this</button>
+    <button type="button" class="row-actions-item" data-action="copy-path" role="menuitem">Copy file path</button>
+    <button type="button" class="row-actions-item" data-action="copy-name" role="menuitem">Copy filename</button>
+    <button type="button" class="row-actions-item" data-action="select-only" role="menuitem">Select only this</button>
+    <button type="button" class="row-actions-item" data-action="preview-only" role="menuitem">Preview this</button>
   `;
   document.body.appendChild(menu);
 
@@ -195,11 +197,44 @@ function wireRowActions() {
     current = null;
   };
 
+  const items = () => [...menu.querySelectorAll('button.row-actions-item')];
+
+  const focusItem = (index) => {
+    const btns = items();
+    if (btns[index]) btns[index].focus();
+  };
+
   document.addEventListener('click', (e) => {
     // Close when clicking outside
     if (!menu.classList.contains('hidden')) {
       const t = e.target;
       if (!menu.contains(t) && !t.classList?.contains('row-actions-btn')) hide();
+    }
+  });
+
+  // Keyboard navigation for the menu
+  menu.addEventListener('keydown', (e) => {
+    const btns = items();
+    const idx = btns.indexOf(document.activeElement);
+
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      hide();
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusItem(idx < btns.length - 1 ? idx + 1 : 0);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusItem(idx > 0 ? idx - 1 : btns.length - 1);
+    } else if (e.key === 'Tab') {
+      // Allow tab but wrap within menu
+      if (e.shiftKey && idx === 0) {
+        e.preventDefault();
+        focusItem(btns.length - 1);
+      } else if (!e.shiftKey && idx === btns.length - 1) {
+        e.preventDefault();
+        focusItem(0);
+      }
     }
   });
 
@@ -214,6 +249,7 @@ function wireRowActions() {
       menu.style.top = `${Math.min(window.innerHeight - 10, r.bottom + 6)}px`;
       menu.style.left = `${Math.min(window.innerWidth - 220, r.left)}px`;
       menu.classList.remove('hidden');
+      focusItem(0); // Focus first item for keyboard users
     });
   });
 
