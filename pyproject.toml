@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 license = {text = "MIT"}
 keywords = ["mp3", "rename", "metadata", "id3", "dj", "music", "audio"]
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Steve Zenone", email = "steve@zenone.org"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -80,9 +80,9 @@ crate = "crate.cli.main:main"
 crate-tui = "crate.tui:run_tui"
 
 [project.urls]
-Homepage = "https://github.com/yourusername/crate"
-Repository = "https://github.com/yourusername/crate"
-Issues = "https://github.com/yourusername/crate/issues"
+Homepage = "https://github.com/zenone/crate"
+Repository = "https://github.com/zenone/crate"
+Issues = "https://github.com/zenone/crate/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
