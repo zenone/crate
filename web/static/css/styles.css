@@ -730,7 +730,20 @@ a:hover {
 }
 
 .file-table thead {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--bg-primary);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.file-table thead::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--border);
 }
 
 .file-table th {
@@ -743,6 +756,7 @@ a:hover {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 2px solid var(--border);
+    background: var(--bg-primary);
 }
 
 .file-table th.sortable {
