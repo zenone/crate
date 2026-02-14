@@ -54,6 +54,11 @@
                     >
                     <button id="browse-btn" class="btn btn-primary" title="Browse for music directory">Browse</button>
                 </div>
+                <p class="directory-hint">
+                    <span id="recursive-indicator">📂 Including subdirectories</span>
+                    <span class="hint-separator">•</span>
+                    <span>Paste a path or click Browse</span>
+                </p>
 
                 <div id="path-breadcrumb" class="breadcrumb hidden"></div>
             </section>
@@ -288,13 +293,15 @@
                     <div class="empty-state-icon">🎵</div>
                     <h3 class="empty-state-title">No MP3 Files Found</h3>
                     <p class="empty-state-description">
-                        This directory doesn't contain any MP3 files.
+                        This folder doesn't contain any MP3 files to rename.
                     </p>
-                    <p class="empty-state-hint">
-                        Try selecting a different folder with music files.
-                    </p>
+                    <ul class="empty-state-suggestions">
+                        <li>Browse to a folder containing your music collection</li>
+                        <li>Try your Downloads folder or Music library</li>
+                        <li>Subdirectories are included by default</li>
+                    </ul>
                     <button id="empty-browse-again-btn" class="btn btn-primary">
-                        📁 Choose Different Folder
+                        📁 Browse for Music
                     </button>
                 </div>
             </section>

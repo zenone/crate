@@ -485,6 +485,21 @@ a:hover {
     color: var(--text-muted);
 }
 
+.directory-hint {
+    margin-top: var(--spacing-xs);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.directory-hint .hint-separator {
+    margin: 0 var(--spacing-sm);
+    opacity: 0.5;
+}
+
+#recursive-indicator {
+    color: var(--text-secondary);
+}
+
 /* Buttons */
 .btn {
     padding: 0.875rem 1.75rem;
@@ -1162,6 +1177,29 @@ a:hover {
     font-style: italic;
     margin-bottom: var(--spacing-lg);
     max-width: 450px;
+}
+
+.empty-state-suggestions {
+    list-style: none;
+    padding: 0;
+    margin: var(--spacing-md) 0 var(--spacing-lg);
+    text-align: left;
+    max-width: 350px;
+}
+
+.empty-state-suggestions li {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    padding: var(--spacing-xs) 0;
+    padding-left: 1.5em;
+    position: relative;
+}
+
+.empty-state-suggestions li::before {
+    content: "→";
+    position: absolute;
+    left: 0;
+    color: var(--accent-primary);
 }
 
 .empty-state .btn {
