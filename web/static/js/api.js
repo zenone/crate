@@ -75,6 +75,14 @@ export const API = {
     return this._getJson('/api/config');
   },
 
+  async getConfigDefaults() {
+    return this._getJson('/api/config/defaults');
+  },
+
+  async resetConfig() {
+    return this._postJson('/api/config/reset', null);
+  },
+
   async updateConfig(updates) {
     return this._postJson('/api/config/update', { updates });
   },

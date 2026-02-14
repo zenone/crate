@@ -1147,9 +1147,15 @@ function wireSettingsModal() {
 
   resetBtn?.addEventListener('click', async (e) => {
     e.preventDefault();
-    // Simple behavior: re-fetch config from backend
-    await loadIntoForm();
-    toast('Settings reloaded');
+    try {
+      // Reset to defaults on backend (preserves API keys)
+      const result = await API.resetConfig();
+      // Reload the form with the reset values
+      await loadIntoForm();
+      toast('Settings reset to defaults');
+    } catch (err) {
+      toast(`Reset failed: ${err.message}`);
+    }
   });
   // Settings dependency wiring (disable dependent controls when parent is off)
   ['enable-smart-detection', 'enable-per-album-detection', 'enable-auto-apply'].forEach((id) => {

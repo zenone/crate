@@ -77,6 +77,48 @@ def mock_metadata():
     }
 
 
+class TestConfigEndpoints:
+    """Test /api/config/* endpoints."""
+
+    def test_get_config_defaults(self, client):
+        """Should return default configuration values."""
+        r = client.get("/api/config/defaults")
+        assert r.status_code == 200
+        data = r.json()
+        # Check key defaults exist
+        assert "enable_musicbrainz" in data
+        assert "enable_smart_detection" in data
+        assert "default_template" in data
+        # Verify some known defaults
+        assert data["enable_smart_detection"] is False
+        assert data["enable_musicbrainz"] is False
+        assert data["enable_auto_apply"] is True
+
+    def test_reset_config_preserves_api_key(self, client, tmp_path, monkeypatch):
+        """Reset should preserve API keys but reset other settings."""
+        from crate.core import config as config_module
+
+        # Use temp config dir
+        monkeypatch.setattr(config_module, "get_config_dir", lambda: tmp_path)
+        config_module.clear_config_cache()
+
+        # Set a custom API key
+        custom_key = "my_custom_key_12345"
+        config_module.set_config_value("acoustid_api_key", custom_key)
+        config_module.set_config_value("enable_smart_detection", True)
+
+        # Reset
+        r = client.post("/api/config/reset")
+        assert r.status_code == 200
+        data = r.json()
+        assert data["success"] is True
+
+        # API key should be preserved
+        assert data["config"]["acoustid_api_key"] == custom_key
+        # Other settings should be reset to defaults
+        assert data["config"]["enable_smart_detection"] is False
+
+
 # Test: Preview Endpoint
 class TestPreviewEndpoint:
     """Test /api/rename/preview endpoint."""

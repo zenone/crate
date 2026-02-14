@@ -1166,6 +1166,39 @@ async def complete_first_run():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/api/config/defaults")
+async def get_config_defaults():
+    """Get default configuration values (not saved user config)."""
+    try:
+        from crate.core.config import DEFAULT_CONFIG
+        return DEFAULT_CONFIG.copy()
+    except Exception as e:
+        logger.error(f"Error getting defaults: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/config/reset")
+async def reset_config_to_defaults():
+    """Reset configuration to defaults (preserves API keys and first_run status)."""
+    try:
+        from crate.core.config import DEFAULT_CONFIG, load_config, save_config
+        current = load_config()
+        reset = DEFAULT_CONFIG.copy()
+        # Preserve user-specific values that shouldn't be reset
+        reset["acoustid_api_key"] = current.get("acoustid_api_key", reset["acoustid_api_key"])
+        reset["first_run_complete"] = current.get("first_run_complete", False)
+        reset["last_directory"] = current.get("last_directory", "")
+        success = save_config(reset)
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to reset configuration")
+        return {"success": True, "message": "Configuration reset to defaults", "config": reset}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error resetting config: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/config/update")
 async def update_config(request: ConfigUpdate):
     """Update configuration."""
