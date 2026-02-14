@@ -2301,6 +2301,52 @@ input[type="checkbox"][title] {
     opacity: 0.55;
 }
 
+/* Input validation styling */
+.input-with-validation {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.input-with-validation .form-control {
+    flex: 1;
+}
+
+.input-status {
+    font-size: 1rem;
+    min-width: 1.5rem;
+}
+
+.input-status.valid::after {
+    content: "✓";
+    color: var(--success);
+}
+
+.input-status.invalid::after {
+    content: "✗";
+    color: var(--danger);
+}
+
+.input-status.warning::after {
+    content: "⚠";
+    color: var(--warning);
+}
+
+.settings-warning {
+    margin-top: var(--spacing-sm);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid var(--warning);
+    border-radius: var(--radius-sm);
+    color: var(--warning);
+    font-size: 0.85rem;
+}
+
+.settings-warning.hidden {
+    display: none;
+}
+
 .form-group {
     margin-bottom: var(--spacing-md);
 }

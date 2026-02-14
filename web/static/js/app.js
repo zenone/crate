@@ -953,6 +953,46 @@ function wireSettingsModal() {
     });
   }
 
+  const DEFAULT_ACOUSTID_KEY = '8XaBELgH';
+
+  function validateApiKeyField() {
+    const keyInput = $('acoustid-api-key');
+    const status = $('acoustid-key-status');
+    const warning = $('acoustid-warning');
+    const mbCheckbox = $('enable-musicbrainz');
+
+    if (!keyInput || !status) return;
+
+    const key = (keyInput.value || '').trim();
+    const mbEnabled = mbCheckbox?.checked;
+
+    // Clear classes
+    status.classList.remove('valid', 'invalid', 'warning');
+
+    if (!key) {
+      // Empty - no indicator
+      status.title = '';
+    } else if (key === DEFAULT_ACOUSTID_KEY) {
+      // Using default shared key
+      status.classList.add('warning');
+      status.title = 'Using default shared API key';
+    } else if (key.length >= 6 && /^[a-zA-Z0-9]+$/.test(key)) {
+      // Looks valid (alphanumeric, 6+ chars)
+      status.classList.add('valid');
+      status.title = 'API key format looks valid';
+    } else {
+      // Invalid format
+      status.classList.add('invalid');
+      status.title = 'API key should be alphanumeric (letters and numbers only)';
+    }
+
+    // Show warning if MusicBrainz enabled with default key
+    if (warning) {
+      const showWarning = mbEnabled && (!key || key === DEFAULT_ACOUSTID_KEY);
+      warning.classList.toggle('hidden', !showWarning);
+    }
+  }
+
   function insertAtCursor(textarea, text) {
     const start = textarea.selectionStart ?? textarea.value.length;
     const end = textarea.selectionEnd ?? textarea.value.length;
@@ -1010,6 +1050,7 @@ function wireSettingsModal() {
         if (confVal) confVal.textContent = String(conf.value);
       }
       applySettingsDependencies();
+      validateApiKeyField();
     } catch (e) {
       toast(`Failed to load settings: ${e.message}`);
     }
@@ -1162,6 +1203,12 @@ function wireSettingsModal() {
     const el = $(id);
     el?.addEventListener('change', applySettingsDependencies);
   });
+
+  // API key validation wiring
+  const acoustidKeyInput = $('acoustid-api-key');
+  const mbCheckbox = $('enable-musicbrainz');
+  acoustidKeyInput?.addEventListener('input', validateApiKeyField);
+  mbCheckbox?.addEventListener('change', validateApiKeyField);
 
 
   // Optional dependency install wiring (Chromaprint)

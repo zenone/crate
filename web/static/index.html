@@ -528,17 +528,23 @@
                                 AcoustID API Key
                                 <span class="label-hint">(for MusicBrainz audio fingerprinting)</span>
                             </label>
-                            <input
-                                type="text"
-                                id="acoustid-api-key"
-                                name="acoustid_api_key"
-                                class="form-control"
-                                placeholder="Enter your AcoustID API key"
-                                aria-describedby="acoustid-help"
-                            >
+                            <div class="input-with-validation">
+                                <input
+                                    type="text"
+                                    id="acoustid-api-key"
+                                    name="acoustid_api_key"
+                                    class="form-control"
+                                    placeholder="Enter your AcoustID API key"
+                                    aria-describedby="acoustid-help"
+                                >
+                                <span id="acoustid-key-status" class="input-status" aria-live="polite"></span>
+                            </div>
                             <small id="acoustid-help" class="form-help">
                                 Get a free API key at <a href="https://acoustid.org/api-key" target="_blank">acoustid.org/api-key</a>
                             </small>
+                            <div id="acoustid-warning" class="settings-warning hidden" role="alert">
+                                ⚠️ MusicBrainz lookup is enabled but using the default shared API key. For better rate limits, get your own free key.
+                            </div>
                         </div>
                     </div>
 
