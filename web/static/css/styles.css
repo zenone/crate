@@ -845,18 +845,26 @@ a:hover {
 }
 
 .col-current {
-    min-width: 200px;
+    min-width: 180px;
+    max-width: 300px;
     font-family: var(--font-mono);
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     color: var(--text-secondary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .col-preview {
-    min-width: 200px;
+    min-width: 180px;
+    max-width: 300px;
     font-family: var(--font-mono);
-    font-size: 0.9rem;
+    font-size: 0.875rem;
     color: var(--success);
     font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .col-preview .preview-placeholder {
@@ -879,33 +887,48 @@ a:hover {
 
 .col-artist,
 .col-title {
-    min-width: 150px;
+    min-width: 120px;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 /* Task #106: New metadata columns */
 .col-album {
-    min-width: 150px;
+    min-width: 100px;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .col-year {
-    min-width: 80px;
+    width: 60px;
+    min-width: 60px;
     text-align: center;
     vertical-align: middle;
 }
 
 .col-genre {
-    min-width: 120px;
+    min-width: 80px;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .col-duration {
-    min-width: 80px;
+    width: 65px;
+    min-width: 65px;
     text-align: center;
     vertical-align: middle;
 }
 
 .col-bpm,
 .col-key {
-    min-width: 80px;
+    width: 55px;
+    min-width: 55px;
     text-align: center;
 }
 

@@ -60,6 +60,7 @@ export function showFiles(contents) {
     const tdName = document.createElement('td');
     tdName.className = 'col-current';
     tdName.textContent = f.name;
+    tdName.title = f.name; // Tooltip for truncated names
 
     const tdPreview = document.createElement('td');
     tdPreview.className = 'col-preview';
@@ -137,17 +138,19 @@ export function updateRowMetadata(path, metadata, albumArtUrl = null, opts = nul
 
   const getTd = (cls) => row.querySelector(`td.${cls}`);
 
-  const setText = (cls, v) => {
+  const setText = (cls, v, addTitle = false) => {
     const td = getTd(cls);
     if (!td) return;
-    td.textContent = v ?? '';
+    const text = v ?? '';
+    td.textContent = text;
+    if (addTitle && text) td.title = text; // Tooltip for truncated content
   };
 
-  setText('col-artist', metadata.artist);
-  setText('col-title', metadata.title);
-  setText('col-album', metadata.album);
+  setText('col-artist', metadata.artist, true);
+  setText('col-title', metadata.title, true);
+  setText('col-album', metadata.album, true);
   setText('col-year', metadata.year);
-  setText('col-genre', metadata.genre);
+  setText('col-genre', metadata.genre, true);
   setText('col-bpm', metadata.bpm);
 
   const mode = (opts && opts.keyDisplayMode) ? String(opts.keyDisplayMode) : 'musical';
