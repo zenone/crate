@@ -2278,6 +2278,29 @@ input[type="checkbox"][title] {
     font-size: 0.9rem;
 }
 
+.settings-subsection {
+    margin-top: var(--spacing-md);
+}
+
+.settings-subsection-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin: var(--spacing-md) 0 var(--spacing-sm);
+    letter-spacing: 0.01em;
+    text-transform: none;
+}
+
+.settings-dependent {
+    margin-left: var(--spacing-md);
+    padding-left: var(--spacing-md);
+    border-left: 2px solid var(--border);
+}
+
+.settings-dependent.is-disabled {
+    opacity: 0.55;
+}
+
 .form-group {
     margin-bottom: var(--spacing-md);
 }

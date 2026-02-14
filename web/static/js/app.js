@@ -916,6 +916,7 @@ function wireSettingsModal() {
     (modal.querySelector('.modal-close'))?.focus();
     document.addEventListener('keydown', onKeyDown);
     refreshDepsUi();
+    applySettingsDependencies();
   }
 
   function close() {
@@ -931,6 +932,24 @@ function wireSettingsModal() {
       if (t) clearTimeout(t);
       t = setTimeout(() => fn(...args), ms);
     };
+  }
+
+  function applySettingsDependencies() {
+    const blocks = modal.querySelectorAll('[data-depends-on]');
+    blocks.forEach((block) => {
+      const depId = block.getAttribute('data-depends-on');
+      if (!depId) return;
+      const depEl = $(depId);
+      const enabled = depEl ? !!depEl.checked : true;
+
+      const inputs = block.querySelectorAll('input, select, textarea, button');
+      inputs.forEach((el) => {
+        if (el && el.id === depId) return;
+        el.disabled = !enabled;
+      });
+
+      block.classList.toggle('is-disabled', !enabled);
+    });
   }
 
   function insertAtCursor(textarea, text) {
@@ -989,6 +1008,7 @@ function wireSettingsModal() {
         conf.value = String(cfg.confidence_threshold ?? conf.value);
         if (confVal) confVal.textContent = String(conf.value);
       }
+      applySettingsDependencies();
     } catch (e) {
       toast(`Failed to load settings: ${e.message}`);
     }
@@ -1130,6 +1150,12 @@ function wireSettingsModal() {
     await loadIntoForm();
     toast('Settings reloaded');
   });
+  // Settings dependency wiring (disable dependent controls when parent is off)
+  ['enable-smart-detection', 'enable-per-album-detection', 'enable-auto-apply'].forEach((id) => {
+    const el = $(id);
+    el?.addEventListener('change', applySettingsDependencies);
+  });
+
 
   // Optional dependency install wiring (Chromaprint)
   const depsInstallBtn = $('deps-install-chromaprint-btn');

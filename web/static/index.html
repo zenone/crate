@@ -856,166 +856,179 @@
                     <div class="settings-section">
                         <h3 class="settings-section-title">🔧 Other Options</h3>
 
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    id="enable-smart-detection"
-                                    name="enable_smart_detection"
-                                    aria-describedby="enable-smart-detection-help"
-                                >
-                                <span>Enable Smart Track Detection (Beta)</span>
-                            </label>
-                            <small id="enable-smart-detection-help" class="form-help">
-                                Automatically suggests album vs single track templates based on metadata.
-                                You can always override suggestions. Off by default.
-                            </small>
-                        </div>
+                        <div class="settings-subsection">
+                            <div class="settings-subsection-title">Smart detection & automation</div>
 
-                        <!-- Task #108: Per-Album Smart Detection -->
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    id="enable-per-album-detection"
-                                    name="enable_per_album_detection"
-                                    aria-describedby="enable-per-album-detection-help"
-                                >
-                                <span>Enable Per-Album Detection (Experimental)</span>
-                            </label>
-                            <small id="enable-per-album-detection-help" class="form-help">
-                                When loading directories with multiple albums, show individual templates
-                                per album for precise control. Requires Smart Track Detection enabled. Off by default.
-                            </small>
-                        </div>
-
-                        <!-- Task #1: Auto-Apply Feature Flags -->
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    id="enable-auto-apply"
-                                    name="enable_auto_apply"
-                                    checked
-                                    aria-describedby="enable-auto-apply-help"
-                                >
-                                <span>Enable Auto-Apply for High Confidence</span>
-                            </label>
-                            <small id="enable-auto-apply-help" class="form-help">
-                                Automatically apply template when confidence is high (≥threshold).
-                                If disabled, you'll always review suggestions manually.
-                            </small>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    id="enable-auto-select-albums"
-                                    name="enable_auto_select_albums"
-                                    checked
-                                    aria-describedby="enable-auto-select-albums-help"
-                                >
-                                <span>Auto-Select High Confidence Albums</span>
-                            </label>
-                            <small id="enable-auto-select-albums-help" class="form-help">
-                                In per-album mode, automatically check albums with high confidence.
-                                You can still uncheck before applying.
-                            </small>
-                        </div>
-
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    id="enable-toast-notifications"
-                                    name="enable_toast_notifications"
-                                    checked
-                                    aria-describedby="enable-toast-notifications-help"
-                                >
-                                <span>Enable Toast Notifications</span>
-                            </label>
-                            <small id="enable-toast-notifications-help" class="form-help">
-                                Show non-intrusive notifications for actions (rename complete, undo available, etc.).
-                                If disabled, you'll only see status updates in the main UI.
-                            </small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="confidence-threshold" class="form-label">
-                                Confidence Threshold for Auto-Apply
-                            </label>
-                            <div class="range-input-group">
-                                <input
-                                    type="range"
-                                    id="confidence-threshold"
-                                    name="confidence_threshold"
-                                    min="0.7"
-                                    max="0.95"
-                                    step="0.05"
-                                    value="0.9"
-                                    aria-describedby="confidence-threshold-help"
-                                >
-                                <span id="confidence-threshold-value" class="range-value">0.90</span>
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        id="enable-smart-detection"
+                                        name="enable_smart_detection"
+                                        aria-describedby="enable-smart-detection-help"
+                                    >
+                                    <span>Enable Smart Track Detection (Beta)</span>
+                                </label>
+                                <small id="enable-smart-detection-help" class="form-help">
+                                    Automatically suggests album vs single track templates based on metadata.
+                                    You can always override suggestions. Off by default.
+                                </small>
                             </div>
-                            <small id="confidence-threshold-help" class="form-help">
-                                Minimum confidence (0.7-0.95) required for auto-apply. Higher = more conservative.
-                                Recommended: 0.90 for balanced accuracy.
-                            </small>
+
+                            <!-- Task #108: Per-Album Smart Detection -->
+                            <div class="form-group settings-dependent" data-depends-on="enable-smart-detection">
+                                <label class="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        id="enable-per-album-detection"
+                                        name="enable_per_album_detection"
+                                        aria-describedby="enable-per-album-detection-help"
+                                    >
+                                    <span>Enable Per-Album Detection (Experimental)</span>
+                                </label>
+                                <small id="enable-per-album-detection-help" class="form-help">
+                                    When loading directories with multiple albums, show individual templates per album for precise control.
+                                    Requires Smart Track Detection enabled. Off by default.
+                                </small>
+                            </div>
+
+                            <div class="form-group settings-dependent" data-depends-on="enable-per-album-detection">
+                                <label class="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        id="enable-auto-select-albums"
+                                        name="enable_auto_select_albums"
+                                        checked
+                                        aria-describedby="enable-auto-select-albums-help"
+                                    >
+                                    <span>Auto-Select High Confidence Albums</span>
+                                </label>
+                                <small id="enable-auto-select-albums-help" class="form-help">
+                                    In per-album mode, automatically check albums with high confidence.
+                                    You can still uncheck before applying.
+                                </small>
+                            </div>
+
+                            <!-- Task #1: Auto-Apply Feature Flags -->
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        id="enable-auto-apply"
+                                        name="enable_auto_apply"
+                                        checked
+                                        aria-describedby="enable-auto-apply-help"
+                                    >
+                                    <span>Enable Auto-Apply for High Confidence</span>
+                                </label>
+                                <small id="enable-auto-apply-help" class="form-help">
+                                    Automatically apply template when confidence is high (≥threshold).
+                                    If disabled, you'll always review suggestions manually.
+                                </small>
+                            </div>
+
+                            <div class="form-group" data-depends-on="enable-auto-apply">
+                                <label for="confidence-threshold" class="form-label">
+                                    Confidence Threshold for Auto-Apply
+                                </label>
+                                <div class="range-input-group">
+                                    <input
+                                        type="range"
+                                        id="confidence-threshold"
+                                        name="confidence_threshold"
+                                        min="0.7"
+                                        max="0.95"
+                                        step="0.05"
+                                        value="0.9"
+                                        aria-describedby="confidence-threshold-help"
+                                    >
+                                    <span id="confidence-threshold-value" class="range-value">0.90</span>
+                                </div>
+                                <small id="confidence-threshold-help" class="form-help">
+                                    Minimum confidence (0.7-0.95) required for auto-apply. Higher = more conservative.
+                                    Recommended: 0.90 for balanced accuracy.
+                                </small>
+                            </div>
                         </div>
 
-                        <!-- Task #84: Remember Last Directory -->
-                        <div class="setting-item">
-                            <label class="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    id="remember-last-directory"
-                                    name="remember_last_directory"
-                                    checked
-                                    aria-describedby="remember-last-directory-help"
+                        <div class="settings-subsection">
+                            <div class="settings-subsection-title">Notifications</div>
+
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        id="enable-toast-notifications"
+                                        name="enable_toast_notifications"
+                                        checked
+                                        aria-describedby="enable-toast-notifications-help"
+                                    >
+                                    <span>Enable Toast Notifications</span>
+                                </label>
+                                <small id="enable-toast-notifications-help" class="form-help">
+                                    Show non-intrusive notifications for actions (rename complete, undo available, etc.).
+                                    If disabled, you'll only see status updates in the main UI.
+                                </small>
+                            </div>
+                        </div>
+
+                        <div class="settings-subsection">
+                            <div class="settings-subsection-title">Directory defaults</div>
+
+                            <!-- Task #84: Remember Last Directory -->
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        id="remember-last-directory"
+                                        name="remember_last_directory"
+                                        checked
+                                        aria-describedby="remember-last-directory-help"
+                                    >
+                                    <span>Remember Last Directory</span>
+                                </label>
+                                <small id="remember-last-directory-help" class="form-help">
+                                    Automatically return to your last browsed directory on startup.
+                                    If the directory no longer exists, the closest parent folder will be used.
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        id="recursive-default"
+                                        name="recursive_default"
+                                        aria-describedby="recursive-default-help"
+                                    >
+                                    <span>Scan Subdirectories by Default</span>
+                                </label>
+                                <small id="recursive-default-help" class="form-help">
+                                    Include subdirectories when loading a directory
+                                </small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="track-number-padding">
+                                    Track Number Padding
+                                    <span class="label-hint">(for album organization)</span>
+                                </label>
+                                <select
+                                    id="track-number-padding"
+                                    name="track_number_padding"
+                                    class="form-control"
+                                    aria-describedby="track-number-padding-help"
                                 >
-                                <span>Remember Last Directory</span>
-                            </label>
-                            <small id="remember-last-directory-help" class="form-help">
-                                Automatically return to your last browsed directory on startup.
-                                If the directory no longer exists, the closest parent folder will be used.
-                            </small>
+                                    <option value="0">No padding (1, 2, 3...)</option>
+                                    <option value="2" selected>2 digits (01, 02, 03...)</option>
+                                    <option value="3">3 digits (001, 002, 003...)</option>
+                                </select>
+                                <small id="track-number-padding-help" class="form-help">
+                                    Zero-pad track numbers in the {track} variable for proper album sorting
+                                </small>
+                            </div>
                         </div>
-
-                        <div class="form-group">
-                            <label class="checkbox-label">
-                                <input
-                                    type="checkbox"
-                                    id="recursive-default"
-                                    name="recursive_default"
-                                    aria-describedby="recursive-default-help"
-                                >
-                                <span>Scan Subdirectories by Default</span>
-                            </label>
-                            <small id="recursive-default-help" class="form-help">
-                                Include subdirectories when loading a directory
-                            </small>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="track-number-padding">
-                                Track Number Padding
-                                <span class="label-hint">(for album organization)</span>
-                            </label>
-                            <select
-                                id="track-number-padding"
-                                name="track_number_padding"
-                                class="form-control"
-                                aria-describedby="track-number-padding-help"
-                            >
-                                <option value="0">No padding (1, 2, 3...)</option>
-                                <option value="2" selected>2 digits (01, 02, 03...)</option>
-                                <option value="3">3 digits (001, 002, 003...)</option>
-                            </select>
-                            <small id="track-number-padding-help" class="form-help">
-                                Zero-pad track numbers in the {track} variable for proper album sorting
-                            </small>
-                        </div>
+                    </div>
                     </div>
                 </form>
             </div>
