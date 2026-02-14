@@ -56,6 +56,9 @@ tmp/
 .crate_web.pid.port
 web/uploads/
 
+# SSL certificates (defense in depth - *.pem already covered above)
+certs/
+
 # Scratch / local debugging helpers (keep out of repo and lint scope)
 test_per_album_grouping.py
 

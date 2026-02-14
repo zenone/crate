@@ -44,13 +44,14 @@ fi
 if [ -f pyproject.toml ] || [ -f requirements.txt ]; then
   if command -v pytest >/dev/null 2>&1; then
     say "pytest"
-    pytest -q || true
+    pytest tests/ -q || true
   fi
   if command -v ruff >/dev/null 2>&1; then
     say "ruff check"
-    ruff check . || true
+    # Use explicit paths to avoid linting scratch files in repo root
+    ruff check crate web tests || true
     say "ruff format --check"
-    ruff format --check . || true
+    ruff format --check crate web tests || true
   fi
   exit 0
 fi

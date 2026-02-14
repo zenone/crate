@@ -1,27 +1,40 @@
-.PHONY: help setup test lint format verify
+.PHONY: help setup test lint format verify clean web
 
 help:
-	@echo "Common targets:"
-	@echo "  make setup   - install deps / bootstrap (project-specific)"
-	@echo "  make test    - run tests"
-	@echo "  make lint    - run lint/static checks"
-	@echo "  make format  - auto-format"
-	@echo "  make verify  - best-effort quality gate (runs test/lint/format if wired)"
+	@echo "Crate - DJ MP3 Renaming Tool"
 	@echo ""
-	@echo "This template does not assume a stack."
-	@echo "After choosing a stack, update this Makefile (or replace it)."
+	@echo "Common targets:"
+	@echo "  make setup   - create venv and install deps"
+	@echo "  make test    - run pytest"
+	@echo "  make lint    - run ruff + mypy"
+	@echo "  make format  - auto-format with ruff"
+	@echo "  make verify  - full quality gate (lint + test)"
+	@echo "  make web     - start web UI"
+	@echo "  make clean   - remove build artifacts"
 
 setup:
-	@echo "No-op. Choose a stack, then wire setup commands here."
+	python3 -m venv .venv
+	.venv/bin/pip install -e ".[dev]"
+	@echo "✅ Setup complete. Activate with: source .venv/bin/activate"
 
 test:
-	@echo "No-op. Choose a stack, then wire test commands here (pytest/npm/etc)."
+	.venv/bin/pytest tests/ -q
 
 lint:
-	@echo "No-op. Choose a stack, then wire lint commands here (ruff/eslint/etc)."
+	.venv/bin/ruff check crate web tests
+	.venv/bin/mypy crate web --config-file pyproject.toml
 
 format:
-	@echo "No-op. Choose a stack, then wire formatter commands here (ruff/black/prettier/etc)."
+	.venv/bin/ruff check --fix crate web tests
+	.venv/bin/ruff format crate web tests
 
-verify:
-	@./scripts/verify.sh
+verify: lint test
+	@echo "✅ All checks passed"
+
+web:
+	./crate-web.sh
+
+clean:
+	rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .mypy_cache/ .ruff_cache/
+	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	@echo "✅ Cleaned build artifacts"
