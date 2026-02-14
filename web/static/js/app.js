@@ -1577,11 +1577,18 @@ function wireProgressOverlay() {
   const outputEl = $('progress-output');
   const cancelBtn = $('progress-cancel-btn');
   const doneBtn = $('progress-done-btn');
+  const titleIcon = $('progress-title-icon');
+  const titleText = $('progress-title-text');
+  const undoSection = $('progress-undo-section');
+  const undoBtn = $('progress-undo-btn');
 
   function open() {
     overlay?.classList.remove('hidden');
     doneBtn?.classList.add('hidden');
     cancelBtn?.classList.remove('hidden');
+    undoSection?.classList.add('hidden');
+    if (titleIcon) titleIcon.textContent = '⏳';
+    if (titleText) titleText.textContent = 'Renaming Files...';
   }
 
   function close() {
@@ -1602,12 +1609,40 @@ function wireProgressOverlay() {
       if (msgEl) msgEl.textContent = message || (currentFile ? `Processing: ${currentFile}` : '');
     },
     setOutputHtml: (html) => { if (outputEl) outputEl.innerHTML = html; },
-    setDone: () => {
+    setDone: (status = 'success') => {
       cancelBtn?.classList.add('hidden');
       doneBtn?.classList.remove('hidden');
+      // Update title based on status
+      if (status === 'success') {
+        if (titleIcon) titleIcon.textContent = '✅';
+        if (titleText) titleText.textContent = 'Rename Complete';
+      } else if (status === 'cancelled') {
+        if (titleIcon) titleIcon.textContent = '⚠️';
+        if (titleText) titleText.textContent = 'Operation Cancelled';
+      } else if (status === 'error') {
+        if (titleIcon) titleIcon.textContent = '❌';
+        if (titleText) titleText.textContent = 'Operation Failed';
+      }
+    },
+    showUndo: (undoFn) => {
+      undoSection?.classList.remove('hidden');
+      // Remove old listeners by cloning
+      if (undoBtn) {
+        const newBtn = undoBtn.cloneNode(true);
+        undoBtn.parentNode?.replaceChild(newBtn, undoBtn);
+        newBtn.addEventListener('click', undoFn);
+      }
+    },
+    hideUndo: () => {
+      undoSection?.classList.add('hidden');
     },
     onCancel: (fn) => {
-      cancelBtn?.addEventListener('click', fn);
+      // Remove old listeners by cloning
+      if (cancelBtn) {
+        const newBtn = cancelBtn.cloneNode(true);
+        cancelBtn.parentNode?.replaceChild(newBtn, cancelBtn);
+        newBtn.addEventListener('click', fn);
+      }
     },
   };
 }
@@ -1735,37 +1770,44 @@ function wire() {
 
       if (st.status === 'completed') {
         if ((st.total ?? 0) === 0) {
-          progress.setOutputHtml('<div>❌ No files were processed. Your selection may be stale — click Refresh and try again.</div>');
-          progress.setDone();
+          progress.setOutputHtml('<div class="summary-error">No files were processed. Your selection may be stale — click Refresh and try again.</div>');
+          progress.setDone('error');
           break;
         }
         const renamed = st.results?.renamed ?? 0;
         const skipped = st.results?.skipped ?? 0;
         const errors = st.results?.errors ?? 0;
 
-        let html = `<div>✅ Completed. Renamed: <strong>${renamed}</strong>, Skipped: <strong>${skipped}</strong>, Errors: <strong>${errors}</strong></div>`;
-
-        if (st.undo_session_id) {
-          state.lastUndoSessionId = st.undo_session_id;
-          html += `<div style="margin-top:8px;">↩️ <button id="undo-btn" class="btn btn-secondary btn-sm" type="button">Undo</button> <span class="dim">(available ~10 min)</span></div>`;
+        // Build detailed summary
+        let html = '<div class="summary-grid">';
+        html += `<div class="summary-item summary-success"><span class="summary-value">${renamed}</span><span class="summary-label">Renamed</span></div>`;
+        if (skipped > 0) {
+          html += `<div class="summary-item summary-skip"><span class="summary-value">${skipped}</span><span class="summary-label">Skipped</span></div>`;
         }
+        if (errors > 0) {
+          html += `<div class="summary-item summary-error"><span class="summary-value">${errors}</span><span class="summary-label">Errors</span></div>`;
+        }
+        html += '</div>';
 
         progress.setOutputHtml(html);
-        progress.setDone();
+        progress.setDone('success');
 
-        // wire undo button if present
-        const undoBtn = document.getElementById('undo-btn');
-        undoBtn?.addEventListener('click', async () => {
-          if (!state.lastUndoSessionId) return;
-          try {
-            const ur = await API.undoRename(state.lastUndoSessionId);
-            toast(ur.message || 'Undo complete');
-            // refresh directory view after undo
-            if (state.directory) await loadDirectory(state.directory, true);
-          } catch (e) {
-            toast(`Undo failed: ${e.message}`);
-          }
-        });
+        // Show undo section if available
+        if (st.undo_session_id) {
+          state.lastUndoSessionId = st.undo_session_id;
+          progress.showUndo(async () => {
+            if (!state.lastUndoSessionId) return;
+            try {
+              const ur = await API.undoRename(state.lastUndoSessionId);
+              toast(ur.message || 'Undo complete — files restored');
+              progress.hideUndo();
+              // refresh directory view after undo
+              if (state.directory) await loadDirectory(state.directory, true);
+            } catch (e) {
+              toast(`Undo failed: ${e.message}`);
+            }
+          });
+        }
 
         // refresh directory view after completion
         if (state.directory) await loadDirectory(state.directory, true);
@@ -1773,8 +1815,8 @@ function wire() {
       }
 
       if (st.status === 'error' || st.status === 'cancelled') {
-        progress.setOutputHtml(`<div>❌ ${st.status}: ${st.error || ''}</div>`);
-        progress.setDone();
+        progress.setOutputHtml(`<div class="summary-error">${st.status === 'cancelled' ? 'Operation was cancelled' : st.error || 'An error occurred'}</div>`);
+        progress.setDone(st.status);
         break;
       }
 

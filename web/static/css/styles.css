@@ -2123,6 +2123,123 @@ input[type="checkbox"][title] {
     justify-content: center;
 }
 
+.progress-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.progress-actions .btn svg {
+    flex-shrink: 0;
+}
+
+/* Progress Undo Section */
+.progress-undo-section {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin: var(--spacing-md) 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.progress-undo-section.hidden {
+    display: none;
+}
+
+.undo-prompt {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.undo-icon {
+    font-size: 1.2rem;
+}
+
+.btn-undo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-warning {
+    background: #f59e0b;
+    color: white;
+    border: 1px solid #f59e0b;
+}
+
+.btn-warning:hover:not(:disabled) {
+    background: #d97706;
+    border-color: #d97706;
+}
+
+.undo-timer {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+}
+
+.btn-cancel {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Progress Summary Grid */
+.summary-grid {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-lg);
+    margin: var(--spacing-md) 0;
+}
+
+.summary-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-radius: var(--radius-md);
+    min-width: 80px;
+}
+
+.summary-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.summary-label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0.8;
+}
+
+.summary-success {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+}
+
+.summary-skip {
+    background: rgba(234, 179, 8, 0.15);
+    color: #eab308;
+}
+
+.summary-error {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+}
+
+.progress-output .summary-error {
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+
 /* ==================== Additional Utilities ==================== */
 
 .btn-danger {
