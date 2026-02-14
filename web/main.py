@@ -416,6 +416,15 @@ async def list_directory(request: DirectoryRequest):
 
             total_files = len(files)
 
+        # Save last_directory if remember feature is enabled (Task #84)
+        try:
+            from crate.core.config import load_config, set_config_value
+            config = load_config()
+            if config.get("remember_last_directory", True):
+                set_config_value("last_directory", str(dir_path))
+        except Exception as save_err:
+            logger.warning(f"Failed to save last_directory: {save_err}")
+
         return DirectoryContents(
             path=str(dir_path),
             files=files,

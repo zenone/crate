@@ -1963,14 +1963,24 @@ window.addEventListener('load', async () => {
   wire();
 
   // initial directory
+  const dirInput = $('directory-path');
+  if (dirInput) dirInput.placeholder = 'Loading last directory...';
   try {
     const init = await API._getJson('/api/directory/initial');
     if (init?.path) {
       await loadDirectory(init.path, true);
+      // Notify user if path fell back
+      if (init.source === 'fallback' && init.original_path) {
+        toast(`Previous folder not found. Loaded parent: ${init.path}`);
+      } else if (init.source === 'home' && init.original_path) {
+        toast(`Previous folder not found. Loaded home directory.`);
+      }
     }
-  } catch {
-    // ignore
+  } catch (e) {
+    console.warn('Failed to load initial directory:', e);
+    toast('Could not restore last directory');
   }
+  if (dirInput) dirInput.placeholder = '/path/to/your/music/folder';
 
   setInterval(refreshHealth, 5000);
 });
