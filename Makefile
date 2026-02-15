@@ -1,16 +1,18 @@
-.PHONY: help setup test lint format verify clean web
+.PHONY: help setup test lint format verify clean web golden golden-quick
 
 help:
 	@echo "Crate - DJ MP3 Renaming Tool"
 	@echo ""
 	@echo "Common targets:"
-	@echo "  make setup   - create venv and install deps"
-	@echo "  make test    - run pytest"
-	@echo "  make lint    - run ruff + mypy"
-	@echo "  make format  - auto-format with ruff"
-	@echo "  make verify  - full quality gate (lint + test)"
-	@echo "  make web     - start web UI"
-	@echo "  make clean   - remove build artifacts"
+	@echo "  make setup       - create venv and install deps"
+	@echo "  make test        - run pytest (unit tests)"
+	@echo "  make golden      - run golden path tests (real MP3s)"
+	@echo "  make golden-quick- run quick preview-only golden tests"
+	@echo "  make lint        - run ruff + mypy"
+	@echo "  make format      - auto-format with ruff"
+	@echo "  make verify      - full quality gate (lint + test)"
+	@echo "  make web         - start web UI"
+	@echo "  make clean       - remove build artifacts"
 
 setup:
 	python3 -m venv .venv
@@ -18,7 +20,13 @@ setup:
 	@echo "✅ Setup complete. Activate with: source .venv/bin/activate"
 
 test:
-	.venv/bin/pytest tests/ -q
+	.venv/bin/pytest tests/ -q --ignore=tests/test_golden_path.py
+
+golden:
+	./scripts/golden-path-test.sh full
+
+golden-quick:
+	./scripts/golden-path-test.sh quick
 
 lint:
 	.venv/bin/ruff check crate web tests
