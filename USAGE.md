@@ -1,46 +1,72 @@
 # Usage
 
-## Create a new project
+Quick reference for common Crate operations.
 
+## CLI
+
+### Basic rename (dry run first!)
 ```bash
-cd "~/Downloads/code/claude-code-template"
-./scripts/new-project.sh ~/code/my-new-project "My New Project" [variant]
-
-cd ~/code/my-new-project
-git init
-git add .
-git commit -m "Initial commit from template"
+crate ~/Music/NewTracks --dry-run -v
+crate ~/Music/NewTracks
 ```
 
-## After creation
-- `docs/STACK_DECISION.md` is created for you (timeboxed decision). Update it.
-- `docs/LOCAL_DEV.md` is created for you. Update it.
-- Wire `Makefile` targets to real commands.
-- Optional: copy a variant CI scaffold (`variants/*/.github/workflows/ci.yml`).
-
-## Helpful commands
-Create a context bundle for dev sessions:
+### Recursive processing
 ```bash
-./scripts/context-pack.sh
+crate ~/Music/Incoming --recursive
 ```
 
-Install opt-in git hooks (recommended):
+### Audio analysis (slow but thorough)
 ```bash
-./scripts/install-hooks.sh
+crate ~/Music/Untagged --analyze
 ```
 
-Run the quality gate:
+### Custom template
 ```bash
-make verify
+crate ~/Music/Tracks --template "{bpm} - {artist} - {title}"
 ```
 
-Sanity-check your machine:
+## Web UI
+
 ```bash
-./scripts/doctor.sh
+make web
+# Open http://127.0.0.1:8000
 ```
 
-## Updating the template
-Keep the template itself clean:
-- don’t commit `.claude/settings.local.json`
-- keep `CLAUDE.md` short
-- put long rules into `.claude/`
+Or manually:
+```bash
+./crate-web.sh --no-https
+```
+
+## Development
+
+```bash
+make setup    # Create venv + install deps
+make test     # Run unit tests
+make golden   # Run integration tests (real MP3s)
+make verify   # Full quality gate
+make lint     # ruff + mypy
+make format   # Auto-format
+```
+
+## Template Variables
+
+| Variable | Description |
+|----------|-------------|
+| `{artist}` | Artist name |
+| `{title}` | Track title |
+| `{bpm}` | BPM |
+| `{key}` | Musical key (Am, Gm) |
+| `{camelot}` | Camelot notation (8A, 9B) |
+| `{mix}` | Mix version |
+| `{mix_paren}` | Mix in parentheses |
+| `{kb}` | Key + BPM in brackets |
+| `{track}` | Track number |
+
+Default template: `{artist} - {title}{mix_paren}{kb}`
+
+## More Info
+
+- [Getting Started](docs/GETTING_STARTED.md)
+- [API Reference](docs/API.md)
+- [CLI Reference](docs/CLI.md)
+- [Installation](INSTALLATION.md)

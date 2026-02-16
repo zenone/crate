@@ -1,18 +1,24 @@
-# 📦 Crate: The DJ's Indestructible Library Tool
+# 📦 Crate
 
-A **DJ-first MP3 renaming and metadata cleanup tool** designed for real-world workflows using:
+**The DJ's Indestructible Library Tool**
 
-- **Rekordbox**
-- **Pioneer CDJ-3000 / XDJ gear**
+[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/zenone/crate)
+[![Python](https://img.shields.io/badge/python-3.10%2B-brightgreen.svg)](https://python.org)
+[![Tests](https://img.shields.io/badge/tests-389%20passed-success.svg)](https://github.com/zenone/crate)
+[![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
+
+A **DJ-first MP3 renaming and metadata cleanup tool** designed for real-world workflows:
+
+- **Rekordbox** / **Pioneer CDJ-3000** / **XDJ gear**
 - USB export + Finder browsing
 - Long-term library hygiene and portability
 
 **Crate** focuses on what actually matters to DJs:
 
-- Human-readable, scan-friendly filenames (`Artist - Title`)
+- Human-readable, scan-friendly filenames (`Artist - Title [8A 128]`)
 - Clean, deterministic metadata
 - Album/EP ordering that *never breaks*
-- Optional MusicBrainz-style identification for poorly tagged files
+- Optional audio analysis for untagged files
 
 ---
 
@@ -20,19 +26,20 @@ A **DJ-first MP3 renaming and metadata cleanup tool** designed for real-world wo
 
 ### Screenshots
 
-Web UI (directory picker + connected status):
+Web UI (directory picker):
 
 ![Crate Web UI](docs/assets/screenshots/web-ui-directory-select.webp)
 
-Web UI (preview example):
+Web UI (preview):
 
 ![Crate Web Preview](docs/assets/web-preview.png)
 
-CLI (dry-run preview):
+CLI (dry-run):
 
 ![Crate CLI](docs/assets/cli.png)
 
-### 1. Smart DJ-Friendly Filenames
+### Smart DJ-Friendly Filenames
+
 Creates filenames like:
 
 ```
@@ -45,149 +52,175 @@ Why this works:
 - Optional **Camelot Key + BPM** for instant context
 - **Track numbers preserved** for albums/EPs
 
----
+### Deep Metadata Reading
 
-### 2. Deep Metadata Reading (ID3 Best Practices)
-
-Reads metadata from **all common DJ tag variants**, including:
+Reads metadata from **all common DJ tag variants**:
 - Standard ID3 frames (`TPE1`, `TIT2`, `TALB`, `TBPM`, `TKEY`)
 - Rekordbox/Serato custom tags
 - Fallback to filename parsing if tags are missing
 
----
-
-### 3. Album / EP Detection (Automatic)
+### Album / EP Detection
 
 When processing folders:
-- If **all tracks share the same album tag**...
-- And **most tracks have track numbers**...
-➡️ Crate automatically treats the folder as an album and prefixes `01`, `02`...
+- If **all tracks share the same album tag** and **most have track numbers**
+- ➡️ Crate automatically prefixes `01`, `02`...
 
 ---
 
-## 📦 Installation
+## 🚀 Quick Start
 
-If you just want to use Crate locally (recommended):
+### Install
 
 ```bash
-pip install .
+# Clone and install
+git clone https://github.com/zenone/crate.git
+cd crate
+pip install -e .
 ```
 
-Notes:
-- On macOS, the fastest audio analysis backend (Essentia) currently requires **Python 3.10–3.13**.
-- See the full install guide: `INSTALLATION.md`.
-
-(We’ll publish to PyPI once we’re ready.)
-
----
-
-## 🚀 Usage
-
-Non-technical? Start here: **`docs/GETTING_STARTED.md`**
-
-### Basic Structure
+### First Run (Safe Mode)
 
 ```bash
-crate PATH [options]
-```
-
-Where `PATH` is a file or folder.
-
----
-
-## 🧪 SAFEST FIRST RUN (Highly Recommended)
-
-### Dry run on a folder (no changes made)
-
-```bash
+# Dry run - shows what WOULD change (no actual changes)
 crate ~/Music/Incoming --recursive --dry-run -v
 ```
 
-What happens:
-- Shows exactly what filenames *would* change
-- No files renamed
-- No metadata written
-
----
-
-## 🎚️ Common Real-World Examples
-
-### Example 1: Rename a single MP3
+### Rename Files
 
 ```bash
-crate "Unknown Track.mp3"
+# Actually rename files
+crate ~/Music/Incoming --recursive
 ```
 
-### Example 2: Recursive folder processing (Label dumps)
+### Web Interface
 
 ```bash
-crate ~/Music/NewTracks --recursive
+# Start the web UI
+make web
+# Then open http://127.0.0.1:8000
 ```
-
-### Example 3: Include Key & BPM in filenames (default)
-
-```bash
-crate ~/Music/NewTracks
-# Output: Artist - Track Title [8A 128].mp3
-```
-
-> **Note on Speed:** By default, Crate runs in **Fast Mode** (reading existing ID3 tags only). This allows it to scan thousands of files in seconds.
->
-> If your files are missing Key/BPM tags, use `--analyze` to enable **Deep Scan** (audio analysis). This reads the entire file and is slower but magical for untagged files.
-> ```bash
-> crate ~/Music/Untagged --analyze
-> ```
 
 ---
 
 ## 💻 Web Interface
 
-Prefer a visual experience? Crate comes with a modern Web UI.
+The modern Web UI offers:
+
+- **Directory Browser** - navigate your filesystem
+- **Live Preview** - see changes before applying
+- **Dark Mode** - because we're DJs
+- **Undo** - one-click revert
+- **Drag & Drop** - upload files directly
 
 ```bash
 ./crate-web.sh --no-https
 ```
-*Then open http://127.0.0.1:8000*
 
-> Dev note: `python run_web.py` is a lightweight dev launcher. For the best end-user experience (instance management + HTTPS helper), prefer `./crate-web.sh`.
-
-Features:
-- **Drag & Drop** uploads
-- **Dark Mode** (Supreme UX)
-- **Live Preview** before renaming
-- **Undo** functionality
-
-API / integration:
-- OpenAPI: http://localhost:8000/docs
-- Human summary: `docs/API.md`
+API docs: http://localhost:8000/docs
 
 ---
 
-## ⚙️ All CLI Options
+## 🎚️ CLI Examples
 
-```text
-usage: crate [-h] [--recursive] [--dry-run] [--workers WORKERS] [-l LOG] [-v] [--template TEMPLATE] path
+### Single file
+```bash
+crate "Unknown Track.mp3"
+```
 
-positional arguments:
-  path                  File or directory to process
+### Recursive folder (label dumps)
+```bash
+crate ~/Music/NewTracks --recursive
+```
 
-optional arguments:
-  -h, --help            show this help message and exit
-  --recursive           Recurse into subfolders
-  --dry-run             Show changes without applying them
-  --workers WORKERS     Number of worker threads (default: 4)
-  -l LOG, --log LOG     Write detailed log to a file
-  -v, --verbosity       Increase verbosity (-v, -vv)
-  --template TEMPLATE   Filename template. Default: '{artist} - {title}{mix_paren}{kb}'
+### With Key & BPM (default template)
+```bash
+crate ~/Music/NewTracks
+# Output: Artist - Track Title [8A 128].mp3
+```
+
+### Audio analysis for untagged files
+```bash
+# Slower but finds BPM/key from audio
+crate ~/Music/Untagged --analyze
 ```
 
 ---
 
-## 👤 About
+## ⚙️ CLI Options
 
-Built by Steve Zenone.
+```
+crate PATH [options]
 
-- LinkedIn: https://www.linkedin.com/in/zenone/
+positional arguments:
+  path                  File or directory to process
+
+options:
+  -h, --help            Show help message
+  --recursive           Recurse into subfolders
+  --dry-run             Show changes without applying
+  --workers WORKERS     Number of worker threads (default: 4)
+  -l, --log LOG         Write detailed log to file
+  -v                    Increase verbosity (-v, -vv)
+  --template TEMPLATE   Filename template
+                        Default: '{artist} - {title}{mix_paren}{kb}'
+  --analyze             Enable audio analysis for BPM/key detection
+```
+
+---
+
+## 🛠️ Development
+
+### Setup
+
+```bash
+# Create venv and install dev deps
+make setup
+source .venv/bin/activate
+```
+
+### Testing
+
+```bash
+make test          # Unit tests (fast)
+make golden        # Integration tests with real MP3s
+make verify        # Full quality gate (lint + test)
+```
+
+### Code Quality
+
+```bash
+make lint          # ruff + mypy
+make format        # Auto-format with ruff
+```
+
+### Project Structure
+
+```
+crate/
+├── crate/          # Core library
+│   ├── api/        # Python API
+│   ├── cli/        # CLI interface
+│   └── core/       # Business logic
+├── web/            # Web UI (FastAPI)
+├── tests/          # Test suite (389+ tests)
+└── docs/           # Documentation
+```
+
+---
+
+## 📦 Installation Details
+
+**Requirements:** Python 3.10+
+
+```bash
+pip install -e .
+```
+
+For audio analysis (optional):
+- macOS: `brew install chromaprint`
+- Linux: `apt install libchromaprint-tools`
+
+Full guide: [INSTALLATION.md](INSTALLATION.md)
 
 ---
 
@@ -195,8 +228,14 @@ Built by Steve Zenone.
 
 Crate is opinionated on purpose. It favors **Stability** over cleverness and **Human Readability** over database purity.
 
-If your USB ever corrupts, Rekordbox breaks, or you switch platforms —
+If your USB ever corrupts, Rekordbox breaks, or you switch platforms —  
 **your library will still make sense.**
+
+---
+
+## 👤 About
+
+Built by [Steve Zenone](https://www.linkedin.com/in/zenone/).
 
 ---
 
