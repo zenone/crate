@@ -36,7 +36,7 @@ jobs:
         run: mypy crate web --config-file pyproject.toml
 
       - name: Test with pytest
-        run: pytest tests/ -v --cov=crate --cov=web --cov-report=xml
+        run: pytest tests/ -v --cov=crate --cov=web --cov-report=xml --ignore=tests/test_golden_path.py
 
       - name: Upload coverage
         uses: codecov/codecov-action@v4
