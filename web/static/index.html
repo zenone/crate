@@ -318,6 +318,94 @@
                     ⚙️ Settings
                 </button>
             </section>
+
+            <!-- Tools Section (NEW: Phase 1 & 2) -->
+            <section id="tools-section" class="tools-section hidden">
+                <div class="section-header">
+                    <h2>🔧 Audio Tools</h2>
+                </div>
+
+                <div class="tools-grid">
+                    <!-- Normalization Tool -->
+                    <div class="tool-card" id="normalize-card">
+                        <div class="tool-header">
+                            <h3>📊 Volume Normalization</h3>
+                            <span class="tool-badge">LUFS</span>
+                        </div>
+                        <p class="tool-description">
+                            Analyze loudness levels and write ReplayGain tags for consistent playback volume.
+                        </p>
+
+                        <div class="tool-options">
+                            <div class="option-group">
+                                <label for="normalize-mode">Mode:</label>
+                                <select id="normalize-mode" class="tool-select">
+                                    <option value="analyze">Analyze Only</option>
+                                    <option value="tag">Write ReplayGain Tags</option>
+                                    <option value="apply">Apply to Audio (destructive)</option>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label for="normalize-target">Target LUFS:</label>
+                                <input type="number" id="normalize-target" class="tool-input" value="-14" min="-23" max="-9" step="0.5">
+                            </div>
+                        </div>
+
+                        <button id="normalize-btn" class="btn btn-primary tool-action" disabled>
+                            📊 Analyze Volume
+                        </button>
+
+                        <div id="normalize-results" class="tool-results hidden">
+                            <div class="results-header">
+                                <span id="normalize-results-count">0 files analyzed</span>
+                                <button id="normalize-results-close" class="btn-icon" title="Close results">✕</button>
+                            </div>
+                            <div id="normalize-results-list" class="results-list"></div>
+                        </div>
+                    </div>
+
+                    <!-- Cue Detection Tool -->
+                    <div class="tool-card" id="cue-card">
+                        <div class="tool-header">
+                            <h3>🎯 Cue Point Detection</h3>
+                            <span class="tool-badge">Rekordbox</span>
+                        </div>
+                        <p class="tool-description">
+                            Auto-detect intro, drops, and breakdowns. Export to Rekordbox XML.
+                        </p>
+
+                        <div class="tool-options">
+                            <div class="option-group checkbox-group">
+                                <label><input type="checkbox" id="cue-detect-intro" checked> Detect Intro</label>
+                                <label><input type="checkbox" id="cue-detect-drops" checked> Detect Drops</label>
+                                <label><input type="checkbox" id="cue-detect-breakdowns" checked> Detect Breakdowns</label>
+                            </div>
+                            <div class="option-group">
+                                <label for="cue-sensitivity">Sensitivity:</label>
+                                <input type="range" id="cue-sensitivity" min="0" max="1" step="0.1" value="0.5">
+                                <span id="cue-sensitivity-value">0.5</span>
+                            </div>
+                        </div>
+
+                        <div class="tool-actions-row">
+                            <button id="cue-detect-btn" class="btn btn-primary tool-action" disabled>
+                                🎯 Detect Cues
+                            </button>
+                            <button id="cue-export-btn" class="btn btn-secondary tool-action" disabled title="Export to Rekordbox XML">
+                                📤 Export XML
+                            </button>
+                        </div>
+
+                        <div id="cue-results" class="tool-results hidden">
+                            <div class="results-header">
+                                <span id="cue-results-count">0 files analyzed</span>
+                                <button id="cue-results-close" class="btn-icon" title="Close results">✕</button>
+                            </div>
+                            <div id="cue-results-list" class="results-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
         </main>
 
         <!-- Footer -->

@@ -61,6 +61,15 @@ function updateActionButtons() {
     // Keep actions discoverable: show bar when there are MP3s loaded.
     setHidden(floatingBar, !anyMp3);
   }
+
+  // Update tools section visibility and button state
+  const toolsSection = $('tools-section');
+  const normalizeBtn = $('normalize-btn');
+  const cueDetectBtn = $('cue-detect-btn');
+  const hasPath = state.directory && state.directory.trim() !== '';
+  if (toolsSection) setHidden(toolsSection, !hasPath);
+  if (normalizeBtn) normalizeBtn.disabled = !hasPath;
+  if (cueDetectBtn) cueDetectBtn.disabled = !hasPath;
 }
 
 function applyFilterSort(files) {
@@ -2035,3 +2044,212 @@ window.addEventListener('load', async () => {
 
   setInterval(refreshHealth, 5000);
 });
+
+// =============================================================================
+// AUDIO TOOLS (Phase 1 & 2: Normalization + Cue Detection)
+// =============================================================================
+
+function initTools() {
+  const toolsSection = document.getElementById('tools-section');
+  const normalizeBtn = document.getElementById('normalize-btn');
+  const cueDetectBtn = document.getElementById('cue-detect-btn');
+  const cueExportBtn = document.getElementById('cue-export-btn');
+  const sensitivitySlider = document.getElementById('cue-sensitivity');
+  const sensitivityValue = document.getElementById('cue-sensitivity-value');
+
+  // Store cue results for export
+  let lastCueResults = null;
+
+  // Sensitivity slider display
+  sensitivitySlider?.addEventListener('input', () => {
+    sensitivityValue.textContent = parseFloat(sensitivitySlider.value).toFixed(1);
+  });
+
+  // Normalization
+  normalizeBtn?.addEventListener('click', async () => {
+    const mode = document.getElementById('normalize-mode')?.value || 'analyze';
+    const targetLufs = parseFloat(document.getElementById('normalize-target')?.value) || -14.0;
+    const path = state.directory;
+
+    if (!path) {
+      toast('Please select a directory first');
+      return;
+    }
+
+    normalizeBtn.disabled = true;
+    normalizeBtn.innerHTML = '<span class="spinner-small"></span> Analyzing...';
+
+    try {
+      const result = await API.normalize({
+        path,
+        mode,
+        target_lufs: targetLufs,
+        recursive: true,
+      });
+
+      // Show results
+      const resultsDiv = document.getElementById('normalize-results');
+      const resultsList = document.getElementById('normalize-results-list');
+      const resultsCount = document.getElementById('normalize-results-count');
+
+      if (resultsDiv && resultsList) {
+        resultsDiv.classList.remove('hidden');
+        resultsCount.textContent = `${result.succeeded} files analyzed`;
+
+        let html = '';
+        for (const r of result.results) {
+          if (!r.success) {
+            html += `<div class="result-item"><span class="result-item-name">${r.name}</span><span class="result-item-value negative">Error: ${r.error || 'Unknown'}</span></div>`;
+            continue;
+          }
+
+          const lufs = r.original_lufs?.toFixed(1) || '?';
+          const adj = r.adjustment_db;
+          const adjClass = adj > 0 ? 'positive' : adj < 0 ? 'negative' : '';
+          const adjStr = adj != null ? `${adj > 0 ? '+' : ''}${adj.toFixed(1)} dB` : 'N/A';
+          const clipNote = r.clipping_prevented ? ' <span class="result-item-value warning">(limited)</span>' : '';
+
+          html += `
+            <div class="result-item">
+              <span class="result-item-name" title="${r.name}">${r.name}</span>
+              <div class="result-item-values">
+                <span class="result-item-value">${lufs} LUFS</span>
+                <span class="result-item-value ${adjClass}">${adjStr}${clipNote}</span>
+              </div>
+            </div>
+          `;
+        }
+        resultsList.innerHTML = html;
+
+        const modeLabels = { analyze: 'Analyzed', tag: 'Tags written', apply: 'Audio modified' };
+        toast(`${modeLabels[mode] || 'Done'}: ${result.succeeded} files`);
+      }
+    } catch (e) {
+      toast(`Normalization failed: ${e.message}`);
+    } finally {
+      normalizeBtn.disabled = false;
+      normalizeBtn.innerHTML = '📊 Analyze Volume';
+    }
+  });
+
+  // Close normalize results
+  document.getElementById('normalize-results-close')?.addEventListener('click', () => {
+    document.getElementById('normalize-results')?.classList.add('hidden');
+  });
+
+  // Cue Detection
+  cueDetectBtn?.addEventListener('click', async () => {
+    const path = state.directory;
+    if (!path) {
+      toast('Please select a directory first');
+      return;
+    }
+
+    const detectIntro = document.getElementById('cue-detect-intro')?.checked ?? true;
+    const detectDrops = document.getElementById('cue-detect-drops')?.checked ?? true;
+    const detectBreakdowns = document.getElementById('cue-detect-breakdowns')?.checked ?? true;
+    const sensitivity = parseFloat(document.getElementById('cue-sensitivity')?.value) || 0.5;
+
+    cueDetectBtn.disabled = true;
+    cueDetectBtn.innerHTML = '<span class="spinner-small"></span> Detecting...';
+
+    try {
+      const result = await API.detectCues({
+        path,
+        detect_intro: detectIntro,
+        detect_drops: detectDrops,
+        detect_breakdowns: detectBreakdowns,
+        sensitivity,
+        recursive: true,
+      });
+
+      lastCueResults = result.results;
+
+      // Show results
+      const resultsDiv = document.getElementById('cue-results');
+      const resultsList = document.getElementById('cue-results-list');
+      const resultsCount = document.getElementById('cue-results-count');
+
+      if (resultsDiv && resultsList) {
+        resultsDiv.classList.remove('hidden');
+        resultsCount.textContent = `${result.succeeded} files analyzed`;
+
+        let html = '';
+        for (const r of result.results) {
+          if (!r.success) {
+            html += `<div class="result-item"><span class="result-item-name">${r.name}</span><span class="result-item-value negative">Error: ${r.error || 'Unknown'}</span></div>`;
+            continue;
+          }
+
+          const cueHtml = r.cues.map(c => {
+            const typeClass = c.type;
+            return `<span class="cue-item"><span class="cue-item-type ${typeClass}">${c.type}</span><span class="cue-item-time">${c.position_str}</span></span>`;
+          }).join('');
+
+          const bpmStr = r.bpm ? `${r.bpm.toFixed(0)} BPM` : '';
+
+          html += `
+            <div class="result-item" style="flex-direction: column; align-items: stretch;">
+              <div style="display: flex; justify-content: space-between;">
+                <span class="result-item-name" title="${r.name}">${r.name}</span>
+                <span class="result-item-value">${bpmStr}</span>
+              </div>
+              <div class="cue-list">${cueHtml || '<span class="result-item-value">No cues detected</span>'}</div>
+            </div>
+          `;
+        }
+        resultsList.innerHTML = html;
+
+        // Enable export button
+        if (cueExportBtn) cueExportBtn.disabled = false;
+
+        toast(`Detected cues in ${result.succeeded} files`);
+      }
+    } catch (e) {
+      toast(`Cue detection failed: ${e.message}`);
+    } finally {
+      cueDetectBtn.disabled = false;
+      cueDetectBtn.innerHTML = '🎯 Detect Cues';
+    }
+  });
+
+  // Close cue results
+  document.getElementById('cue-results-close')?.addEventListener('click', () => {
+    document.getElementById('cue-results')?.classList.add('hidden');
+  });
+
+  // Export cues to Rekordbox XML
+  cueExportBtn?.addEventListener('click', async () => {
+    if (!lastCueResults || lastCueResults.length === 0) {
+      toast('No cue results to export. Run detection first.');
+      return;
+    }
+
+    // Prompt for export path
+    const defaultPath = state.directory ? `${state.directory}/crate-cues.xml` : '~/Desktop/crate-cues.xml';
+    const exportPath = prompt('Export Rekordbox XML to:', defaultPath);
+
+    if (!exportPath) return;
+
+    cueExportBtn.disabled = true;
+    cueExportBtn.innerHTML = '<span class="spinner-small"></span> Exporting...';
+
+    try {
+      const result = await API.exportCues(lastCueResults, exportPath);
+      toast(`Exported ${result.tracks_exported} tracks to ${result.output_path}`);
+    } catch (e) {
+      toast(`Export failed: ${e.message}`);
+    } finally {
+      cueExportBtn.disabled = false;
+      cueExportBtn.innerHTML = '📤 Export XML';
+    }
+  });
+
+}
+
+// Initialize tools when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initTools);
+} else {
+  initTools();
+}

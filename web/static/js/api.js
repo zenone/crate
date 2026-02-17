@@ -111,6 +111,36 @@ export const API = {
     return this._postJson('/api/analyze-context', { files });
   },
 
+  // Phase 1: Volume Normalization
+  async normalize({ path, mode = 'analyze', target_lufs = -14.0, recursive = true }) {
+    return this._postJson('/api/normalize', {
+      path,
+      mode,
+      target_lufs,
+      recursive,
+    });
+  },
+
+  // Phase 2: Cue Detection
+  async detectCues({ path, detect_intro = true, detect_drops = true, detect_breakdowns = true, sensitivity = 0.5, max_cues = 8, recursive = true }) {
+    return this._postJson('/api/detect-cues', {
+      path,
+      detect_intro,
+      detect_drops,
+      detect_breakdowns,
+      sensitivity,
+      max_cues,
+      recursive,
+    });
+  },
+
+  async exportCues(results, output_path) {
+    return this._postJson('/api/export-cues', {
+      results,
+      output_path,
+    });
+  },
+
   async _getJson(path) {
     const r = await fetch(path, { method: 'GET', headers: { 'Accept': 'application/json' } });
     if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);

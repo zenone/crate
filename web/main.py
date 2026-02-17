@@ -1224,6 +1224,215 @@ async def update_config(request: ConfigUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =============================================================================
+# NORMALIZATION API (Phase 1)
+# =============================================================================
+
+
+class NormalizeRequest(BaseModel):
+    """Request to analyze/normalize audio files."""
+    path: str
+    mode: str = "analyze"  # analyze, tag, apply
+    target_lufs: float = -14.0
+    recursive: bool = True
+
+
+class NormalizeResult(BaseModel):
+    """Result for a single file."""
+    path: str
+    success: bool
+    original_lufs: Optional[float] = None
+    original_peak_db: Optional[float] = None
+    adjustment_db: Optional[float] = None
+    clipping_prevented: bool = False
+    error: Optional[str] = None
+
+
+@app.post("/api/normalize")
+async def normalize_files(request: NormalizeRequest):
+    """Analyze or normalize audio files for consistent volume levels."""
+    try:
+        from crate.api.normalization import (
+            NormalizationAPI,
+            NormalizationMode,
+            NormalizationRequest,
+        )
+
+        api = NormalizationAPI(logger=logger)
+
+        # Map mode string to enum
+        mode_map = {
+            "analyze": NormalizationMode.ANALYZE,
+            "tag": NormalizationMode.TAG,
+            "apply": NormalizationMode.APPLY,
+        }
+        mode = mode_map.get(request.mode, NormalizationMode.ANALYZE)
+
+        norm_request = NormalizationRequest(
+            paths=[Path(request.path)],
+            mode=mode,
+            target_lufs=request.target_lufs,
+            prevent_clipping=True,
+            recursive=request.recursive,
+        )
+
+        status = api.normalize(norm_request)
+
+        results = []
+        for r in status.results:
+            results.append({
+                "path": str(r.path),
+                "name": r.path.name,
+                "success": r.success,
+                "original_lufs": r.original_lufs,
+                "original_peak_db": r.original_peak_db,
+                "adjustment_db": r.adjustment_db,
+                "clipping_prevented": r.clipping_prevented,
+                "error": r.error,
+            })
+
+        return {
+            "success": True,
+            "total": status.total,
+            "succeeded": status.succeeded,
+            "failed": status.failed,
+            "mode": request.mode,
+            "target_lufs": request.target_lufs,
+            "results": results,
+        }
+
+    except Exception as e:
+        logger.error(f"Normalization error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# CUE DETECTION API (Phase 2)
+# =============================================================================
+
+
+class CueDetectRequest(BaseModel):
+    """Request to detect cue points."""
+    path: str
+    detect_intro: bool = True
+    detect_drops: bool = True
+    detect_breakdowns: bool = True
+    sensitivity: float = 0.5
+    max_cues: int = 8
+    recursive: bool = True
+
+
+class CueExportRequest(BaseModel):
+    """Request to export cue points to Rekordbox XML."""
+    results: list
+    output_path: str
+
+
+@app.post("/api/detect-cues")
+async def detect_cues(request: CueDetectRequest):
+    """Detect cue points (intro, drops, breakdowns) in audio files."""
+    try:
+        from crate.api.cue_detection import (
+            CueDetectionAPI,
+            CueDetectionRequest,
+        )
+
+        api = CueDetectionAPI(logger=logger)
+
+        cue_request = CueDetectionRequest(
+            paths=[Path(request.path)],
+            detect_intro=request.detect_intro,
+            detect_drops=request.detect_drops,
+            detect_breakdowns=request.detect_breakdowns,
+            max_cues=request.max_cues,
+            sensitivity=request.sensitivity,
+            recursive=request.recursive,
+        )
+
+        status = api.detect(cue_request)
+
+        results = []
+        for r in status.results:
+            cues = []
+            for cue in r.cues:
+                cues.append({
+                    "position_ms": cue.position_ms,
+                    "position_str": f"{int(cue.position_ms // 60000)}:{(cue.position_ms % 60000) / 1000:05.2f}",
+                    "type": cue.cue_type.value,
+                    "confidence": cue.confidence,
+                    "label": cue.label,
+                    "hot_cue_index": cue.hot_cue_index,
+                    "color": cue.color,
+                })
+
+            results.append({
+                "path": str(r.path),
+                "name": r.path.name,
+                "success": r.success,
+                "duration_ms": r.duration_ms,
+                "bpm": r.bpm,
+                "cues": cues,
+                "error": r.error,
+            })
+
+        return {
+            "success": True,
+            "total": status.total,
+            "succeeded": status.succeeded,
+            "failed": status.failed,
+            "results": results,
+        }
+
+    except Exception as e:
+        logger.error(f"Cue detection error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/export-cues")
+async def export_cues(request: CueExportRequest):
+    """Export detected cue points to Rekordbox XML format."""
+    try:
+        from crate.api.cue_detection import CueDetectionResult, CuePoint, CueType
+        from crate.core.cue_detection import write_rekordbox_xml
+
+        # Reconstruct CueDetectionResult objects from the request
+        results = []
+        for r in request.results:
+            cues = []
+            for c in r.get("cues", []):
+                cue = CuePoint(
+                    position_ms=c["position_ms"],
+                    cue_type=CueType(c["type"]),
+                    confidence=c.get("confidence", 1.0),
+                    label=c.get("label"),
+                    hot_cue_index=c.get("hot_cue_index"),
+                    color=c.get("color"),
+                )
+                cues.append(cue)
+
+            result = CueDetectionResult(
+                path=Path(r["path"]),
+                success=r["success"],
+                cues=cues,
+                duration_ms=r.get("duration_ms"),
+                bpm=r.get("bpm"),
+            )
+            results.append(result)
+
+        output_path = Path(request.output_path)
+        write_rekordbox_xml(results, output_path, logger)
+
+        return {
+            "success": True,
+            "output_path": str(output_path),
+            "tracks_exported": len([r for r in results if r.success]),
+        }
+
+    except Exception as e:
+        logger.error(f"Cue export error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/favicon.ico")
 async def favicon():
     """Serve favicon.ico (avoid browser 404 spam)."""
