@@ -4,10 +4,10 @@
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/zenone/crate)
 [![Python](https://img.shields.io/badge/python-3.10%2B-brightgreen.svg)](https://python.org)
-[![Tests](https://img.shields.io/badge/tests-389%20passed-success.svg)](https://github.com/zenone/crate)
+[![Tests](https://img.shields.io/badge/tests-417%20passed-success.svg)](https://github.com/zenone/crate)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
-A **DJ-first MP3 renaming and metadata cleanup tool** designed for real-world workflows:
+A **DJ-first audio library tool** designed for real-world workflows:
 
 - **Rekordbox** / **Pioneer CDJ-3000** / **XDJ gear**
 - USB export + Finder browsing
@@ -15,55 +15,58 @@ A **DJ-first MP3 renaming and metadata cleanup tool** designed for real-world wo
 
 **Crate** focuses on what actually matters to DJs:
 
-- Human-readable, scan-friendly filenames (`Artist - Title [8A 128]`)
-- Clean, deterministic metadata
-- Album/EP ordering that *never breaks*
-- Optional audio analysis for untagged files
+- 🎵 **Smart Renaming** — Human-readable, scan-friendly filenames (`Artist - Title [8A 128]`)
+- 📊 **Volume Normalization** — LUFS measurement and ReplayGain tagging
+- 🎯 **Cue Detection** — Auto-detect drops, breakdowns, and export to Rekordbox
+- 🔍 **Audio Analysis** — BPM/Key detection via Essentia or librosa
 
 ---
 
-## ✨ What Crate Does
-
-### Screenshots
-
-Web UI (directory picker):
-
-![Crate Web UI](docs/assets/screenshots/web-ui-directory-select.webp)
-
-Web UI (preview):
-
-![Crate Web Preview](docs/assets/web-preview.png)
-
-CLI (dry-run):
-
-![Crate CLI](docs/assets/cli.png)
+## ✨ Features
 
 ### Smart DJ-Friendly Filenames
-
-Creates filenames like:
 
 ```
 Artist - Track Title (Extended Mix) [8A 128].mp3
 01 Artist - Track Title.mp3
 ```
 
-Why this works:
 - **Artist - Title first** → fastest scanning on CDJs & USBs
-- Optional **Camelot Key + BPM** for instant context
+- **Camelot Key + BPM** for instant mix context
 - **Track numbers preserved** for albums/EPs
+
+### Volume Normalization (NEW)
+
+```bash
+# Analyze loudness (no changes)
+crate ~/Music/DJ --normalize
+
+# Write ReplayGain tags
+crate ~/Music/DJ --normalize --normalize-mode tag
+```
+
+- EBU R128 / LUFS measurement
+- ReplayGain tag writing (non-destructive)
+- Target: -14 LUFS (streaming standard)
+
+### Cue Point Detection (NEW)
+
+```bash
+# Detect cues and export to Rekordbox
+crate ~/Music/DJ --detect-cues --export-cues cues.xml
+```
+
+- **Intro detection** — First beat marker
+- **Drop detection** — Energy peaks
+- **Breakdown detection** — Energy dips
+- **Rekordbox XML export** — Ready for import
 
 ### Deep Metadata Reading
 
-Reads metadata from **all common DJ tag variants**:
 - Standard ID3 frames (`TPE1`, `TIT2`, `TALB`, `TBPM`, `TKEY`)
 - Rekordbox/Serato custom tags
-- Fallback to filename parsing if tags are missing
-
-### Album / EP Detection
-
-When processing folders:
-- If **all tracks share the same album tag** and **most have track numbers**
-- ➡️ Crate automatically prefixes `01`, `02`...
+- Fallback to filename parsing
+- MusicBrainz/AcoustID lookup (optional)
 
 ---
 
@@ -72,98 +75,94 @@ When processing folders:
 ### Install
 
 ```bash
-# Clone and install
 git clone https://github.com/zenone/crate.git
 cd crate
 pip install -e .
 ```
 
-### First Run (Safe Mode)
+### First Run (Preview Mode)
 
 ```bash
-# Dry run - shows what WOULD change (no actual changes)
-crate ~/Music/Incoming --recursive --dry-run -v
+# Shows what WOULD change (no actual changes)
+crate ~/Music/Incoming --dry-run -v
 ```
 
 ### Rename Files
 
 ```bash
-# Actually rename files
-crate ~/Music/Incoming --recursive
+crate ~/Music/Incoming
 ```
 
 ### Web Interface
 
 ```bash
-# Start the web UI
-make web
-# Then open http://127.0.0.1:8000
+./crate-web.sh --no-https
+# Open http://127.0.0.1:8000
 ```
 
 ---
 
 ## 💻 Web Interface
 
+![Crate Web UI](docs/assets/screenshots/web-ui-main.jpg)
+
 The modern Web UI offers:
 
-- **Directory Browser** - navigate your filesystem
-- **Live Preview** - see changes before applying
-- **Dark Mode** - because we're DJs
-- **Undo** - one-click revert
-- **Drag & Drop** - upload files directly
+- **Directory Browser** — Navigate your filesystem
+- **Live Preview** — See changes before applying
+- **Dark Mode** — Because we're DJs
+- **Undo** — One-click revert
+- **Settings Panel** — Configure templates, metadata detection, and more
 
-```bash
-./crate-web.sh --no-https
-```
-
-API docs: http://localhost:8000/docs
+![Crate Settings](docs/assets/screenshots/web-ui-settings.jpg)
 
 ---
 
-## 🎚️ CLI Examples
+## 🎚️ CLI Reference
 
-### Single file
+### Basic Usage
+
 ```bash
-crate "Unknown Track.mp3"
-```
-
-### Recursive folder (label dumps)
-```bash
-crate ~/Music/NewTracks --recursive
-```
-
-### With Key & BPM (default template)
-```bash
-crate ~/Music/NewTracks
-# Output: Artist - Track Title [8A 128].mp3
-```
-
-### Audio analysis for untagged files
-```bash
-# Slower but finds BPM/key from audio
-crate ~/Music/Untagged --analyze
-```
-
----
-
-## ⚙️ CLI Options
-
-```
 crate PATH [options]
+```
 
-positional arguments:
-  path                  File or directory to process
+### Renaming Options
 
-options:
-  -h, --help            Show help message
-  --recursive           Recurse into subfolders
-  --dry-run             Show changes without applying
-  --workers WORKERS     Number of worker threads (default: 4)
-  -l, --log LOG         Write detailed log to file
-  -v                    Increase verbosity (-v, -vv)
-  --template TEMPLATE   Filename template
-                        Default: '{artist} - {title}{mix_paren}{kb}'
-  --analyze             Enable audio analysis for BPM/key detection
+| Option | Description |
+|--------|-------------|
+| `--dry-run` | Preview changes without applying |
+| `--no-recursive` | Don't recurse into subfolders |
+| `--template TEMPLATE` | Custom filename template |
+| `--analyze` | Enable BPM/Key audio analysis |
+| `-v, -vv` | Increase verbosity |
+
+### Normalization Options
+
+| Option | Description |
+|--------|-------------|
+| `--normalize` | Analyze/normalize volume levels |
+| `--normalize-mode MODE` | `analyze`, `tag`, or `apply` |
+| `--target-lufs LUFS` | Target loudness (default: -14.0) |
+
+### Cue Detection Options
+
+| Option | Description |
+|--------|-------------|
+| `--detect-cues` | Detect hot cue points |
+| `--export-cues PATH` | Export to Rekordbox XML |
+| `--cue-sensitivity N` | Detection sensitivity (0.0-1.0) |
+
+### Examples
+
+```bash
+# Rename with BPM/Key analysis
+crate ~/Music/NewTracks --analyze
+
+# Normalize and write ReplayGain tags
+crate ~/Music/DJ --normalize --normalize-mode tag
+
+# Detect cues with high sensitivity
+crate ~/Music/DJ --detect-cues --cue-sensitivity 0.8 --export-cues ~/Desktop/cues.xml
 ```
 
 ---
@@ -173,7 +172,6 @@ options:
 ### Setup
 
 ```bash
-# Create venv and install dev deps
 make setup
 source .venv/bin/activate
 ```
@@ -197,13 +195,19 @@ make format        # Auto-format with ruff
 
 ```
 crate/
-├── crate/          # Core library
-│   ├── api/        # Python API
-│   ├── cli/        # CLI interface
-│   └── core/       # Business logic
-├── web/            # Web UI (FastAPI)
-├── tests/          # Test suite (389+ tests)
-└── docs/           # Documentation
+├── crate/
+│   ├── api/            # API layer
+│   │   ├── renamer.py
+│   │   ├── normalization.py  # NEW
+│   │   └── cue_detection.py  # NEW
+│   ├── cli/            # CLI interface
+│   └── core/           # Business logic
+│       ├── audio_analysis.py
+│       ├── normalization.py  # NEW
+│       └── cue_detection.py  # NEW
+├── web/                # Web UI (FastAPI)
+├── tests/              # Test suite (417+ tests)
+└── docs/               # Documentation
 ```
 
 ---
@@ -216,9 +220,13 @@ crate/
 pip install -e .
 ```
 
-For audio analysis (optional):
-- macOS: `brew install chromaprint`
-- Linux: `apt install libchromaprint-tools`
+**Optional dependencies:**
+
+| Package | Purpose | Install |
+|---------|---------|---------|
+| `chromaprint` | MusicBrainz fingerprinting | `brew install chromaprint` |
+| `pyloudnorm` | LUFS measurement | Included |
+| `essentia` | Fast BPM/Key detection | Included |
 
 Full guide: [INSTALLATION.md](INSTALLATION.md)
 
@@ -230,6 +238,14 @@ Crate is opinionated on purpose. It favors **Stability** over cleverness and **H
 
 If your USB ever corrupts, Rekordbox breaks, or you switch platforms —  
 **your library will still make sense.**
+
+---
+
+## 📋 Roadmap
+
+- ✅ **Phase 1:** Volume Normalization (LUFS, ReplayGain)
+- ✅ **Phase 2:** Basic Cue Detection (intro, drops, breakdowns)
+- 📋 **Phase 3:** Advanced Phrase Detection (ML-based verse/chorus/drop)
 
 ---
 
