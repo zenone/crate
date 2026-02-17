@@ -11,6 +11,8 @@ from pathlib import Path
 from typing import List, Optional
 
 from ..api import RenamerAPI, RenameRequest
+from ..api.cue_detection import CueDetectionAPI, CueDetectionRequest
+from ..api.normalization import NormalizationAPI, NormalizationMode, NormalizationRequest
 from ..core.template import DEFAULT_TEMPLATE
 from .logging_config import configure_logging
 
@@ -78,6 +80,45 @@ def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         action="store_true",
         help="Analyze audio for BPM/Key (slower, reads entire file). Default: Tags only."
     )
+
+    # Phase 1: Normalization
+    parser.add_argument(
+        "--normalize",
+        action="store_true",
+        help="Analyze/normalize volume levels (LUFS measurement)."
+    )
+    parser.add_argument(
+        "--normalize-mode",
+        choices=["analyze", "tag", "apply"],
+        default="analyze",
+        help="Normalization mode: analyze (measure only), tag (write ReplayGain), apply (modify audio). Default: analyze."
+    )
+    parser.add_argument(
+        "--target-lufs",
+        type=float,
+        default=-14.0,
+        help="Target loudness in LUFS (default: -14.0, streaming standard)."
+    )
+
+    # Phase 2: Cue Detection
+    parser.add_argument(
+        "--detect-cues",
+        action="store_true",
+        help="Detect hot cue points (intro, drops, breakdowns)."
+    )
+    parser.add_argument(
+        "--export-cues",
+        type=Path,
+        default=None,
+        help="Export detected cues to Rekordbox XML file."
+    )
+    parser.add_argument(
+        "--cue-sensitivity",
+        type=float,
+        default=0.5,
+        help="Cue detection sensitivity (0.0-1.0). Higher = more cues. Default: 0.5."
+    )
+
     return parser.parse_args(argv)
 
 
@@ -158,6 +199,222 @@ def _preflight_optional_deps_for_analyze(logger, console) -> None:
             logger.warning(f"Chromaprint install failed: {e}")
 
 
+def _run_normalize(args, logger, console, path: Path) -> int:
+    """Run normalization mode.
+
+    Args:
+        args: Parsed arguments
+        logger: Logger instance
+        console: Rich console (or None)
+        path: Path to process
+
+    Returns:
+        Exit code
+    """
+    api = NormalizationAPI(logger=logger)
+
+    # Map mode string to enum
+    mode_map = {
+        "analyze": NormalizationMode.ANALYZE,
+        "tag": NormalizationMode.TAG,
+        "apply": NormalizationMode.APPLY,
+    }
+    mode = mode_map[args.normalize_mode]
+
+    request = NormalizationRequest(
+        paths=[path],
+        mode=mode,
+        target_lufs=args.target_lufs,
+        prevent_clipping=True,
+        recursive=args.recursive,
+    )
+
+    if console:
+        console.print(f"[bold blue]Analyzing loudness...[/bold blue] (target: {args.target_lufs} LUFS)")
+    else:
+        logger.info(f"Analyzing loudness (target: {args.target_lufs} LUFS)")
+
+    status = api.normalize(request)
+
+    if status.total == 0:
+        if console:
+            console.print("[bold red]No audio files found[/bold red]")
+        else:
+            logger.error("No audio files found")
+        return 1
+
+    # Print results
+    if RICH_AVAILABLE and console:
+        from rich.panel import Panel
+        from rich.table import Table
+
+        table = Table(show_header=True, header_style="bold magenta")
+        table.add_column("File", style="cyan")
+        table.add_column("LUFS", justify="right")
+        table.add_column("Peak dB", justify="right")
+        table.add_column("Adjustment", justify="right")
+        table.add_column("Status")
+
+        for result in status.results:
+            if result.success:
+                lufs_str = f"{result.original_lufs:.1f}" if result.original_lufs else "?"
+                peak_str = f"{result.original_peak_db:.1f}" if result.original_peak_db else "?"
+                adj_str = f"{result.adjustment_db:+.1f} dB" if result.adjustment_db else "N/A"
+                clip_note = " [yellow](limited)[/yellow]" if result.clipping_prevented else ""
+                status_str = f"[green]✅{clip_note}[/green]"
+            else:
+                lufs_str = "?"
+                peak_str = "?"
+                adj_str = "?"
+                status_str = f"[red]❌ {result.error}[/red]"
+
+            table.add_row(
+                result.path.name[:40],
+                lufs_str,
+                peak_str,
+                adj_str,
+                status_str
+            )
+
+        console.print(table)
+
+        mode_desc = {
+            NormalizationMode.ANALYZE: "Analyzed (no changes)",
+            NormalizationMode.TAG: "ReplayGain tags written",
+            NormalizationMode.APPLY: "Audio modified",
+        }
+
+        summary = (
+            f"[bold]Files:[/bold] {status.total}\n"
+            f"[green]Succeeded:[/green] {status.succeeded}\n"
+            f"[red]Failed:[/red] {status.failed}\n"
+            f"[bold]Mode:[/bold] {mode_desc[mode]}"
+        )
+        color = "green" if status.failed == 0 else "red"
+        console.print(Panel(summary, title=f"[bold {color}]Normalization Results[/]", border_style=color))
+    else:
+        logger.info(f"Processed {status.total} files: {status.succeeded} succeeded, {status.failed} failed")
+
+    return 0 if status.failed == 0 else 1
+
+
+def _run_cue_detection(args, logger, console, path: Path) -> int:
+    """Run cue detection mode.
+
+    Args:
+        args: Parsed arguments
+        logger: Logger instance
+        console: Rich console (or None)
+        path: Path to process
+
+    Returns:
+        Exit code
+    """
+    api = CueDetectionAPI(logger=logger)
+
+    request = CueDetectionRequest(
+        paths=[path],
+        detect_intro=True,
+        detect_drops=True,
+        detect_breakdowns=True,
+        max_cues=8,
+        sensitivity=args.cue_sensitivity,
+        recursive=args.recursive,
+    )
+
+    if console:
+        console.print(f"[bold blue]Detecting cue points...[/bold blue] (sensitivity: {args.cue_sensitivity})")
+    else:
+        logger.info(f"Detecting cue points (sensitivity: {args.cue_sensitivity})")
+
+    status = api.detect(request)
+
+    if status.total == 0:
+        if console:
+            console.print("[bold red]No audio files found[/bold red]")
+        else:
+            logger.error("No audio files found")
+        return 1
+
+    # Print results
+    if RICH_AVAILABLE and console:
+        from rich.panel import Panel
+        from rich.table import Table
+
+        for result in status.results:
+            if not result.success:
+                console.print(f"[red]❌ {result.path.name}: {result.error}[/red]")
+                continue
+
+            console.print(f"\n[bold cyan]{result.path.name}[/bold cyan]")
+            if result.bpm:
+                console.print(f"  BPM: {result.bpm:.1f}")
+            if result.duration_ms:
+                duration_sec = result.duration_ms / 1000
+                console.print(f"  Duration: {int(duration_sec // 60)}:{int(duration_sec % 60):02d}")
+
+            if result.cues:
+                table = Table(show_header=True, header_style="bold")
+                table.add_column("#", width=3)
+                table.add_column("Type", width=12)
+                table.add_column("Position", justify="right")
+                table.add_column("Label")
+
+                for cue in result.cues:
+                    pos_sec = cue.position_ms / 1000
+                    pos_str = f"{int(pos_sec // 60)}:{pos_sec % 60:05.2f}"
+
+                    type_colors = {
+                        "intro": "green",
+                        "drop": "red",
+                        "breakdown": "blue",
+                        "build": "yellow",
+                        "outro": "magenta",
+                    }
+                    color = type_colors.get(cue.cue_type.value, "white")
+
+                    table.add_row(
+                        str(cue.hot_cue_index or "-"),
+                        f"[{color}]{cue.cue_type.value}[/{color}]",
+                        pos_str,
+                        cue.label or ""
+                    )
+
+                console.print(table)
+            else:
+                console.print("  [yellow]No cues detected[/yellow]")
+
+        summary = (
+            f"[bold]Files:[/bold] {status.total}\n"
+            f"[green]Succeeded:[/green] {status.succeeded}\n"
+            f"[red]Failed:[/red] {status.failed}"
+        )
+        color = "green" if status.failed == 0 else "red"
+        console.print(Panel(summary, title=f"[bold {color}]Cue Detection Results[/]", border_style=color))
+    else:
+        logger.info(f"Processed {status.total} files: {status.succeeded} succeeded, {status.failed} failed")
+        for result in status.results:
+            if result.success:
+                logger.info(f"{result.path.name}: {len(result.cues)} cues detected")
+
+    # Export to Rekordbox if requested
+    if args.export_cues:
+        success = api.export_rekordbox(status.results, args.export_cues)
+        if success:
+            if console:
+                console.print(f"[green]✅ Exported to {args.export_cues}[/green]")
+            else:
+                logger.info(f"Exported to {args.export_cues}")
+        else:
+            if console:
+                console.print(f"[red]❌ Failed to export to {args.export_cues}[/red]")
+            else:
+                logger.error(f"Failed to export to {args.export_cues}")
+            return 1
+
+    return 0 if status.failed == 0 else 1
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     """
     Main entry point for CLI.
@@ -177,6 +434,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     # Clean path: remove shell escape characters (backslashes before spaces)
     path_str = str(args.path).replace("\\ ", " ")
     cleaned_path = Path(path_str)
+
+    # Handle normalization mode
+    if args.normalize:
+        return _run_normalize(args, logger, console, cleaned_path)
+
+    # Handle cue detection mode
+    if args.detect_cues:
+        return _run_cue_detection(args, logger, console, cleaned_path)
 
     # Create API
     api = RenamerAPI(workers=args.workers, logger=logger)

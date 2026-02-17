@@ -10,7 +10,28 @@ from ..core.io import find_mp3s
 # Re-export commonly needed core utilities through API layer
 # (maintains API-first architecture - UI should not import core directly)
 from ..core.template import DEFAULT_TEMPLATE
+
+# Cue Detection API (Phase 2)
+from .cue_detection import (
+    REKORDBOX_COLORS,
+    CueDetectionAPI,
+    CueDetectionRequest,
+    CueDetectionResult,
+    CueDetectionStatus,
+    CuePoint,
+    CueType,
+    ExportFormat,
+)
 from .models import RenameRequest, RenameResult, RenameStatus
+
+# Normalization API (Phase 1)
+from .normalization import (
+    NormalizationAPI,
+    NormalizationMode,
+    NormalizationRequest,
+    NormalizationResult,
+    NormalizationStatus,
+)
 from .renamer import RenamerAPI
 
 __all__ = [
@@ -19,6 +40,21 @@ __all__ = [
     "RenameRequest",
     "RenameResult",
     "RenameStatus",
+    # Normalization API
+    "NormalizationAPI",
+    "NormalizationRequest",
+    "NormalizationResult",
+    "NormalizationStatus",
+    "NormalizationMode",
+    # Cue Detection API
+    "CueDetectionAPI",
+    "CueDetectionRequest",
+    "CueDetectionResult",
+    "CueDetectionStatus",
+    "CuePoint",
+    "CueType",
+    "ExportFormat",
+    "REKORDBOX_COLORS",
     # Configuration
     "load_config",
     "save_config",

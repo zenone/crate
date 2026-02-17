@@ -29,12 +29,14 @@ crate ~/Music/Tracks --template "{bpm} - {artist} - {title}"
 
 ```bash
 make web
-# Open http://127.0.0.1:8000
+# Then open http://127.0.0.1:8000
 ```
 
 Or manually:
 ```bash
-./crate-web.sh --no-https
+./crate-web.sh              # HTTPS (default)
+./crate-web.sh --no-https   # HTTP mode
+./crate-web.sh --open       # Auto-open browser
 ```
 
 ## Development

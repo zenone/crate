@@ -58,6 +58,16 @@ def main():
         action="store_true",
         help="Enable auto-reload for development",
     )
+    parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Open browser automatically after starting server",
+    )
+    parser.add_argument(
+        "--no-open",
+        action="store_true",
+        help="Do not open browser (default behavior, kept for compatibility)",
+    )
     args = parser.parse_args()
 
     # Premium UX: if the default port is already in use, automatically pick a nearby free port.
@@ -110,12 +120,13 @@ def main():
     print("✨ Press Ctrl+C to stop")
     print()
 
-    # Open browser automatically (only after we know the port is free)
-    try:
-        import webbrowser
-        webbrowser.open(f"{protocol}://{args.host}:{args.port}")
-    except Exception:
-        pass
+    # Open browser only if explicitly requested with --open
+    if args.open:
+        try:
+            import webbrowser
+            webbrowser.open(f"{protocol}://{args.host}:{args.port}")
+        except Exception:
+            pass
 
     # Build uvicorn args
     uvicorn_args = {

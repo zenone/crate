@@ -248,10 +248,20 @@ done
 
 # Build uvicorn command based on HTTPS
 # Default: no --reload (more stable, fewer file watchers). Enable with --reload.
+# Default: no browser open (prevents tab accumulation). Enable with --open.
 RELOAD_FLAG=""
-if [ "$1" = "--reload" ]; then
-    RELOAD_FLAG="--reload"
-fi
+OPEN_BROWSER=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --reload)
+            RELOAD_FLAG="--reload"
+            ;;
+        --open)
+            OPEN_BROWSER=true
+            ;;
+    esac
+done
 
 if [ "$HTTPS_ENABLED" = true ]; then
     UVICORN_CMD="python -m uvicorn web.main:app --host 127.0.0.1 --port $PORT --ssl-keyfile $KEY_FILE --ssl-certfile $CERT_FILE $RELOAD_FLAG"
@@ -298,15 +308,20 @@ if ps -p $SERVER_PID > /dev/null 2>&1; then
     echo -e "${BLUE}🌐 URL: $PROTOCOL://127.0.0.1:$PORT${NC}"
     echo ""
 
-    # Auto-open browser
+    # Open browser only if --open flag was passed
     URL="$PROTOCOL://127.0.0.1:$PORT"
-    echo -e "${BLUE}🚀 Opening browser at: $URL${NC}"
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        open "$URL" 2>&1 || echo "   (Could not auto-open - please open manually)"
-    elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        xdg-open "$URL" 2>&1 || echo "   (Could not auto-open - please open manually)"
+    if [ "$OPEN_BROWSER" = true ]; then
+        echo -e "${BLUE}🚀 Opening browser at: $URL${NC}"
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            open "$URL" 2>&1 || echo "   (Could not auto-open - please open manually)"
+        elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
+            xdg-open "$URL" 2>&1 || echo "   (Could not auto-open - please open manually)"
+        else
+            echo "   (Auto-open not supported - please open manually)"
+        fi
     else
-        echo "   (Auto-open not supported - please open manually)"
+        echo -e "${BLUE}📋 Open in browser: $URL${NC}"
+        echo "   (Use --open to auto-open browser)"
     fi
 
     echo ""
