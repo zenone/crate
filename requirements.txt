@@ -14,6 +14,9 @@ soundfile>=0.12.0
 # Loudness normalization (EBU R128 / LUFS)
 pyloudnorm>=0.1.0
 
+# Peak limiting (true peak limiter)
+pedalboard>=0.9.0
+
 # Audio analysis - Database lookup
 pyacoustid>=1.3.0
 

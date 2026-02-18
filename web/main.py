@@ -1433,6 +1433,96 @@ async def export_cues(request: CueExportRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =============================================================================
+# PEAK LIMITER ENDPOINTS
+# =============================================================================
+
+
+class LimitRequest(BaseModel):
+    """Request to apply peak limiting to audio files."""
+    path: str
+    mode: str = "analyze"  # analyze, apply
+    ceiling_percent: float = 99.7  # Platinum Notes default
+    release_ms: float = 100.0
+    recursive: bool = True
+
+
+class LimitResult(BaseModel):
+    """Result for a single file."""
+    path: str
+    name: str
+    success: bool
+    original_peak_db: Optional[float] = None
+    limited_peak_db: Optional[float] = None
+    reduction_db: Optional[float] = None
+    samples_limited: int = 0
+    error: Optional[str] = None
+
+
+@app.post("/api/limit")
+async def limit_files(request: LimitRequest):
+    """Apply true peak limiting to audio files.
+    
+    Peak limiting prevents audio from exceeding a specified ceiling,
+    which prevents clipping and distortion in playback systems.
+    
+    Default ceiling: 99.7% (-0.03 dB) per Platinum Notes DJ standard.
+    """
+    try:
+        from crate.api.limiter import (
+            LimiterAPI,
+            LimiterMode,
+            LimiterRequest,
+        )
+
+        api = LimiterAPI(logger=logger)
+
+        # Map mode string to enum
+        mode_map = {
+            "analyze": LimiterMode.ANALYZE,
+            "apply": LimiterMode.APPLY,
+        }
+        mode = mode_map.get(request.mode, LimiterMode.ANALYZE)
+
+        limit_request = LimiterRequest(
+            paths=[Path(request.path)],
+            mode=mode,
+            ceiling_percent=request.ceiling_percent,
+            release_ms=request.release_ms,
+            recursive=request.recursive,
+        )
+
+        status = api.limit(limit_request)
+
+        results = []
+        for r in status.results:
+            results.append({
+                "path": str(r.path),
+                "name": r.path.name,
+                "success": r.success,
+                "original_peak_db": float(r.original_peak_db) if r.original_peak_db is not None else None,
+                "limited_peak_db": float(r.limited_peak_db) if r.limited_peak_db is not None else None,
+                "reduction_db": float(r.reduction_db) if r.reduction_db is not None else None,
+                "samples_limited": r.samples_limited,
+                "error": r.error,
+            })
+
+        return {
+            "success": True,
+            "total": status.total,
+            "succeeded": status.succeeded,
+            "failed": status.failed,
+            "needed_limiting": status.needed_limiting,
+            "mode": request.mode,
+            "ceiling_percent": request.ceiling_percent,
+            "results": results,
+        }
+
+    except Exception as e:
+        logger.error(f"Limiter error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/favicon.ico")
 async def favicon():
     """Serve favicon.ico (avoid browser 404 spam)."""
