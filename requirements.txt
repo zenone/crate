@@ -1,6 +1,7 @@
 # Core dependencies (always required)
 mutagen>=1.46.0
 tqdm>=4.65.0
+scipy>=1.10.0
 
 # Audio analysis - Tier 1: Essentia (recommended, 2x faster, more accurate)
 # Task #88: Migrated from librosa to Essentia with fallback

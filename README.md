@@ -4,7 +4,7 @@
 
 [![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/zenone/crate)
 [![Python](https://img.shields.io/badge/python-3.10%2B-brightgreen.svg)](https://python.org)
-[![Tests](https://img.shields.io/badge/tests-472%20passed-success.svg)](https://github.com/zenone/crate)
+[![Tests](https://img.shields.io/badge/tests-505%20passed-success.svg)](https://github.com/zenone/crate)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey.svg)](LICENSE)
 
 A **DJ-first audio library tool** designed for real-world workflows:
@@ -53,6 +53,20 @@ Artist - Track Title (Extended Mix) [8A 128].mp3
 - **High-quality pitch shifting** via rubberband
 - **Default: Off** (10 cent threshold when enabled)
 - Great for vinyl rips and older music
+
+### 🔧 Clipped Peak Repair
+
+- **Detects digital clipping** (flat-topped waveforms)
+- **Cubic spline interpolation** to reconstruct natural peaks
+- **Per-channel processing** for stereo audio
+- **Default: Off** — preserves original audio unless needed
+
+### 🌡️ Warmth / Saturation
+
+- **Analog-style harmonic saturation** via tanh soft clipping
+- **Exciter effect** with high-frequency enhancement
+- **Adjustable drive, mix, and tone** controls
+- **Default: Off** — adds subtle vinyl warmth when enabled
 
 ### 🔍 Audio Analysis
 
@@ -105,7 +119,7 @@ The modern Web UI provides a complete DJ workflow:
 
 ![Audio Tools](docs/screenshots/03-audio-tools.jpg)
 
-Four powerful audio processing tools:
+Six powerful audio processing tools:
 
 | Tool | Badge | Description |
 |------|-------|-------------|
@@ -113,6 +127,8 @@ Four powerful audio processing tools:
 | **Cue Point Detection** | `REKORDBOX` | Auto-detect drops, export to XML |
 | **Peak Limiter** | `99.7%` | Prevent clipping on loud tracks |
 | **Pitch Correction** | `OFF` | Fix off-pitch vinyl rips |
+| **Clipped Peak Repair** | `OFF` | Repair digitally clipped audio |
+| **Warmth** | `OFF` | Add analog-style saturation |
 
 ---
 
@@ -192,18 +208,22 @@ crate/
 │   │   ├── normalization.py
 │   │   ├── cue_detection.py
 │   │   ├── limiter.py          # Peak limiter
-│   │   └── pitch_correction.py # Pitch correction
+│   │   ├── pitch_correction.py # Pitch correction
+│   │   ├── clip_repair.py      # Clipped peak repair
+│   │   └── warmth.py           # Warmth/saturation
 │   ├── cli/                    # CLI interface
 │   └── core/                   # Business logic
 │       ├── audio_analysis.py
 │       ├── normalization.py
 │       ├── cue_detection.py
 │       ├── limiter.py
-│       └── pitch_correction.py
+│       ├── pitch_correction.py
+│       ├── clip_repair.py
+│       └── warmth.py
 ├── web/                        # Web UI (FastAPI)
 │   ├── main.py                 # API endpoints
 │   └── static/                 # Frontend (vanilla JS)
-├── tests/                      # Test suite (472+ tests)
+├── tests/                      # Test suite (505+ tests)
 └── docs/                       # Documentation
 ```
 
@@ -245,6 +265,8 @@ Crate's audio tools use the same defaults as Platinum Notes:
 | Target LUFS | -11.5 | -11.5 |
 | Peak Limiter | 99.7% | 99.7% |
 | Pitch Correction | Off (10¢) | Off (10¢) |
+| Clipped Peak Repair | Off | Off |
+| Warmth | Off | Off |
 
 ---
 
@@ -253,6 +275,7 @@ Crate's audio tools use the same defaults as Platinum Notes:
 - ✅ **Phase 1:** Volume Normalization (LUFS, ReplayGain)
 - ✅ **Phase 2:** Cue Detection (intro, drops, breakdowns)
 - ✅ **Phase 1.5:** Peak Limiter + Pitch Correction
+- ✅ **Phase 2.0:** Clipped Peak Repair + Warmth
 - 📋 **Phase 3:** Advanced Phrase Detection (ML-based)
 
 ---
