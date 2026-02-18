@@ -1233,7 +1233,7 @@ class NormalizeRequest(BaseModel):
     """Request to analyze/normalize audio files."""
     path: str
     mode: str = "analyze"  # analyze, tag, apply
-    target_lufs: float = -14.0
+    target_lufs: float = -11.5  # DJ standard (Platinum Notes default)
     recursive: bool = True
 
 

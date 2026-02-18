@@ -30,11 +30,11 @@ class TestNormalizationModels:
         assert NormalizationMode.APPLY.value == "apply"
 
     def test_normalization_request_defaults(self):
-        """NormalizationRequest has sensible defaults."""
+        """NormalizationRequest has sensible defaults (DJ standard per Platinum Notes)."""
         request = NormalizationRequest(paths=[Path("test.mp3")])
 
         assert request.mode == NormalizationMode.ANALYZE
-        assert request.target_lufs == -14.0
+        assert request.target_lufs == -11.5  # DJ standard (Platinum Notes)
         assert request.prevent_clipping is True
         assert request.recursive is False
 

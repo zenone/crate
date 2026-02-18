@@ -112,7 +112,7 @@ export const API = {
   },
 
   // Phase 1: Volume Normalization
-  async normalize({ path, mode = 'analyze', target_lufs = -14.0, recursive = true }) {
+  async normalize({ path, mode = 'analyze', target_lufs = -11.5, recursive = true }) {
     return this._postJson('/api/normalize', {
       path,
       mode,

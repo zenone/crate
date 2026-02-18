@@ -1,5 +1,5 @@
-import { API } from './api.js';
-import { setApiBadge, showFiles, toast, updateRowMetadata } from './ui.js';
+import { API } from './api.js?v=20260217-1700';
+import { setApiBadge, showFiles, toast, updateRowMetadata } from './ui.js?v=20260217-1700';
 
 const state = {
   directory: null,
@@ -2082,7 +2082,7 @@ function initTools() {
   // Normalization
   normalizeBtn?.addEventListener('click', async () => {
     const mode = document.getElementById('normalize-mode')?.value || 'analyze';
-    const targetLufs = parseFloat(document.getElementById('normalize-target')?.value) || -14.0;
+    const targetLufs = parseFloat(document.getElementById('normalize-target')?.value) || -11.5;
     const path = state.directory;
 
     if (!path) {

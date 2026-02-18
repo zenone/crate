@@ -30,13 +30,13 @@ class NormalizationRequest:
     Attributes:
         paths: Files or directories to process
         mode: analyze, tag, or apply
-        target_lufs: Target loudness (-14.0 is streaming standard)
+        target_lufs: Target loudness (-11.5 is DJ standard per Platinum Notes)
         prevent_clipping: Reduce gain if it would cause clipping
         recursive: Process subdirectories
     """
     paths: List[Path]
     mode: NormalizationMode = NormalizationMode.ANALYZE
-    target_lufs: float = -14.0
+    target_lufs: float = -11.5  # DJ standard (Platinum Notes)
     prevent_clipping: bool = True
     recursive: bool = False
 
