@@ -266,10 +266,12 @@ If your USB ever corrupts, Rekordbox breaks, or you switch platforms —
 
 ---
 
-## 👤 About
-
-Built by [Steve Zenone](https://www.linkedin.com/in/zenone/).
+## 🖤 Built for DJs who care about their libraries.
 
 ---
 
-## 🖤 Built for DJs who care about their libraries.
+<p align="center">
+  Made by <a href="https://github.com/zenone">@zenone</a>
+  <br>
+  <a href="https://www.linkedin.com/in/zenone/">LinkedIn</a> · <a href="https://github.com/zenone">GitHub</a>
+</p>
