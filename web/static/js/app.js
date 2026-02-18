@@ -67,11 +67,13 @@ function updateActionButtons() {
   const normalizeBtn = $('normalize-btn');
   const cueDetectBtn = $('cue-detect-btn');
   const limiterBtn = $('limiter-btn');
+  const pitchBtn = $('pitch-btn');
   const hasPath = state.directory && state.directory.trim() !== '';
   if (toolsSection) setHidden(toolsSection, !hasPath);
   if (normalizeBtn) normalizeBtn.disabled = !hasPath;
   if (cueDetectBtn) cueDetectBtn.disabled = !hasPath;
   if (limiterBtn) limiterBtn.disabled = !hasPath;
+  if (pitchBtn) pitchBtn.disabled = !hasPath;
 }
 
 function applyFilterSort(files) {
@@ -2336,6 +2338,87 @@ function initTools() {
   // Close limiter results
   document.getElementById('limiter-results-close')?.addEventListener('click', () => {
     document.getElementById('limiter-results')?.classList.add('hidden');
+  });
+
+  // ==========================================================================
+  // PITCH CORRECTION
+  // ==========================================================================
+  const pitchBtn = document.getElementById('pitch-btn');
+
+  pitchBtn?.addEventListener('click', async () => {
+    const mode = document.getElementById('pitch-mode')?.value || 'analyze';
+    const thresholdCents = parseFloat(document.getElementById('pitch-threshold')?.value) || 10;
+    const path = state.directory;
+
+    if (!path) {
+      toast('Please select a directory first');
+      return;
+    }
+
+    pitchBtn.disabled = true;
+    pitchBtn.innerHTML = '<span class="spinner-small"></span> Analyzing...';
+
+    try {
+      const result = await API.pitchCorrect({
+        path,
+        mode,
+        threshold_cents: thresholdCents,
+        recursive: true,
+      });
+
+      // Show results
+      const resultsDiv = document.getElementById('pitch-results');
+      const resultsList = document.getElementById('pitch-results-list');
+      const resultsCount = document.getElementById('pitch-results-count');
+
+      if (resultsDiv && resultsList) {
+        resultsDiv.classList.remove('hidden');
+        const needsCorrection = result.needs_correction || 0;
+        resultsCount.textContent = `${result.succeeded} files analyzed, ${needsCorrection} off-pitch`;
+
+        let html = '';
+        for (const r of result.results) {
+          if (!r.success) {
+            html += `<div class="result-item"><span class="result-item-name">${r.name}</span><span class="result-item-value bad">Error: ${r.error || 'Unknown'}</span></div>`;
+            continue;
+          }
+
+          if (!r.original_pitch_hz) {
+            html += `<div class="result-item"><span class="result-item-name" title="${r.name}">${r.name}</span><span class="result-item-value">No pitch detected</span></div>`;
+            continue;
+          }
+
+          const shift = r.shift_cents || 0;
+          const needsFix = Math.abs(shift) >= thresholdCents;
+          const statusClass = needsFix ? 'warning' : 'good';
+          const shiftStr = shift !== 0 ? `${shift > 0 ? '+' : ''}${shift.toFixed(0)}¢` : 'In tune';
+
+          html += `
+            <div class="result-item">
+              <span class="result-item-name" title="${r.name}">${r.name}</span>
+              <div class="result-item-values">
+                <span class="result-item-value">${r.nearest_note || '?'}</span>
+                <span class="result-item-value ${statusClass}">${shiftStr}</span>
+              </div>
+            </div>
+          `;
+        }
+        resultsList.innerHTML = html;
+
+        const modeLabels = { analyze: 'Analyzed', correct: 'Corrected' };
+        toast(`${modeLabels[mode] || 'Done'}: ${result.succeeded} files, ${needsCorrection} off-pitch`);
+      }
+    } catch (e) {
+      toast(`Pitch analysis failed: ${e.message}`);
+    } finally {
+      pitchBtn.disabled = false;
+      pitchBtn.innerHTML = '🎵 Analyze Pitch';
+    }
+  });
+
+  // Close pitch results
+  document.getElementById('pitch-results-close')?.addEventListener('click', () => {
+    document.getElementById('pitch-results')?.classList.add('hidden');
   });
 
 }

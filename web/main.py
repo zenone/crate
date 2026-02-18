@@ -1523,6 +1523,83 @@ async def limit_files(request: LimitRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# =============================================================================
+# PITCH CORRECTION ENDPOINTS
+# =============================================================================
+
+
+class PitchCorrectRequest(BaseModel):
+    """Request to analyze/correct pitch in audio files."""
+    path: str
+    mode: str = "analyze"  # analyze, correct
+    threshold_cents: float = 10.0  # Platinum Notes default
+    recursive: bool = True
+
+
+@app.post("/api/pitch-correct")
+async def pitch_correct_files(request: PitchCorrectRequest):
+    """Analyze or correct pitch in audio files.
+    
+    Detects pitch deviation from nearest semitone and optionally
+    corrects audio to be in tune.
+    
+    Default threshold: 10 cents (per Platinum Notes).
+    Default mode: analyze only (off by default).
+    """
+    try:
+        from crate.api.pitch_correction import (
+            PitchCorrectionAPI,
+            PitchCorrectionMode,
+            PitchCorrectionRequest,
+        )
+
+        api = PitchCorrectionAPI(logger=logger)
+
+        # Map mode string to enum
+        mode_map = {
+            "analyze": PitchCorrectionMode.ANALYZE,
+            "correct": PitchCorrectionMode.CORRECT,
+        }
+        mode = mode_map.get(request.mode, PitchCorrectionMode.ANALYZE)
+
+        pitch_request = PitchCorrectionRequest(
+            paths=[Path(request.path)],
+            mode=mode,
+            threshold_cents=request.threshold_cents,
+            recursive=request.recursive,
+        )
+
+        status = api.process(pitch_request)
+
+        results = []
+        for r in status.results:
+            results.append({
+                "path": str(r.path),
+                "name": r.path.name,
+                "success": r.success,
+                "original_pitch_hz": float(r.original_pitch_hz) if r.original_pitch_hz is not None else None,
+                "corrected_pitch_hz": float(r.corrected_pitch_hz) if r.corrected_pitch_hz is not None else None,
+                "shift_cents": float(r.shift_cents) if r.shift_cents is not None else None,
+                "nearest_note": r.nearest_note,
+                "error": r.error,
+            })
+
+        return {
+            "success": True,
+            "total": status.total,
+            "succeeded": status.succeeded,
+            "failed": status.failed,
+            "needs_correction": status.needs_correction,
+            "mode": request.mode,
+            "threshold_cents": request.threshold_cents,
+            "results": results,
+        }
+
+    except Exception as e:
+        logger.error(f"Pitch correction error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/favicon.ico")
 async def favicon():
     """Serve favicon.ico (avoid browser 404 spam)."""

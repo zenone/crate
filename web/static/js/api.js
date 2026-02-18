@@ -152,6 +152,16 @@ export const API = {
     });
   },
 
+  // Phase 1.5: Pitch Correction
+  async pitchCorrect({ path, mode = 'analyze', threshold_cents = 10.0, recursive = true }) {
+    return this._postJson('/api/pitch-correct', {
+      path,
+      mode,
+      threshold_cents,
+      recursive,
+    });
+  },
+
   async _getJson(path) {
     const r = await fetch(path, { method: 'GET', headers: { 'Accept': 'application/json' } });
     if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);

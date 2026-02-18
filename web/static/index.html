@@ -439,6 +439,41 @@
                             <div id="limiter-results-list" class="results-list"></div>
                         </div>
                     </div>
+
+                    <!-- Pitch Correction Tool -->
+                    <div class="tool-card" id="pitch-card">
+                        <div class="tool-header">
+                            <h3>🎵 Pitch Correction</h3>
+                            <span class="tool-badge">Off</span>
+                        </div>
+                        <p class="tool-description">Detect and correct off-pitch audio. Great for vinyl rips and older music. Default: Off.</p>
+                        
+                        <div class="tool-options">
+                            <div class="option-group">
+                                <label for="pitch-mode">Mode:</label>
+                                <select id="pitch-mode" class="tool-select">
+                                    <option value="analyze">Analyze Only</option>
+                                    <option value="correct">Correct Pitch (modifies audio)</option>
+                                </select>
+                            </div>
+                            <div class="option-group">
+                                <label for="pitch-threshold">Threshold (cents):</label>
+                                <input type="number" id="pitch-threshold" class="tool-input" value="10" min="1" max="50" step="1">
+                            </div>
+                        </div>
+
+                        <button id="pitch-btn" class="btn btn-primary tool-action" disabled>
+                            🎵 Analyze Pitch
+                        </button>
+
+                        <div id="pitch-results" class="tool-results hidden">
+                            <div class="results-header">
+                                <span id="pitch-results-count">0 files analyzed</span>
+                                <button id="pitch-results-close" class="btn-icon" title="Close results">✕</button>
+                            </div>
+                            <div id="pitch-results-list" class="results-list"></div>
+                        </div>
+                    </div>
                 </div>
             </section>
         </main>
