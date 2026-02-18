@@ -562,32 +562,46 @@ async function loadMetadataForVisibleFiles(files) {
     }
 
     try {
+      // Create a timeout that aborts after 10 seconds per file
+      const timeoutId = setTimeout(() => metadataAbort?.abort(), 10000);
       const resp = await fetch('/api/file/metadata', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
         body: JSON.stringify({ path: f.path, recursive: false, write_metadata: false }),
         signal: metadataAbort.signal,
       });
+      clearTimeout(timeoutId);
       if (!resp.ok) {
-        // ignore failures per-file
+        // Mark as processed but empty metadata
+        f.metadata = {};
         continue;
       }
       const data = await resp.json();
-      const md = data.metadata;
+      const md = data.metadata || {};
       f.metadata = md;
       const artUrl = API.albumArtUrl(f.path);
       updateRowMetadata(f.path, md, artUrl, { keyDisplayMode: $('key-display-mode')?.value });
     } catch (e) {
-      // Abort = user cancelled; otherwise ignore
-      if (e?.name === 'AbortError') break;
+      // Abort = user cancelled or timeout; mark as processed and continue
+      if (e?.name === 'AbortError') {
+        // If this was a timeout (not user cancel), reset abort controller and continue
+        if (!cancelled) {
+          f.metadata = {};
+          metadataAbort = new AbortController();
+          continue;
+        }
+        break;
+      }
+      // Other errors - mark as processed with empty metadata
+      f.metadata = {};
     }
   }
 
   if (barEl) barEl.style.width = '100%';
-  if (textEl) textEl.textContent = `Loading metadata: ${total}/${total} files (100%)`;
-  if (currentNameEl) currentNameEl.textContent = '—';
+  if (textEl) textEl.textContent = `✓ Metadata loaded for ${total} files`;
+  if (currentNameEl) currentNameEl.textContent = '';
   // hide after short delay
-  setTimeout(() => progressEl?.classList.add('hidden'), 600);
+  setTimeout(() => progressEl?.classList.add('hidden'), 1500);
 
   // After best-effort metadata load, try to show smart template suggestion.
   await maybeAnalyzeContext(mp3s);
