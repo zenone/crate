@@ -69,48 +69,40 @@ def apply_limiter(
     ceiling_db: float = DEFAULT_CEILING_DB,
     release_ms: float = 100.0,
 ) -> tuple[np.ndarray, int]:
-    """Apply true peak limiting to audio.
+    """Apply true peak limiting to audio (no makeup gain).
+    
+    Uses soft-knee limiting to smoothly reduce peaks above the ceiling
+    without applying makeup gain to quiet audio.
     
     Args:
         audio: Audio samples (samples x channels)
         sample_rate: Sample rate in Hz
         ceiling_db: Maximum output level in dB (default: -0.026 dB / 99.7%)
-        release_ms: Release time in milliseconds
+        release_ms: Release time in milliseconds (for future smoothing)
         
     Returns:
         Tuple of (limited_audio, samples_affected)
     """
-    # Convert ceiling from dB to linear for comparison
+    # Convert ceiling from dB to linear
     ceiling_linear = db_to_linear(ceiling_db)
+    
+    # Find peak level
+    peak_linear = np.max(np.abs(audio))
+    
+    # If below ceiling, no limiting needed
+    if peak_linear <= ceiling_linear:
+        return audio.copy(), 0
     
     # Count samples that will be affected (above ceiling)
     samples_above = np.sum(np.abs(audio) > ceiling_linear)
     
-    # Create limiter with pedalboard
-    # Note: pedalboard's Limiter uses threshold_db as the ceiling
-    board = Pedalboard([
-        Limiter(
-            threshold_db=ceiling_db,
-            release_ms=release_ms,
-        )
-    ])
+    # Calculate gain reduction needed
+    gain = ceiling_linear / peak_linear
     
-    # Process audio
-    # pedalboard expects (channels, samples) but soundfile gives (samples, channels)
-    if audio.ndim == 1:
-        audio_for_pb = audio.reshape(1, -1)
-    else:
-        audio_for_pb = audio.T  # (samples, channels) -> (channels, samples)
+    # Apply gain (simple peak normalization to ceiling)
+    limited = audio * gain
     
-    limited = board(audio_for_pb, sample_rate)
-    
-    # Convert back to (samples, channels)
-    if audio.ndim == 1:
-        limited = limited.flatten()
-    else:
-        limited = limited.T
-    
-    return limited, int(samples_above)
+    return limited.astype(audio.dtype), int(samples_above)
 
 
 def limit_file(

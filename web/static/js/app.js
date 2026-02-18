@@ -66,10 +66,12 @@ function updateActionButtons() {
   const toolsSection = $('tools-section');
   const normalizeBtn = $('normalize-btn');
   const cueDetectBtn = $('cue-detect-btn');
+  const limiterBtn = $('limiter-btn');
   const hasPath = state.directory && state.directory.trim() !== '';
   if (toolsSection) setHidden(toolsSection, !hasPath);
   if (normalizeBtn) normalizeBtn.disabled = !hasPath;
   if (cueDetectBtn) cueDetectBtn.disabled = !hasPath;
+  if (limiterBtn) limiterBtn.disabled = !hasPath;
 }
 
 function applyFilterSort(files) {
@@ -2257,6 +2259,83 @@ function initTools() {
       cueExportBtn.disabled = false;
       cueExportBtn.innerHTML = '📤 Export XML';
     }
+  });
+
+  // ==========================================================================
+  // PEAK LIMITER
+  // ==========================================================================
+  const limiterBtn = document.getElementById('limiter-btn');
+
+  limiterBtn?.addEventListener('click', async () => {
+    const mode = document.getElementById('limiter-mode')?.value || 'analyze';
+    const ceilingPercent = parseFloat(document.getElementById('limiter-ceiling')?.value) || 99.7;
+    const path = state.directory;
+
+    if (!path) {
+      toast('Please select a directory first');
+      return;
+    }
+
+    limiterBtn.disabled = true;
+    limiterBtn.innerHTML = '<span class="spinner-small"></span> Analyzing...';
+
+    try {
+      const result = await API.limit({
+        path,
+        mode,
+        ceiling_percent: ceilingPercent,
+        recursive: true,
+      });
+
+      // Show results
+      const resultsDiv = document.getElementById('limiter-results');
+      const resultsList = document.getElementById('limiter-results-list');
+      const resultsCount = document.getElementById('limiter-results-count');
+
+      if (resultsDiv && resultsList) {
+        resultsDiv.classList.remove('hidden');
+        const neededLimiting = result.needed_limiting || 0;
+        resultsCount.textContent = `${result.succeeded} files analyzed, ${neededLimiting} need limiting`;
+
+        let html = '';
+        for (const r of result.results) {
+          if (!r.success) {
+            html += `<div class="result-item"><span class="result-item-name">${r.name}</span><span class="result-item-value bad">Error: ${r.error || 'Unknown'}</span></div>`;
+            continue;
+          }
+
+          const peakDb = r.original_peak_db?.toFixed(1) || '?';
+          const reduction = r.reduction_db || 0;
+          const needsLimit = reduction > 0;
+          const statusClass = needsLimit ? 'warning' : 'good';
+          const statusText = needsLimit ? `${reduction.toFixed(1)} dB reduction` : 'OK';
+
+          html += `
+            <div class="result-item">
+              <span class="result-item-name" title="${r.name}">${r.name}</span>
+              <div class="result-item-values">
+                <span class="result-item-value">${peakDb} dB peak</span>
+                <span class="result-item-value ${statusClass}">${statusText}</span>
+              </div>
+            </div>
+          `;
+        }
+        resultsList.innerHTML = html;
+
+        const modeLabels = { analyze: 'Analyzed', apply: 'Limited' };
+        toast(`${modeLabels[mode] || 'Done'}: ${result.succeeded} files, ${neededLimiting} needed limiting`);
+      }
+    } catch (e) {
+      toast(`Limiter failed: ${e.message}`);
+    } finally {
+      limiterBtn.disabled = false;
+      limiterBtn.innerHTML = '🔊 Analyze Peaks';
+    }
+  });
+
+  // Close limiter results
+  document.getElementById('limiter-results-close')?.addEventListener('click', () => {
+    document.getElementById('limiter-results')?.classList.add('hidden');
   });
 
 }

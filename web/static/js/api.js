@@ -141,6 +141,17 @@ export const API = {
     });
   },
 
+  // Phase 1.5: Peak Limiter
+  async limit({ path, mode = 'analyze', ceiling_percent = 99.7, release_ms = 100.0, recursive = true }) {
+    return this._postJson('/api/limit', {
+      path,
+      mode,
+      ceiling_percent,
+      release_ms,
+      recursive,
+    });
+  },
+
   async _getJson(path) {
     const r = await fetch(path, { method: 'GET', headers: { 'Accept': 'application/json' } });
     if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
