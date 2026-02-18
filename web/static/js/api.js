@@ -3,7 +3,22 @@
 
 export const API = {
   async health() {
-    return this._getJson('/api/health');
+    // Health check with 3s timeout to avoid showing "Disconnected" during heavy processing
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    try {
+      const r = await fetch('/api/health', {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return await r.json();
+    } catch (e) {
+      clearTimeout(timeoutId);
+      throw e;
+    }
   },
 
   async browseDirectory(path) {

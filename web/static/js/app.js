@@ -1,5 +1,5 @@
-import { API } from './api.js?v=20260217-1700';
-import { setApiBadge, showFiles, toast, updateRowMetadata } from './ui.js?v=20260217-1700';
+import { API } from './api.js?v=20260217-1800';
+import { setApiBadge, showFiles, toast, updateRowMetadata } from './ui.js?v=20260217-1800';
 
 const state = {
   directory: null,
@@ -24,7 +24,13 @@ async function refreshHealth() {
     const vEl = $('app-version');
     if (vEl && h && h.version) vEl.textContent = String(h.version);
   } catch (e) {
-    console.error(e);
+    // Don't show Disconnected for timeout/abort errors during heavy processing
+    if (e?.name === 'AbortError') {
+      console.warn('Health check timed out (server may be busy)');
+      // Keep current state, don't update badge
+      return;
+    }
+    console.error('Health check failed:', e);
     setApiBadge('error', 'Disconnected');
   }
 }
