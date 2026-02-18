@@ -13,7 +13,7 @@
     <meta name="theme-color" content="#10B981">
     <meta name="description" content="Crate - Batch rename music files with metadata-based templates">
     <title>Crate</title>
-    <link rel="stylesheet" href="/static/css/styles.css?v=20260217-1600">
+    <link rel="stylesheet" href="/static/css/styles.css?v=20260217-2300">
 </head>
 <body>
     <div class="app-container">
@@ -21,7 +21,23 @@
         <header class="app-header">
             <div class="header-top">
                 <div class="header-title-section">
-                    <h1>🎵 Crate</h1>
+                    <div class="logo-title">
+                        <svg class="logo-icon" width="48" height="48" viewBox="0 0 512 512" aria-hidden="true">
+                            <defs>
+                                <linearGradient id="logo-gradient" x1="0" y1="0" x2="1" y2="1">
+                                    <stop offset="0" stop-color="#6366F1"/>
+                                    <stop offset="1" stop-color="#10B981"/>
+                                </linearGradient>
+                            </defs>
+                            <rect x="48" y="48" width="416" height="416" rx="112" fill="url(#logo-gradient)"/>
+                            <path d="M140 110h232c56 0 102 46 102 102v0" fill="none" stroke="#fff" stroke-opacity="0.22" stroke-width="18" stroke-linecap="round"/>
+                            <g fill="#0B1220" fill-opacity="0.90">
+                                <path d="M322 152c0-8 6-14 14-14h18c8 0 14 6 14 14v186c0 43-36 78-80 78s-80-35-80-78 36-78 80-78c13 0 25 3 36 8V152zm-56 144c-23 0-42 18-42 40s19 40 42 40 42-18 42-40-19-40-42-40z"/>
+                                <path d="M182 196c0-10 8-18 18-18h22c10 0 18 8 18 18v162c0 36-30 66-68 66s-68-30-68-66 30-66 68-66c10 0 20 2 28 6V196zm-40 150c-20 0-36 16-36 36s16 36 36 36 36-16 36-36-16-36-36-36z"/>
+                            </g>
+                        </svg>
+                        <h1>Crate</h1>
+                    </div>
                     <p class="subtitle">Batch rename your music files with metadata-based templates</p>
                 </div>
                 <div class="header-actions">

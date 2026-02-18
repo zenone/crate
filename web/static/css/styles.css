@@ -98,10 +98,21 @@ body {
     gap: var(--spacing-sm);
 }
 
+.logo-title {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.logo-icon {
+    flex-shrink: 0;
+    filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.3));
+}
+
 .app-header h1 {
     font-size: 2.5rem;
     font-weight: 700;
-    margin-bottom: var(--spacing-xs);
+    margin: 0;
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-light));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
