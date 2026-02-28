@@ -65,5 +65,8 @@ test_per_album_grouping.py
 # data/
 # *.sqlite3
 
-# Local configuration
-.local/
+# Local configuration (personal workspace — not tracked)
+# Use .local/* instead of .local/ so we can carve out exceptions
+.local/*
+# Exception: audit gates are design invariants and belong in version control
+!.local/AUDIT-GATES.md

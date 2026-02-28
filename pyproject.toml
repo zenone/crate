@@ -7,7 +7,7 @@ name = "crate"
 version = "0.1.0"
 description = "Your music library, organized. Rename MP3 files using metadata into DJ-friendly filenames."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.14"
 license = {text = "MIT"}
 keywords = ["mp3", "rename", "metadata", "id3", "dj", "music", "audio"]
 authors = [

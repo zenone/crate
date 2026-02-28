@@ -1,4 +1,4 @@
-.PHONY: help setup test lint format verify clean web golden golden-quick
+.PHONY: help setup test lint format verify clean web golden golden-quick audit-gates
 
 help:
 	@echo "Crate - DJ MP3 Renaming Tool"
@@ -13,6 +13,7 @@ help:
 	@echo "  make verify      - full quality gate (lint + test)"
 	@echo "  make web         - start web UI"
 	@echo "  make clean       - remove build artifacts"
+	@echo "  make audit-gates - run design invariant audit gates"
 
 setup:
 	python3 -m venv .venv
@@ -46,3 +47,7 @@ clean:
 	rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .mypy_cache/ .ruff_cache/
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	@echo "✅ Cleaned build artifacts"
+
+audit-gates:
+	@echo "🔍 Running Crate design invariant audit gates..."
+	@bash ~/Dropbox/.nimbus-shared/scripts/audit-gates-check.sh $(shell pwd) && echo "✅ All gates pass" || echo "❌ Gate violations found"
