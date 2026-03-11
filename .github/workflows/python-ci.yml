@@ -39,7 +39,7 @@ jobs:
         run: pytest tests/ -v --cov=crate --cov=web --cov-report=xml --ignore=tests/test_golden_path.py
 
       - name: Upload coverage
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           file: ./coverage.xml
           fail_ci_if_error: false
