@@ -35,7 +35,7 @@ audio-essentia = [
 
 # Tier 2: Alternative/Fallback (better compatibility, pure Python)
 audio-librosa = [
-    "librosa>=0.10.0",
+    "librosa>=0.11.0",
     "numpy>=1.25",
     "soundfile>=0.12.0",
 ]
